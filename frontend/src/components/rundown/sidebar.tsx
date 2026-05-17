@@ -5,7 +5,8 @@ import type { Segment } from '~backend/background/interfaces'
 import './sidebar.scss'
 import { DragTypes } from '~/components/drag-and-drop/DragTypes'
 import { DraggableContainer } from '../drag-and-drop/DraggableContainer'
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { fetchRundownEdits } from '~/lib/authApi'
 import ImportSegmentModal from './importSegmentModal/importSegmentModal'
 import { SidebarSegment } from './sidebar/segment'
 import { useToasts } from '../toasts/useToasts'
@@ -31,6 +32,13 @@ export function RundownSidebar({
 	)
 
 	const [openSegments, setOpenSegments] = useState<Record<string, boolean>>({})
+	const [partEdits, setPartEdits] = useState<
+		Record<string, { displayName: string; editedAt: number }>
+	>({})
+
+	useEffect(() => {
+		void fetchRundownEdits(rundownId).then(setPartEdits)
+	}, [rundownId])
 
 	const isSegmentOpen = useCallback(
 		(segmentId: string) => openSegments[segmentId] ?? true,
@@ -80,6 +88,7 @@ export function RundownSidebar({
 							onToggleOpen={() => toggleSegmentOpen(segment.id)}
 							insertRank={insertRankBySegmentId[segment.id]}
 							setShowImportModal={setShowImportModal}
+							partEdits={partEdits}
 						/>
 					</>
 				)}

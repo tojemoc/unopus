@@ -3,6 +3,7 @@ FROM node:22-slim AS builder
 
 # Set production environment
 ENV NODE_ENV=production
+ENV DATA_DIR=/app/data
 
 # Set working directory
 WORKDIR /app

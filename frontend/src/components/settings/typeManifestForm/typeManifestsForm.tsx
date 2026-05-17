@@ -7,6 +7,7 @@ import type { TypeManifest } from '~backend/background/interfaces'
 import './typesForm.scss'
 import { useToasts } from '~/components/toasts/useToasts'
 import { TypeManifestForm } from './typeManifestForm'
+import { DropImportZone } from '~/components/files/dropImportZone'
 
 export function TypeManifestsForm({
 	typeManifests,
@@ -33,39 +34,41 @@ export function TypeManifestsForm({
 		ipcAPI.saveToFile({ title: `Export ${title}`, document: typeManifests }).catch(console.error)
 	}
 
-	// Import types
-	const importTypes = () => {
-		ipcAPI.openFromFile({ title: `Import ${title}` }).then(async (imported) => {
-			const verify = (arr: unknown): arr is TypeManifest[] =>
-				Array.isArray(arr) &&
-				arr.every((t) => 'id' in t && 'entityType' in t && 'name' in t && 'payload' in t)
+	const importFromData = async (imported: unknown) => {
+		const verify = (arr: unknown): arr is TypeManifest[] =>
+			Array.isArray(arr) &&
+			arr.every((t) => 'id' in t && 'entityType' in t && 'name' in t && 'payload' in t)
 
-			if (!verify(imported)) {
-				toasts.show({ headerContent: `Import ${title}`, bodyContent: 'Invalid file' })
-				return
-			}
+		if (!verify(imported)) {
+			toasts.show({ headerContent: `Import ${title}`, bodyContent: 'Invalid file' })
+			return
+		}
 
-			await Promise.all(
-				imported.map(async (t) => {
-					const existing = typeManifests.find((m) => m.id === t.id)
-					try {
-						if (existing) {
-							await dispatch(updateTypeManifest({ originalId: existing.id, typeManifest: t }))
-						} else {
-							await dispatch(importTypeManifest({ typeManifest: t }))
-						}
-					} catch (e) {
-						console.error(e)
-						toasts.show({
-							headerContent: `Import ${title}`,
-							bodyContent: 'Unexpected error'
-						})
-					}
-				})
-			)
+		await Promise.all(
+			imported.map(async (t) => {
+				const existing = typeManifests.find((m) => m.id === t.id)
+				if (existing) {
+					await dispatch(updateTypeManifest({ originalId: existing.id, typeManifest: t }))
+				} else {
+					await dispatch(importTypeManifest({ typeManifest: t }))
+				}
+			})
+		)
 
-			toasts.show({ headerContent: `Import ${title}`, bodyContent: 'Import complete' })
+		toasts.show({
+			headerContent: `Import ${title}`,
+			bodyContent: `Imported ${imported.length} item${imported.length === 1 ? '' : 's'}`
 		})
+	}
+
+	const importTypes = () => {
+		ipcAPI.openFromFile({ title: `Import ${title}` }).then((imported) => importFromData(imported))
+	}
+
+	const importFile = async (file: File) => {
+		const text = await file.text()
+		const imported = JSON.parse(text) as unknown
+		await importFromData(imported)
 	}
 
 	return (
@@ -73,7 +76,7 @@ export function TypeManifestsForm({
 			<h2>
 				{title}
 				<ButtonGroup className="float-end">
-					<Button size="sm" variant="secondary" onClick={importTypes}>
+					<Button size="sm" variant="secondary" onClick={() => void importTypes()}>
 						Import
 					</Button>
 					<Button size="sm" variant="secondary" onClick={exportTypes}>
@@ -84,6 +87,10 @@ export function TypeManifestsForm({
 					</Button>
 				</ButtonGroup>
 			</h2>
+
+			<div className="mb-3">
+				<DropImportZone label={`Import ${title} from JSON`} onFile={importFile} />
+			</div>
 
 			<Accordion alwaysOpen className="settings-types">
 				{typeManifests.length === 0

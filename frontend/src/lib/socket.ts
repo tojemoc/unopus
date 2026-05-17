@@ -4,7 +4,7 @@ let socket: Socket
 
 export const getSocket = (): Socket => {
 	if (!socket) {
-		socket = import.meta.env.MODE === 'development' ? io('http://localhost:3010/') : io()
+		socket = io({ path: '/socket.io', withCredentials: true })
 	}
 	return socket
 }

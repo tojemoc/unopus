@@ -11,7 +11,13 @@ import { HTML5Backend } from 'react-dnd-html5-backend'
 
 // Create a new router instance
 const hashHistory = createHashHistory() // Use hash history, to make it work properly in packaged Electron
-const router = createRouter({ routeTree, history: hashHistory })
+const router = createRouter({
+	routeTree,
+	history: hashHistory,
+	context: {
+		store
+	}
+})
 
 // Register the router instance for type safety
 declare module '@tanstack/react-router' {

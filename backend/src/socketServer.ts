@@ -1,5 +1,6 @@
 import express from 'express'
 import http from 'http'
+import path from 'path'
 import { Server, Socket } from 'socket.io'
 import { registerSettingsHandlers } from './background/api/settings'
 import { registerTypeManifestsHandlers } from './background/api/typeManifests'
@@ -10,14 +11,63 @@ import { registerPiecesHandlers } from './background/api/pieces'
 import { registerPartsHandlers } from './background/api/parts'
 import { initSocket } from './background/socket'
 import { registerCoreConnectionInfoHandlers } from './background/api/coreConnectionInfo'
-import path from 'path'
+import { attachSocketAuth, type AuthenticatedSocket } from './background/auth/socketAuth'
+import { getUserFromSession, parseSessionCookie } from './background/auth/authStore'
+import { registerAuthRoutes } from './routes/auth'
+import { registerEditsRoutes } from './routes/edits'
 
 const frontendPath = path.resolve(__dirname, '../../frontend/dist')
 
+const PUBLIC_API_PREFIXES = ['/api/auth/login']
+
+function isPublicApiPath(url: string | undefined): boolean {
+	if (!url) {
+		return false
+	}
+	return PUBLIC_API_PREFIXES.some((prefix) => url === prefix || url.startsWith(`${prefix}?`))
+}
+
+function isSpaAssetPath(url: string | undefined): boolean {
+	if (!url) {
+		return false
+	}
+	return (
+		url.startsWith('/assets/') ||
+		url === '/favicon.png' ||
+		url.endsWith('.js') ||
+		url.endsWith('.css') ||
+		url.endsWith('.svg') ||
+		url.endsWith('.woff2')
+	)
+}
+
 export async function initSocketServer(port: number = 3010) {
 	const app = express()
+	app.use(express.json())
+	registerAuthRoutes(app)
+	registerEditsRoutes(app)
+
 	const server = http.createServer(app)
 	const io = initSocket(server)
+
+	app.use((req, res, next) => {
+		if (req.method === 'OPTIONS') {
+			next()
+			return
+		}
+		if (isPublicApiPath(req.path) || isSpaAssetPath(req.path)) {
+			next()
+			return
+		}
+		if (req.path.startsWith('/api/')) {
+			const user = getUserFromSession(parseSessionCookie(req.headers.cookie))
+			if (!user) {
+				res.status(401).json({ error: 'Not authenticated' })
+				return
+			}
+		}
+		next()
+	})
 
 	if (io) {
 		type SocketIOHandler = (socket: Socket, io: Server) => void
@@ -32,6 +82,14 @@ export async function initSocketServer(port: number = 3010) {
 			registerPartsHandlers
 		]
 
+		io.use((socket, next) => {
+			if (attachSocketAuth(socket as AuthenticatedSocket)) {
+				next()
+			} else {
+				next(new Error('Unauthorized'))
+			}
+		})
+
 		io.on('connection', (socket) => {
 			console.log(`Client connected: ${socket.id}`)
 
@@ -39,17 +97,25 @@ export async function initSocketServer(port: number = 3010) {
 				console.log(`Received event: ${event}`, ...args)
 			})
 
-			// Register all feature handlers
 			handlers.map((handler: SocketIOHandler) => handler(socket, io))
 		})
 
 		app.use(express.static(frontendPath))
 
-		app.get('/', (_, res) => {
-			res.sendFile(path.join(frontendPath, 'index.html'))
-		})
 		app.get('/favicon.png', (_, res) => {
 			res.sendFile(path.join(frontendPath, '../../build/icon.png'))
+		})
+
+		app.use((req, res, next) => {
+			if (req.method !== 'GET' || req.path.startsWith('/api/')) {
+				next()
+				return
+			}
+			res.sendFile(path.join(frontendPath, 'index.html'), (err) => {
+				if (err) {
+					next(err)
+				}
+			})
 		})
 
 		server.listen(port, () => console.log(`Server running on http://localhost:${port}`))

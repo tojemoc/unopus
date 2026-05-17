@@ -2,13 +2,15 @@ version: '3.9'
 
 services:
   app:
-    image: ghcr.io/superflytv/sofie-automation-rundown-editor:latest
-    container_name: sofie-automation-rundown-editor
+    image: ghcr.io/duopus/rundown-editor:latest
+    container_name: duopus-rundown-editor
     build:
       context: .
       dockerfile: Dockerfile
     environment:
       - PORT=3010
+      - DATA_DIR=/app/data
+      - NODE_ENV=production
     ports:
       - '3010:3010'
     volumes:

@@ -1,10 +1,10 @@
 import { createFileRoute, Outlet } from '@tanstack/react-router'
-import { EditorNavbar } from '~/components/navbar/navbar'
+import { DuopusNavbar } from '~/components/navbar/duopusNavbar'
 
 export const Route = createFileRoute('/_root')({
 	component: () => (
 		<>
-			<EditorNavbar />
+			<DuopusNavbar />
 
 			<Outlet />
 		</>

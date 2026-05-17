@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import { Tab, Tabs } from 'react-bootstrap'
 import { MyErrorBoundary } from '~/util/errorBoundary'
+import { useAppSelector } from '~/store/app'
 
 export const Route = createFileRoute('/_root/settings')({
 	component: RouteComponent
@@ -8,6 +9,7 @@ export const Route = createFileRoute('/_root/settings')({
 
 function RouteComponent() {
 	const navigate = useNavigate()
+	const isAdmin = useAppSelector((s) => s.auth.user?.role === 'admin')
 
 	const matches = useRouterState({ select: (s) => s.matches })
 	const pathPrefix = '/_root/settings/'
@@ -17,7 +19,7 @@ function RouteComponent() {
 	const selectTab = (path: string | null) => {
 		if (!path) return
 
-		if (path === 'connection' || path === 'rundown') {
+		if (path === 'connection' || path === 'rundown' || path === 'users') {
 			navigate({ to: `/settings/${path}` })
 		} else {
 			navigate({ to: `/settings/type/${path}` })
@@ -26,11 +28,12 @@ function RouteComponent() {
 	return (
 		<div className="p-4">
 			<Tabs activeKey={subPath} onSelect={selectTab} className="mb-3" transition={false}>
-				<Tab eventKey="connection" title="Core Connection" />
-				<Tab eventKey="rundown" title="Rundown metadata" />
-				<Tab eventKey="segment" title="Segment types" />
-				<Tab eventKey="part" title="Part types" />
-				<Tab eventKey="piece" title="Piece types" />
+				<Tab eventKey="connection" title="Connection" />
+				<Tab eventKey="piece" title="Piece Types" />
+				<Tab eventKey="part" title="Part Types" />
+				<Tab eventKey="segment" title="Segment Types" />
+				<Tab eventKey="rundown" title="Rundown Metadata" />
+				{isAdmin && <Tab eventKey="users" title="Users" />}
 			</Tabs>
 
 			<MyErrorBoundary>

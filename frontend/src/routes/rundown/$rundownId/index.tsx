@@ -1,6 +1,7 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { Stack } from 'react-bootstrap'
 import { RundownPropertiesForm } from '~/components/rundown/rundownPropertiesForm'
+import { SyncControl } from '~/components/rundown/syncControl'
 import { useAppSelector } from '~/store/app'
 
 export const Route = createFileRoute('/rundown/$rundownId/')({
@@ -16,6 +17,7 @@ function RouteComponent() {
 	return (
 		<Stack className="rundown-main-content">
 			<div className="p-4">
+				<SyncControl rundown={rundown} />
 				<RundownPropertiesForm rundown={rundown} />
 			</div>
 		</Stack>

@@ -86,33 +86,6 @@ export function RundownPropertiesForm({ rundown }: { rundown: Rundown }) {
 						</>
 					)}
 				/>
-				<form.Subscribe selector={(state) => state.values.isTemplate}>
-					{(isTemplate) => (
-						<form.Field name="sync">
-							{(syncField) => {
-								// UI should show unchecked while isTemplate is true,
-								// but the underlying value remains unchanged
-								const displayChecked = isTemplate ? false : syncField.state.value
-
-								return (
-									<>
-										<Form.Group className="mb-3">
-											<Form.Label htmlFor={syncField.name}>Sync to Sofie:</Form.Label>
-											<Form.Switch
-												name={syncField.name}
-												checked={displayChecked}
-												onBlur={syncField.handleBlur}
-												onChange={(e) => syncField.handleChange(e.target.checked)}
-												disabled={isTemplate} // greyed out when template is on
-											/>
-										</Form.Group>
-										<FieldInfo field={syncField} />
-									</>
-								)
-							}}
-						</form.Field>
-					)}
-				</form.Subscribe>
 				<form.Field name="isTemplate">
 					{(templateField) => (
 						<>

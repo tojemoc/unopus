@@ -8,9 +8,11 @@ import partsReducer from './parts.js'
 import piecesReducer from './pieces.js'
 import typeManifestReducer from './typeManifest.js'
 import settingsReducer from './settings.js'
+import { authReducer } from './auth.js'
 
 export const store = configureStore({
 	reducer: {
+		auth: authReducer,
 		playlists: playlistsReducer,
 		rundowns: rundownsReducer,
 		segments: segmentsReducer,

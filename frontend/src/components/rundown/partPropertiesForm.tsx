@@ -2,7 +2,9 @@ import { useForm } from '@tanstack/react-form'
 import { Button, ButtonGroup, Form, Modal } from 'react-bootstrap'
 import type { Part } from '~backend/background/interfaces'
 import { FieldInfo } from '../form'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { friendlyLabel } from '~/util/fieldLabels'
+import { fetchEntityEdit } from '~/lib/authApi'
 import { useNavigate } from '@tanstack/react-router'
 import { useAppDispatch, useAppSelector } from '~/store/app'
 import { removePart, updatePart } from '~/store/parts'
@@ -11,17 +13,25 @@ import { useToasts } from '../toasts/useToasts'
 export function PartPropertiesForm({ part }: { part: Part }) {
 	const dispatch = useAppDispatch()
 	const toasts = useToasts()
+	const [savedFlash, setSavedFlash] = useState(false)
+	const [lastEdit, setLastEdit] = useState<{ displayName: string; editedAt: number } | null>(null)
 
 	const manifests = useAppSelector((state) => state.typeManifests.manifests)
+
+	useEffect(() => {
+		void fetchEntityEdit('part', part.id).then(setLastEdit)
+	}, [part.id])
 
 	const form = useForm({
 		defaultValues: part,
 		onSubmit: async (values) => {
 			try {
 				await dispatch(updatePart({ part: values.value })).unwrap()
-
-				// Mark as pristine
 				form.reset()
+				setSavedFlash(true)
+				setTimeout(() => setSavedFlash(false), 2000)
+				const edit = await fetchEntityEdit('part', part.id)
+				setLastEdit(edit)
 			} catch (e) {
 				console.error(e)
 				toasts.show({
@@ -34,7 +44,13 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 
 	return (
 		<div>
-			<h2>Part</h2>
+			<h2>Story</h2>
+			{lastEdit && (
+				<p className="text-muted small">
+					Last saved by {lastEdit.displayName} ·{' '}
+					{new Date(lastEdit.editedAt).toLocaleString()}
+				</p>
+			)}
 
 			<Form
 				onSubmit={(e) => {
@@ -48,7 +64,7 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 					children={(field) => (
 						<>
 							<Form.Group className="mb-3">
-								<Form.Label htmlFor={field.name}>Name:</Form.Label>
+								<Form.Label htmlFor={field.name}>Title</Form.Label>
 								<Form.Control
 									name={field.name}
 									type="text"
@@ -66,7 +82,7 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 					children={(field) => (
 						<>
 							<Form.Group className="mb-3">
-								<Form.Label htmlFor={field.name}>Float:</Form.Label>
+								<Form.Label htmlFor={field.name}>{friendlyLabel('float')}</Form.Label>
 								<Form.Switch
 									name={field.name}
 									type="text"
@@ -85,7 +101,7 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 					children={(field) => (
 						<>
 							<Form.Group className="mb-3">
-								<Form.Label htmlFor={field.name}>Type:</Form.Label>
+								<Form.Label htmlFor={field.name}>{friendlyLabel('partType')}</Form.Label>
 								<Form.Select
 									name={field.name}
 									value={field.state.value}
@@ -217,8 +233,8 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 								>
 									Discard
 								</Button>
-								<Button type="submit" disabled={!canSubmit || isPristine} variant="primary">
-									{isSubmitting ? '...' : 'Save'}
+								<Button type="submit" disabled={!canSubmit || isPristine} variant="primary" size="lg">
+									{savedFlash ? 'Saved ✓' : isSubmitting ? 'Saving…' : 'Save'}
 								</Button>
 							</ButtonGroup>
 						</div>

@@ -8,21 +8,27 @@ import { BsFillTrashFill, BsPlus, BsTrash } from 'react-icons/bs'
 import { DeletePartButton } from '../deletePartButton'
 import type { ButtonProps } from 'react-bootstrap'
 import { HoverIconButton } from '~/components/rundownList/hoverIconButton'
+import { useAppSelector } from '~/store/app'
 
 export function SidebarPart({
 	part,
 	segment,
 	handleAddPart,
-	insertRank
+	insertRank,
+	lastEdit
 }: {
 	part: Part
 	segment: Segment
 	handleAddPart: (rank: number) => Promise<string | void>
 	insertRank: number
+	lastEdit?: { displayName: string; editedAt: number }
 }) {
 	const dispatch = useAppDispatch()
 	const navigate = useNavigate()
 	const toasts = useToasts()
+	const partTypeManifest = useAppSelector((state) =>
+		state.typeManifests.manifests?.find((m) => m.id === part.partType)
+	)
 
 	const handleCopyPart = () =>
 		dispatch(copyPart({ id: part.id, rundownId: part.rundownId }))
@@ -41,9 +47,23 @@ export function SidebarPart({
 
 	return (
 		<div className="sidebar-part-wrapper">
-			<div className="sidebar-part copy-item bg-dark">
+			<div
+				className="sidebar-part copy-item bg-dark"
+				style={{
+					borderLeft: `4px solid ${partTypeManifest?.colour ?? '#666'}`
+				}}
+			>
 				<SidebarElementHeader
-					label={part.name}
+					label={
+						<>
+							{part.name}
+							{lastEdit && (
+								<span className="part-edit-hint text-muted ms-2">
+									· {lastEdit.displayName}
+								</span>
+							)}
+						</>
+					}
 					duration={part.duration}
 					linkTo={'/rundown/$rundownId/segment/$segmentId/part/$partId'}
 					linkParams={{

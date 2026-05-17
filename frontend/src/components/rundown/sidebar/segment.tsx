@@ -29,13 +29,15 @@ export function SidebarSegment({
 	isOpen,
 	onToggleOpen,
 	setShowImportModal,
-	insertRank
+	insertRank,
+	partEdits
 }: {
 	segment: Segment
 	isOpen: boolean
 	onToggleOpen: () => void
 	setShowImportModal: Dispatch<SetStateAction<number | undefined>>
 	insertRank: number
+	partEdits: Record<string, { displayName: string; editedAt: number }>
 }) {
 	const dispatch = useAppDispatch()
 	const navigate = useNavigate()
@@ -185,6 +187,7 @@ export function SidebarSegment({
 								segment={segment}
 								handleAddPart={handleAddPart}
 								insertRank={partInsertRankById[data.id]}
+								lastEdit={partEdits[data.id]}
 							/>
 						)}
 					/>

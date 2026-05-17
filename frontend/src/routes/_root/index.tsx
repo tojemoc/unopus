@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useCallback, useState } from 'react'
 import { Button, Dropdown, SplitButton, Stack, Tab, Tabs } from 'react-bootstrap'
 import { BsBoxArrowInUp, BsPlus } from 'react-icons/bs'
-import { RundownList } from '~/components/rundownList/rundownList'
+import { RundownListGrouped } from '~/components/rundownList/rundownListGrouped'
 import { useToasts } from '~/components/toasts/useToasts'
 import { ipcAPI } from '~/lib/IPC'
 import { useAppDispatch, useAppSelector } from '~/store/app'
@@ -96,11 +96,9 @@ function Index() {
 	const normalRundowns = rundowns.filter((r) => !r.isTemplate)
 	return (
 		<div className="p-2">
-			<Stack direction="horizontal" className="mb-2">
+			<Stack direction="horizontal" className="mb-3 align-items-center">
 				<Tabs
-					style={{
-						flexGrow: 2
-					}}
+					className="flex-grow-1"
 					defaultActiveKey="rundowns"
 					activeKey={activeTab ?? 'rundowns'}
 					onSelect={(k) => setActiveTab(k)}
@@ -108,48 +106,36 @@ function Index() {
 					<Tab eventKey="rundowns" title="Rundowns" />
 					<Tab eventKey="templates" title="Templates" />
 				</Tabs>
-				<Stack
-					direction="horizontal"
-					className="align-items-end justify-content-end"
-					style={{
-						borderBottom: '1px solid #495057'
-					}}
-				>
-					<div>
-						<SplitButton
-							className="m-1 split-button-divider"
-							size="sm"
-							title={
-								<span className="d-inline-flex align-items-center">
-									<BsPlus className="bttn-icon icon-lg" aria-hidden />
-									<span className="ms-4 ml-3">New</span>
-								</span>
-							}
-							onClick={() => createNewRundown(activeTab === 'templates')}
-							variant="primary"
-						>
-							{templateRundowns.map((templateRundown) => (
-								<Dropdown.Item
-									onClick={() => handleCopyRundown(templateRundown, activeTab === 'templates')}
-								>
-									{templateRundown.name}
-								</Dropdown.Item>
-							))}
-						</SplitButton>
-						<Button
-							className="m-1"
-							onClick={() => selectImportRundown(activeTab === 'templates')}
-							size="sm"
-						>
-							<BsBoxArrowInUp className="bttn-icon icon-md mt-1" aria-hidden />
-							<span className="ms-4 ml-3">Import</span>
-						</Button>
-					</div>
+				<Stack direction="horizontal" gap={2}>
+					<SplitButton
+						title={
+							<span className="d-inline-flex align-items-center gap-2">
+								<BsPlus className="bttn-icon icon-lg" aria-hidden />
+								New Rundown
+							</span>
+						}
+						onClick={() => createNewRundown(activeTab === 'templates')}
+						variant="primary"
+						size="lg"
+					>
+						{templateRundowns.map((templateRundown) => (
+							<Dropdown.Item
+								key={templateRundown.id}
+								onClick={() => handleCopyRundown(templateRundown, activeTab === 'templates')}
+							>
+								{templateRundown.name}
+							</Dropdown.Item>
+						))}
+					</SplitButton>
+					<Button onClick={() => selectImportRundown(activeTab === 'templates')} variant="outline-primary" size="lg">
+						<BsBoxArrowInUp className="bttn-icon icon-md me-2" aria-hidden />
+						Import
+					</Button>
 				</Stack>
 			</Stack>
-			{activeTab === 'rundowns' && <RundownList title="Rundown" rundowns={normalRundowns} />}
+			{activeTab === 'rundowns' && <RundownListGrouped rundowns={normalRundowns} />}
 
-			{activeTab === 'templates' && <RundownList rundowns={templateRundowns} title="Template" />}
+			{activeTab === 'templates' && <RundownListGrouped rundowns={templateRundowns} />}
 		</div>
 	)
 }
