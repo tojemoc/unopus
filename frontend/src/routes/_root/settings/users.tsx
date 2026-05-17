@@ -129,7 +129,12 @@ function UsersSettingsPage() {
 								<Form.Control
 									size="sm"
 									defaultValue={user.displayName}
-									onBlur={(e) => void updateDisplayName(user.id, e.target.value)}
+									onBlur={(e) => {
+										const value = e.target.value.trim()
+										if (value !== user.displayName.trim()) {
+											void updateDisplayName(user.id, value)
+										}
+									}}
 								/>
 							</td>
 							<td>
