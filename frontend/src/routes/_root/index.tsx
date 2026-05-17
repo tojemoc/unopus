@@ -135,7 +135,9 @@ function Index() {
 			</Stack>
 			{activeTab === 'rundowns' && <RundownListGrouped rundowns={normalRundowns} />}
 
-			{activeTab === 'templates' && <RundownListGrouped rundowns={templateRundowns} />}
+			{activeTab === 'templates' && (
+				<RundownListGrouped rundowns={templateRundowns} showGenerateForDate />
+			)}
 		</div>
 	)
 }

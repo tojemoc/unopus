@@ -8,9 +8,13 @@ import { faClose } from '@fortawesome/free-solid-svg-icons'
 import './navbar.scss'
 import { toTime, toTimeDiff } from '~/util/lib'
 import { useAppSelector } from '~/store/app'
-import { Stack } from 'react-bootstrap'
+import { Button, Stack } from 'react-bootstrap'
+import { BsArchive } from 'react-icons/bs'
+import { useAppDispatch } from '~/store/app'
+import { toggleStoryLibrary } from '~/store/storyLibrary'
 
 export function RundownNavbar({ rundown }: { rundown: Rundown }) {
+	const dispatch = useAppDispatch()
 	const parts = useAppSelector((state) =>
 		state.parts.parts.filter((p) => p.rundownId === rundown.id)
 	)
@@ -57,7 +61,16 @@ export function RundownNavbar({ rundown }: { rundown: Rundown }) {
 					{rundown.name}
 				</Nav.Link>
 
-				<Nav className="">
+				<Nav className="align-items-center gap-2">
+					<Button
+						variant="outline-light"
+						size="sm"
+						className="d-inline-flex align-items-center gap-1"
+						onClick={() => dispatch(toggleStoryLibrary())}
+					>
+						<BsArchive aria-hidden />
+						Library
+					</Button>
 					<Nav.Link as={Link} to="/">
 						<FontAwesomeIcon icon={faClose} size="xl" />
 					</Nav.Link>

@@ -15,6 +15,7 @@ import { attachSocketAuth, type AuthenticatedSocket } from './background/auth/so
 import { getUserFromSession, parseSessionCookie } from './background/auth/authStore'
 import { registerAuthRoutes } from './routes/auth'
 import { registerEditsRoutes } from './routes/edits'
+import { registerStoryRoutes } from './routes/story'
 
 const frontendPath = path.resolve(__dirname, '../../frontend/dist')
 
@@ -69,6 +70,7 @@ export async function initSocketServer(port: number = 3010) {
 
 	registerAuthRoutes(app)
 	registerEditsRoutes(app)
+	registerStoryRoutes(app)
 
 	if (io) {
 		type SocketIOHandler = (socket: Socket, io: Server) => void

@@ -4,6 +4,7 @@ import { Stack } from 'react-bootstrap'
 import { DuopusNavbar } from '~/components/navbar/duopusNavbar'
 import { RundownNavbar } from '~/components/rundown/navbar'
 import { RundownSidebar } from '~/components/rundown/sidebar'
+import { StoryLibraryDrawer } from '~/components/rundown/storyLibrary/storyLibraryDrawer'
 import { useAppDispatch, useAppSelector } from '~/store/app'
 import { loadParts } from '~/store/parts'
 import { loadPieces } from '~/store/pieces'
@@ -78,6 +79,7 @@ function RouteComponent() {
 					<Outlet />
 				</MyErrorBoundary>
 			</Stack>
+			<StoryLibraryDrawer rundownId={rundown.id} />
 		</div>
 	)
 }
