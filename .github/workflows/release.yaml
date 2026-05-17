@@ -1,6 +1,7 @@
 name: Release with Docker image to GHCR
 
 on:
+  workflow_dispatch: 
   push:
     tags:
       - 'v**'
