@@ -37,7 +37,21 @@ export function RundownSidebar({
 	>({})
 
 	useEffect(() => {
-		void fetchRundownEdits(rundownId).then(setPartEdits)
+		let cancelled = false
+		fetchRundownEdits(rundownId)
+			.then((edits) => {
+				if (!cancelled) {
+					setPartEdits(edits)
+				}
+			})
+			.catch((error) => {
+				if (!cancelled) {
+					console.error('Failed to load rundown edit history', rundownId, error)
+				}
+			})
+		return () => {
+			cancelled = true
+		}
 	}, [rundownId])
 
 	const isSegmentOpen = useCallback(

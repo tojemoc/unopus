@@ -37,7 +37,15 @@ export function TypeManifestsForm({
 	const importFromData = async (imported: unknown) => {
 		const verify = (arr: unknown): arr is TypeManifest[] =>
 			Array.isArray(arr) &&
-			arr.every((t) => 'id' in t && 'entityType' in t && 'name' in t && 'payload' in t)
+			arr.every(
+				(t) =>
+					typeof t === 'object' &&
+					t !== null &&
+					'id' in t &&
+					'entityType' in t &&
+					'name' in t &&
+					'payload' in t
+			)
 
 		if (!verify(imported)) {
 			toasts.show({ headerContent: `Import ${title}`, bodyContent: 'Invalid file' })
@@ -61,8 +69,17 @@ export function TypeManifestsForm({
 		})
 	}
 
-	const importTypes = () => {
-		ipcAPI.openFromFile({ title: `Import ${title}` }).then((imported) => importFromData(imported))
+	const importTypes = async () => {
+		try {
+			const imported = await ipcAPI.openFromFile({ title: `Import ${title}` })
+			await importFromData(imported)
+		} catch (e) {
+			console.error(e)
+			toasts.show({
+				headerContent: `Import ${title}`,
+				bodyContent: e instanceof Error ? e.message : 'Import failed'
+			})
+		}
 	}
 
 	const importFile = async (file: File) => {

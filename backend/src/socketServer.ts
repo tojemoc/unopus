@@ -44,8 +44,6 @@ function isSpaAssetPath(url: string | undefined): boolean {
 export async function initSocketServer(port: number = 3010) {
 	const app = express()
 	app.use(express.json())
-	registerAuthRoutes(app)
-	registerEditsRoutes(app)
 
 	const server = http.createServer(app)
 	const io = initSocket(server)
@@ -68,6 +66,9 @@ export async function initSocketServer(port: number = 3010) {
 		}
 		next()
 	})
+
+	registerAuthRoutes(app)
+	registerEditsRoutes(app)
 
 	if (io) {
 		type SocketIOHandler = (socket: Socket, io: Server) => void

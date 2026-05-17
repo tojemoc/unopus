@@ -643,7 +643,11 @@ async function handlePartUpdate(
 		if (updateError) returnedError = updateError
 
 		if (document && 'id' in document && result) {
-			recordEntityEdit('part', result.id, editor)
+			try {
+				recordEntityEdit('part', result.id, editor)
+			} catch (error) {
+				console.error('Failed to record entity edit for part', result.id, error)
+			}
 			try {
 				await sendPartDiffToCore(document, result)
 			} catch (error) {

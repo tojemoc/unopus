@@ -19,7 +19,21 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 	const manifests = useAppSelector((state) => state.typeManifests.manifests)
 
 	useEffect(() => {
-		void fetchEntityEdit('part', part.id).then(setLastEdit)
+		let cancelled = false
+		fetchEntityEdit('part', part.id)
+			.then((edit) => {
+				if (!cancelled) {
+					setLastEdit(edit)
+				}
+			})
+			.catch((error) => {
+				if (!cancelled) {
+					console.error('Failed to load last edit for part', part.id, error)
+				}
+			})
+		return () => {
+			cancelled = true
+		}
 	}, [part.id])
 
 	const form = useForm({
@@ -30,8 +44,12 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 				form.reset()
 				setSavedFlash(true)
 				setTimeout(() => setSavedFlash(false), 2000)
-				const edit = await fetchEntityEdit('part', part.id)
-				setLastEdit(edit)
+				try {
+					const edit = await fetchEntityEdit('part', values.value.id)
+					setLastEdit(edit)
+				} catch (error) {
+					console.error('Failed to refresh last edit after save', error)
+				}
 			} catch (e) {
 				console.error(e)
 				toasts.show({

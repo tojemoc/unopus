@@ -20,7 +20,9 @@ RUN yarn install --frozen-lockfile
 # Build the app
 RUN yarn build
 
-RUN mkdir /app/data
+RUN mkdir /app/data && chown -R node:node /app /app/data
+
+USER node
 
 # Default command (adjust as needed)
 CMD ["yarn", "start"]

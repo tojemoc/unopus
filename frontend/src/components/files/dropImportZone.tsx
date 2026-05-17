@@ -1,5 +1,5 @@
-import { useCallback, useState } from 'react'
-import { Alert } from 'react-bootstrap'
+import { useCallback, useRef, useState } from 'react'
+import { Alert, Button } from 'react-bootstrap'
 import './dropImportZone.scss'
 
 interface DropImportZoneProps {
@@ -9,6 +9,7 @@ interface DropImportZoneProps {
 }
 
 export function DropImportZone({ label, accept = '.json', onFile }: DropImportZoneProps) {
+	const inputRef = useRef<HTMLInputElement>(null)
 	const [dragOver, setDragOver] = useState(false)
 	const [message, setMessage] = useState<string | null>(null)
 
@@ -29,6 +30,13 @@ export function DropImportZone({ label, accept = '.json', onFile }: DropImportZo
 
 	return (
 		<div className="drop-import-zone">
+			<input
+				ref={inputRef}
+				type="file"
+				accept={accept}
+				hidden
+				onChange={(e) => void handleFile(e.target.files?.[0])}
+			/>
 			<div
 				className={`drop-import-zone__target${dragOver ? ' drop-import-zone__target--active' : ''}`}
 				onDragOver={(e) => {
@@ -44,15 +52,15 @@ export function DropImportZone({ label, accept = '.json', onFile }: DropImportZo
 			>
 				<p className="mb-2">{label}</p>
 				<p className="text-muted small mb-2">Drag and drop a file here, or</p>
-				<label className="btn btn-outline-primary btn-sm mb-0">
+				<Button
+					type="button"
+					variant="outline-primary"
+					size="sm"
+					aria-label="Choose file to import"
+					onClick={() => inputRef.current?.click()}
+				>
 					Choose file
-					<input
-						type="file"
-						accept={accept}
-						hidden
-						onChange={(e) => void handleFile(e.target.files?.[0])}
-					/>
-				</label>
+				</Button>
 			</div>
 			{message && (
 				<Alert variant="danger" className="mt-2 mb-0">

@@ -1,3 +1,4 @@
+import { randomBytes } from 'crypto'
 import { db } from '../db'
 import { v4 as uuid } from 'uuid'
 import { hashPassword, verifyPassword } from './password'
@@ -65,13 +66,27 @@ export function initAuthTables(): void {
 
 	const countRow = db.prepare(`SELECT COUNT(*) AS count FROM users`).get() as { count: number }
 	if (countRow.count === 0) {
+		const bootstrapPassword =
+			process.env.BOOTSTRAP_ADMIN_PASSWORD?.trim() ||
+			randomBytes(18).toString('base64url')
 		db.prepare(
 			`
 			INSERT INTO users (id, username, password_hash, display_name, role, active)
 			VALUES (?, ?, ?, ?, ?, 1)
 		`
-		).run(uuid(), 'admin', hashPassword('duopus2025'), 'Administrator', 'admin')
-		console.log('Seeded default admin user (username: admin)')
+		).run(uuid(), 'admin', hashPassword(bootstrapPassword), 'Administrator', 'admin')
+		if (process.env.BOOTSTRAP_ADMIN_PASSWORD?.trim()) {
+			console.log('Seeded default admin user (username: admin) from BOOTSTRAP_ADMIN_PASSWORD')
+		} else if (process.env.NODE_ENV !== 'production') {
+			console.log(
+				'Seeded default admin user (username: admin). Bootstrap password (dev only):',
+				bootstrapPassword
+			)
+		} else {
+			console.warn(
+				'Seeded default admin user (username: admin). Set BOOTSTRAP_ADMIN_PASSWORD or reset the password before use.'
+			)
+		}
 	}
 }
 
@@ -154,7 +169,11 @@ export function parseSessionCookie(cookieHeader: string | undefined): string | u
 	for (const part of cookieHeader.split(';')) {
 		const trimmed = part.trim()
 		if (trimmed.startsWith(prefix)) {
-			return decodeURIComponent(trimmed.slice(prefix.length))
+			try {
+				return decodeURIComponent(trimmed.slice(prefix.length))
+			} catch {
+				return undefined
+			}
 		}
 	}
 	return undefined
@@ -183,6 +202,24 @@ export function listUsers(): AuthUser[] {
 	return rows.map(rowToUser)
 }
 
+export class DuplicateUsernameError extends Error {
+	constructor() {
+		super('Username already exists')
+		this.name = 'DuplicateUsernameError'
+	}
+}
+
+function isUniqueConstraintError(err: unknown): boolean {
+	if (!(err instanceof Error)) {
+		return false
+	}
+	const code = (err as { code?: string }).code
+	return (
+		code === 'SQLITE_CONSTRAINT_UNIQUE' ||
+		err.message.includes('UNIQUE constraint failed')
+	)
+}
+
 export function createUser(payload: {
 	username: string
 	password: string
@@ -190,12 +227,25 @@ export function createUser(payload: {
 	role: UserRole
 }): AuthUser {
 	const id = uuid()
-	db.prepare(
+	try {
+		db.prepare(
+			`
+			INSERT INTO users (id, username, password_hash, display_name, role, active)
+			VALUES (?, ?, ?, ?, ?, 1)
 		`
-		INSERT INTO users (id, username, password_hash, display_name, role, active)
-		VALUES (?, ?, ?, ?, ?, 1)
-	`
-	).run(id, payload.username, hashPassword(payload.password), payload.displayName, payload.role)
+		).run(
+			id,
+			payload.username,
+			hashPassword(payload.password),
+			payload.displayName,
+			payload.role
+		)
+	} catch (err) {
+		if (isUniqueConstraintError(err)) {
+			throw new DuplicateUsernameError()
+		}
+		throw err
+	}
 	return rowToUser(
 		db
 			.prepare(

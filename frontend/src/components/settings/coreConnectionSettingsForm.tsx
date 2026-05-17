@@ -49,7 +49,8 @@ export function CoreConnectionSettingsForm({ settings }: { settings: Application
 					'Could not connect — check the URL and make sure Sofie Core is running.'
 				)
 			}
-		} catch {
+		} catch (error) {
+			console.error('Core connection test failed:', error)
 			setTestVariant('danger')
 			setTestMessage('Could not connect — check the URL and make sure Sofie Core is running.')
 		} finally {

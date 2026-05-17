@@ -1,7 +1,7 @@
 import { createRootRouteWithContext, Outlet, redirect } from '@tanstack/react-router'
 import type { store } from '~/store/store'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { ToastsProvider } from '~/components/toasts/toasts'
 import { useAppDispatch, useAppSelector } from '~/store/app'
 import { initStore } from '~/store/init'
@@ -28,10 +28,12 @@ function RootRoute() {
 	// TODO: this is a hack to get the store to initialize
 	// It should be done in a better way, but this is a quick port of the old code
 	const authStatus = useAppSelector((s) => s.auth.status)
+	const storeInitializedRef = useRef(false)
 
 	useEffect(() => {
-		if (authStatus === 'authenticated') {
+		if (authStatus === 'authenticated' && !storeInitializedRef.current) {
 			initStore(appDispatch)
+			storeInitializedRef.current = true
 		}
 	}, [appDispatch, authStatus])
 

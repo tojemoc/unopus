@@ -6,6 +6,7 @@ import {
 	createSession,
 	createUser,
 	deleteSession,
+	DuplicateUsernameError,
 	getUserFromSession,
 	listUsers,
 	parseSessionCookie,
@@ -144,8 +145,13 @@ export function registerAuthRoutes(app: Application): void {
 					active: user.active
 				}
 			})
-		} catch {
-			sendJson(res, 409, { error: 'Username already exists' })
+		} catch (err) {
+			if (err instanceof DuplicateUsernameError) {
+				sendJson(res, 409, { error: 'Username already exists' })
+				return
+			}
+			console.error('Failed to create user', err)
+			sendJson(res, 500, { error: 'Failed to create user' })
 		}
 	})
 
@@ -161,6 +167,10 @@ export function registerAuthRoutes(app: Application): void {
 		}
 		if (body.role !== undefined && body.role !== 'editor' && body.role !== 'admin') {
 			sendJson(res, 400, { error: 'role must be editor or admin' })
+			return
+		}
+		if (body.active !== undefined && typeof body.active !== 'boolean') {
+			sendJson(res, 400, { error: 'active must be a boolean' })
 			return
 		}
 

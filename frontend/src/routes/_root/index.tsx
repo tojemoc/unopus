@@ -64,7 +64,7 @@ function Index() {
 						})
 					} else {
 						try {
-							await dispatch(importRundown({ ...serializedRundown, isTemplate }))
+							await dispatch(importRundown({ ...serializedRundown, isTemplate })).unwrap()
 
 							await navigate({
 								to: `/rundown/${serializedRundown.rundown.id}`
@@ -73,7 +73,7 @@ function Index() {
 							console.error(e)
 							toasts.show({
 								headerContent: 'Importing rundown',
-								bodyContent: 'Encountered an unexepcted error'
+								bodyContent: 'Encountered an unexpected error'
 							})
 						}
 					}
@@ -88,7 +88,7 @@ function Index() {
 				console.error(e)
 				toasts.show({
 					headerContent: 'Importing rundown',
-					bodyContent: 'Encountered an unexepcted error'
+					bodyContent: 'Encountered an unexpected error'
 				})
 			})
 	}
