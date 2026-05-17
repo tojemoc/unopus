@@ -1,22 +1,11 @@
-import path from 'path'
-import fs from 'fs'
 import sqlite from 'node:sqlite'
+import { initAuthTables } from './auth/authStore'
+import { ensureDataDir, resolveDbFilePath } from './dbPath'
 import { defaultRundownManifest } from './manifest'
 import { PayloadManifest, TypeManifestEntity } from './interfaces'
-// In dev, store the database in the current working directory
-// In production, store the database in the user data directory
-const dbFile = path.join(process.cwd(), '../data/data.db')
-const dbDir = path.dirname(dbFile)
 
-// Ensure the database directory exists
-if (!fs.existsSync(dbDir)) {
-	try {
-		fs.mkdirSync(dbDir)
-	} catch (err) {
-		console.error('Unable to create database directory:', dbDir, err)
-		process.exit(1)
-	}
-}
+ensureDataDir()
+const dbFile = resolveDbFilePath()
 console.log('Database location:', dbFile)
 
 let db: sqlite.DatabaseSync
@@ -279,6 +268,8 @@ try {
 	if (parTypeMigrationLeftovers.length > 0) {
 		throw new Error('Migration incomplete: payload.type still exists')
 	}
+
+	initAuthTables()
 } catch (error) {
 	console.error(
 		'Unable to open database',

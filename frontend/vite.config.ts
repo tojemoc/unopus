@@ -17,5 +17,18 @@ export default defineConfig({
 		//
 		TanStackRouterVite({ target: 'react', autoCodeSplitting: true }),
 		react()
-	]
+	],
+	server: {
+		proxy: {
+			'/api': {
+				target: 'http://localhost:3010',
+				changeOrigin: true
+			},
+			'/socket.io': {
+				target: 'http://localhost:3010',
+				ws: true,
+				changeOrigin: true
+			}
+		}
+	}
 })

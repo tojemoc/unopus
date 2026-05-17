@@ -170,6 +170,17 @@
 		.sidebar-part-wrapper {
 			position: relative;
 			margin-left: 1em;
+			margin-bottom: 0.35em;
+
+			.sidebar-part {
+				padding: 0.45em 0.35em;
+				min-height: 2.5em;
+			}
+
+			.part-edit-hint {
+				font-size: 0.65em;
+				font-weight: normal;
+			}
 
 			.item-duration {
 				top: 1.7em;

@@ -25,6 +25,8 @@ import { mutations as segmentsMutations, sendSegmentDiffToCore } from './segment
 import { spliceReorder } from '../util'
 import { mutations as piecesMutations } from './pieces'
 import { Server, Socket } from 'socket.io'
+import { recordEntityEdit } from '../auth/authStore'
+import type { AuthenticatedSocket } from '../auth/socketAuth'
 
 async function mutatePart(part: Part): Promise<MutatedPart> {
 	return {
@@ -554,7 +556,10 @@ export function registerPartsHandlers(socket: Socket, io: Server) {
 				break
 			case IpcOperationType.Update:
 				{
-					const { result, error } = await handlePartUpdate(payload)
+					const { result, error } = await handlePartUpdate(
+						payload,
+						(socket as AuthenticatedSocket).data.user
+					)
 					callback(result || error)
 				}
 				break
@@ -625,7 +630,10 @@ async function handleCopyPart(payload: MutationPartCopy) {
 
 	return { result, error: returnedError }
 }
-async function handlePartUpdate(payload: MutationPartUpdate) {
+async function handlePartUpdate(
+	payload: MutationPartUpdate,
+	editor: AuthenticatedSocket['data']['user']
+) {
 	{
 		let returnedError: unknown | Error | undefined
 
@@ -635,6 +643,11 @@ async function handlePartUpdate(payload: MutationPartUpdate) {
 		if (updateError) returnedError = updateError
 
 		if (document && 'id' in document && result) {
+			try {
+				recordEntityEdit('part', result.id, editor)
+			} catch (error) {
+				console.error('Failed to record entity edit for part', result.id, error)
+			}
 			try {
 				await sendPartDiffToCore(document, result)
 			} catch (error) {

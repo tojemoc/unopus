@@ -9,12 +9,14 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as RootRouteRouteImport } from './routes/_root/route'
 import { Route as RootIndexRouteImport } from './routes/_root/index'
 import { Route as RundownRundownIdRouteImport } from './routes/rundown/$rundownId'
 import { Route as RootSettingsRouteImport } from './routes/_root/settings'
 import { Route as RundownRundownIdIndexRouteImport } from './routes/rundown/$rundownId/index'
 import { Route as RootSettingsIndexRouteImport } from './routes/_root/settings/index'
+import { Route as RootSettingsUsersRouteImport } from './routes/_root/settings/users'
 import { Route as RootSettingsRundownRouteImport } from './routes/_root/settings/rundown'
 import { Route as RootSettingsConnectionRouteImport } from './routes/_root/settings/connection'
 import { Route as RootSettingsTypeTypeRouteImport } from './routes/_root/settings/type/$type'
@@ -22,6 +24,11 @@ import { Route as RundownRundownIdSegmentSegmentIdIndexRouteImport } from './rou
 import { Route as RundownRundownIdSegmentSegmentIdPartPartIdIndexRouteImport } from './routes/rundown/$rundownId/segment/$segmentId/part/$partId/index'
 import { Route as RundownRundownIdSegmentSegmentIdPartPartIdPiecePieceIdRouteImport } from './routes/rundown/$rundownId/segment/$segmentId/part/$partId/piece/$pieceId'
 
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RootRouteRoute = RootRouteRouteImport.update({
   id: '/_root',
   getParentRoute: () => rootRouteImport,
@@ -49,6 +56,11 @@ const RundownRundownIdIndexRoute = RundownRundownIdIndexRouteImport.update({
 const RootSettingsIndexRoute = RootSettingsIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => RootSettingsRoute,
+} as any)
+const RootSettingsUsersRoute = RootSettingsUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
   getParentRoute: () => RootSettingsRoute,
 } as any)
 const RootSettingsRundownRoute = RootSettingsRundownRouteImport.update({
@@ -86,11 +98,13 @@ const RundownRundownIdSegmentSegmentIdPartPartIdPiecePieceIdRoute =
   } as any)
 
 export interface FileRoutesByFullPath {
+  '/login': typeof LoginRoute
   '/settings': typeof RootSettingsRouteWithChildren
   '/rundown/$rundownId': typeof RundownRundownIdRouteWithChildren
   '/': typeof RootIndexRoute
   '/settings/connection': typeof RootSettingsConnectionRoute
   '/settings/rundown': typeof RootSettingsRundownRoute
+  '/settings/users': typeof RootSettingsUsersRoute
   '/settings/': typeof RootSettingsIndexRoute
   '/rundown/$rundownId/': typeof RundownRundownIdIndexRoute
   '/settings/type/$type': typeof RootSettingsTypeTypeRoute
@@ -99,9 +113,11 @@ export interface FileRoutesByFullPath {
   '/rundown/$rundownId/segment/$segmentId/part/$partId/piece/$pieceId': typeof RundownRundownIdSegmentSegmentIdPartPartIdPiecePieceIdRoute
 }
 export interface FileRoutesByTo {
+  '/login': typeof LoginRoute
   '/': typeof RootIndexRoute
   '/settings/connection': typeof RootSettingsConnectionRoute
   '/settings/rundown': typeof RootSettingsRundownRoute
+  '/settings/users': typeof RootSettingsUsersRoute
   '/settings': typeof RootSettingsIndexRoute
   '/rundown/$rundownId': typeof RundownRundownIdIndexRoute
   '/settings/type/$type': typeof RootSettingsTypeTypeRoute
@@ -112,11 +128,13 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_root': typeof RootRouteRouteWithChildren
+  '/login': typeof LoginRoute
   '/_root/settings': typeof RootSettingsRouteWithChildren
   '/rundown/$rundownId': typeof RundownRundownIdRouteWithChildren
   '/_root/': typeof RootIndexRoute
   '/_root/settings/connection': typeof RootSettingsConnectionRoute
   '/_root/settings/rundown': typeof RootSettingsRundownRoute
+  '/_root/settings/users': typeof RootSettingsUsersRoute
   '/_root/settings/': typeof RootSettingsIndexRoute
   '/rundown/$rundownId/': typeof RundownRundownIdIndexRoute
   '/_root/settings/type/$type': typeof RootSettingsTypeTypeRoute
@@ -127,11 +145,13 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
+    | '/login'
     | '/settings'
     | '/rundown/$rundownId'
     | '/'
     | '/settings/connection'
     | '/settings/rundown'
+    | '/settings/users'
     | '/settings/'
     | '/rundown/$rundownId/'
     | '/settings/type/$type'
@@ -140,9 +160,11 @@ export interface FileRouteTypes {
     | '/rundown/$rundownId/segment/$segmentId/part/$partId/piece/$pieceId'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/login'
     | '/'
     | '/settings/connection'
     | '/settings/rundown'
+    | '/settings/users'
     | '/settings'
     | '/rundown/$rundownId'
     | '/settings/type/$type'
@@ -152,11 +174,13 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_root'
+    | '/login'
     | '/_root/settings'
     | '/rundown/$rundownId'
     | '/_root/'
     | '/_root/settings/connection'
     | '/_root/settings/rundown'
+    | '/_root/settings/users'
     | '/_root/settings/'
     | '/rundown/$rundownId/'
     | '/_root/settings/type/$type'
@@ -167,11 +191,19 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   RootRouteRoute: typeof RootRouteRouteWithChildren
+  LoginRoute: typeof LoginRoute
   RundownRundownIdRoute: typeof RundownRundownIdRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_root': {
       id: '/_root'
       path: ''
@@ -212,6 +244,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/settings/'
       preLoaderRoute: typeof RootSettingsIndexRouteImport
+      parentRoute: typeof RootSettingsRoute
+    }
+    '/_root/settings/users': {
+      id: '/_root/settings/users'
+      path: '/users'
+      fullPath: '/settings/users'
+      preLoaderRoute: typeof RootSettingsUsersRouteImport
       parentRoute: typeof RootSettingsRoute
     }
     '/_root/settings/rundown': {
@@ -262,6 +301,7 @@ declare module '@tanstack/react-router' {
 interface RootSettingsRouteChildren {
   RootSettingsConnectionRoute: typeof RootSettingsConnectionRoute
   RootSettingsRundownRoute: typeof RootSettingsRundownRoute
+  RootSettingsUsersRoute: typeof RootSettingsUsersRoute
   RootSettingsIndexRoute: typeof RootSettingsIndexRoute
   RootSettingsTypeTypeRoute: typeof RootSettingsTypeTypeRoute
 }
@@ -269,6 +309,7 @@ interface RootSettingsRouteChildren {
 const RootSettingsRouteChildren: RootSettingsRouteChildren = {
   RootSettingsConnectionRoute: RootSettingsConnectionRoute,
   RootSettingsRundownRoute: RootSettingsRundownRoute,
+  RootSettingsUsersRoute: RootSettingsUsersRoute,
   RootSettingsIndexRoute: RootSettingsIndexRoute,
   RootSettingsTypeTypeRoute: RootSettingsTypeTypeRoute,
 }
@@ -313,6 +354,7 @@ const RundownRundownIdRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   RootRouteRoute: RootRouteRouteWithChildren,
+  LoginRoute: LoginRoute,
   RundownRundownIdRoute: RundownRundownIdRouteWithChildren,
 }
 export const routeTree = rootRouteImport

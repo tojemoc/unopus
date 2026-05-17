@@ -3,6 +3,7 @@ FROM node:22-slim AS builder
 
 # Set production environment
 ENV NODE_ENV=production
+ENV DATA_DIR=/app/data
 
 # Set working directory
 WORKDIR /app
@@ -19,7 +20,9 @@ RUN yarn install --frozen-lockfile
 # Build the app
 RUN yarn build
 
-RUN mkdir /app/data
+RUN mkdir /app/data && chown -R node:node /app /app/data
+
+USER node
 
 # Default command (adjust as needed)
 CMD ["yarn", "start"]

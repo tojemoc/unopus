@@ -1,24 +1,28 @@
 import { useForm } from '@tanstack/react-form'
-import { Button, ButtonGroup, Form } from 'react-bootstrap'
+import { useState } from 'react'
+import { Alert, Button, ButtonGroup, Form } from 'react-bootstrap'
 import type { ApplicationSettings } from '~backend/background/interfaces'
+import { CoreConnectionStatus } from '~backend/background/interfaces'
 import { FieldInfo } from '../form'
-import { useAppDispatch } from '~/store/app'
+import { useAppDispatch, useAppSelector } from '~/store/app'
 import { updateSettings } from '~/store/settings'
+import { ipcAPI } from '~/lib/IPC'
 import { useToasts } from '../toasts/useToasts'
+import { friendlyLabel } from '~/util/fieldLabels'
 
 export function CoreConnectionSettingsForm({ settings }: { settings: ApplicationSettings }) {
 	const dispatch = useAppDispatch()
 	const toasts = useToasts()
+	const connectionStatus = useAppSelector((s) => s.coreConnectionStatus)
+	const [testMessage, setTestMessage] = useState<string | null>(null)
+	const [testVariant, setTestVariant] = useState<'success' | 'danger'>('success')
+	const [testing, setTesting] = useState(false)
 
 	const form = useForm({
 		defaultValues: settings,
 		onSubmit: async (values) => {
-			console.log('submit', values)
-
 			try {
 				await dispatch(updateSettings({ settings: values.value })).unwrap()
-
-				// Mark as pristine
 				form.reset()
 			} catch (e) {
 				console.error(e)
@@ -29,6 +33,30 @@ export function CoreConnectionSettingsForm({ settings }: { settings: Application
 			}
 		}
 	})
+
+	const testConnection = async () => {
+		setTesting(true)
+		setTestMessage(null)
+		try {
+			await dispatch(updateSettings({ settings: form.state.values })).unwrap()
+			const info = await ipcAPI.getCoreConnectionInfo()
+			if (info.status === CoreConnectionStatus.CONNECTED) {
+				setTestVariant('success')
+				setTestMessage('Connected to Sofie Core')
+			} else {
+				setTestVariant('danger')
+				setTestMessage(
+					'Could not connect — check the URL and make sure Sofie Core is running.'
+				)
+			}
+		} catch (error) {
+			console.error('Core connection test failed:', error)
+			setTestVariant('danger')
+			setTestMessage('Could not connect — check the URL and make sure Sofie Core is running.')
+		} finally {
+			setTesting(false)
+		}
+	}
 
 	return (
 		<div>
@@ -44,7 +72,7 @@ export function CoreConnectionSettingsForm({ settings }: { settings: Application
 					children={(field) => (
 						<>
 							<Form.Group className="mb-3">
-								<Form.Label htmlFor={field.name}>Address:</Form.Label>
+								<Form.Label htmlFor={field.name}>{friendlyLabel('coreUrl')}</Form.Label>
 								<Form.Control
 									name={field.name}
 									type="text"
@@ -63,7 +91,7 @@ export function CoreConnectionSettingsForm({ settings }: { settings: Application
 					children={(field) => (
 						<>
 							<Form.Group className="mb-3">
-								<Form.Label htmlFor={field.name}>Port:</Form.Label>
+								<Form.Label htmlFor={field.name}>{friendlyLabel('corePort')}</Form.Label>
 								<Form.Control
 									name={field.name}
 									type="number"
@@ -77,6 +105,16 @@ export function CoreConnectionSettingsForm({ settings }: { settings: Application
 						</>
 					)}
 				/>
+
+				<div className="mb-3">
+					<Button variant="outline-primary" onClick={() => void testConnection()} disabled={testing}>
+						{testing ? 'Testing…' : 'Test Connection'}
+					</Button>
+					{connectionStatus.status === CoreConnectionStatus.CONNECTED && !testMessage && (
+						<span className="text-success ms-3 small">Currently connected</span>
+					)}
+				</div>
+				{testMessage && <Alert variant={testVariant}>{testMessage}</Alert>}
 
 				<form.Subscribe
 					selector={(state) => [state.canSubmit, state.isSubmitting, state.isPristine]}

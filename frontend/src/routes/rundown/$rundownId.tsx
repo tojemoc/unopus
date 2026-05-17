@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet } from '@tanstack/react-router'
 import { useEffect } from 'react'
 import { Stack } from 'react-bootstrap'
-import { EditorNavbar } from '~/components/navbar/navbar'
+import { DuopusNavbar } from '~/components/navbar/duopusNavbar'
 import { RundownNavbar } from '~/components/rundown/navbar'
 import { RundownSidebar } from '~/components/rundown/sidebar'
 import { useAppDispatch, useAppSelector } from '~/store/app'
@@ -54,7 +54,7 @@ function RouteComponent() {
 		// Note: this can't redirect, or it gets stuck in a loop
 		return (
 			<>
-				<EditorNavbar />
+				<DuopusNavbar />
 				<div>Rundown not found</div>
 			</>
 		)
@@ -62,6 +62,7 @@ function RouteComponent() {
 
 	return (
 		<div style={rootStyle}>
+			<DuopusNavbar rundownName={rundown.name} />
 			<RundownNavbar rundown={rundown} />
 
 			<Stack

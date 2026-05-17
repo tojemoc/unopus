@@ -7,11 +7,13 @@ export function initSocket(server: HTTPServer): SocketIOServer | undefined {
 	if (ioInstance) {
 		return
 	}
-	const corsOrigin = process.env.NODE_ENV === 'development' ? '*' : false
+	const corsOrigin =
+		process.env.NODE_ENV === 'development' ? ['http://localhost:5173', 'http://127.0.0.1:5173'] : false
 
 	ioInstance = new SocketIOServer(server, {
 		cors: {
-			origin: corsOrigin
+			origin: corsOrigin,
+			credentials: true
 		}
 	})
 
