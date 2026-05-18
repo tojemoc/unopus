@@ -17,7 +17,6 @@ import { Route as RootSettingsRouteImport } from './routes/_root/settings'
 import { Route as RundownRundownIdIndexRouteImport } from './routes/rundown/$rundownId/index'
 import { Route as RootSettingsIndexRouteImport } from './routes/_root/settings/index'
 import { Route as RootSettingsUsersRouteImport } from './routes/_root/settings/users'
-import { Route as RootSettingsStoryTemplatesRouteImport } from './routes/_root/settings/story-templates'
 import { Route as RootSettingsScheduleRouteImport } from './routes/_root/settings/schedule'
 import { Route as RootSettingsRundownRouteImport } from './routes/_root/settings/rundown'
 import { Route as RootSettingsConnectionRouteImport } from './routes/_root/settings/connection'
@@ -65,12 +64,6 @@ const RootSettingsUsersRoute = RootSettingsUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => RootSettingsRoute,
 } as any)
-const RootSettingsStoryTemplatesRoute =
-  RootSettingsStoryTemplatesRouteImport.update({
-    id: '/story-templates',
-    path: '/story-templates',
-    getParentRoute: () => RootSettingsRoute,
-  } as any)
 const RootSettingsScheduleRoute = RootSettingsScheduleRouteImport.update({
   id: '/schedule',
   path: '/schedule',
@@ -118,7 +111,6 @@ export interface FileRoutesByFullPath {
   '/settings/connection': typeof RootSettingsConnectionRoute
   '/settings/rundown': typeof RootSettingsRundownRoute
   '/settings/schedule': typeof RootSettingsScheduleRoute
-  '/settings/story-templates': typeof RootSettingsStoryTemplatesRoute
   '/settings/users': typeof RootSettingsUsersRoute
   '/settings/': typeof RootSettingsIndexRoute
   '/rundown/$rundownId/': typeof RundownRundownIdIndexRoute
@@ -133,7 +125,6 @@ export interface FileRoutesByTo {
   '/settings/connection': typeof RootSettingsConnectionRoute
   '/settings/rundown': typeof RootSettingsRundownRoute
   '/settings/schedule': typeof RootSettingsScheduleRoute
-  '/settings/story-templates': typeof RootSettingsStoryTemplatesRoute
   '/settings/users': typeof RootSettingsUsersRoute
   '/settings': typeof RootSettingsIndexRoute
   '/rundown/$rundownId': typeof RundownRundownIdIndexRoute
@@ -152,7 +143,6 @@ export interface FileRoutesById {
   '/_root/settings/connection': typeof RootSettingsConnectionRoute
   '/_root/settings/rundown': typeof RootSettingsRundownRoute
   '/_root/settings/schedule': typeof RootSettingsScheduleRoute
-  '/_root/settings/story-templates': typeof RootSettingsStoryTemplatesRoute
   '/_root/settings/users': typeof RootSettingsUsersRoute
   '/_root/settings/': typeof RootSettingsIndexRoute
   '/rundown/$rundownId/': typeof RundownRundownIdIndexRoute
@@ -171,7 +161,6 @@ export interface FileRouteTypes {
     | '/settings/connection'
     | '/settings/rundown'
     | '/settings/schedule'
-    | '/settings/story-templates'
     | '/settings/users'
     | '/settings/'
     | '/rundown/$rundownId/'
@@ -186,7 +175,6 @@ export interface FileRouteTypes {
     | '/settings/connection'
     | '/settings/rundown'
     | '/settings/schedule'
-    | '/settings/story-templates'
     | '/settings/users'
     | '/settings'
     | '/rundown/$rundownId'
@@ -204,7 +192,6 @@ export interface FileRouteTypes {
     | '/_root/settings/connection'
     | '/_root/settings/rundown'
     | '/_root/settings/schedule'
-    | '/_root/settings/story-templates'
     | '/_root/settings/users'
     | '/_root/settings/'
     | '/rundown/$rundownId/'
@@ -278,13 +265,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RootSettingsUsersRouteImport
       parentRoute: typeof RootSettingsRoute
     }
-    '/_root/settings/story-templates': {
-      id: '/_root/settings/story-templates'
-      path: '/story-templates'
-      fullPath: '/settings/story-templates'
-      preLoaderRoute: typeof RootSettingsStoryTemplatesRouteImport
-      parentRoute: typeof RootSettingsRoute
-    }
     '/_root/settings/schedule': {
       id: '/_root/settings/schedule'
       path: '/schedule'
@@ -341,7 +321,6 @@ interface RootSettingsRouteChildren {
   RootSettingsConnectionRoute: typeof RootSettingsConnectionRoute
   RootSettingsRundownRoute: typeof RootSettingsRundownRoute
   RootSettingsScheduleRoute: typeof RootSettingsScheduleRoute
-  RootSettingsStoryTemplatesRoute: typeof RootSettingsStoryTemplatesRoute
   RootSettingsUsersRoute: typeof RootSettingsUsersRoute
   RootSettingsIndexRoute: typeof RootSettingsIndexRoute
   RootSettingsTypeTypeRoute: typeof RootSettingsTypeTypeRoute
@@ -351,7 +330,6 @@ const RootSettingsRouteChildren: RootSettingsRouteChildren = {
   RootSettingsConnectionRoute: RootSettingsConnectionRoute,
   RootSettingsRundownRoute: RootSettingsRundownRoute,
   RootSettingsScheduleRoute: RootSettingsScheduleRoute,
-  RootSettingsStoryTemplatesRoute: RootSettingsStoryTemplatesRoute,
   RootSettingsUsersRoute: RootSettingsUsersRoute,
   RootSettingsIndexRoute: RootSettingsIndexRoute,
   RootSettingsTypeTypeRoute: RootSettingsTypeTypeRoute,

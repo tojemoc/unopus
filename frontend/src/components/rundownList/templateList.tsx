@@ -1,12 +1,14 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Button, Card, Col, Form, Modal, Row } from 'react-bootstrap'
-import { Link } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import { BsBoxArrowInUp, BsBoxArrowUp } from 'react-icons/bs'
 import type { Rundown, SerializedRundown } from '~backend/background/interfaces'
+import { DropImportZone } from '~/components/files/dropImportZone'
 import { useAppDispatch, useAppSelector, useAppStore } from '~/store/app'
 import { ipcAPI } from '~/lib/IPC'
 import { regenerateFromTemplate, reconcileTemplateSchedule } from '~/lib/rundownScheduleApi'
-import { updateRundown, pushRundown, initRundowns } from '~/store/rundowns'
+import { extractOriginalRundownId, parseImportFile } from '~/util/normalizeImport'
+import { importRundown, updateRundown, pushRundown, initRundowns } from '~/store/rundowns'
 import { useToasts } from '~/components/toasts/useToasts'
 
 interface TemplateListProps {
@@ -17,6 +19,7 @@ interface TemplateListProps {
 export function TemplateList({ templates, onImportTemplate }: TemplateListProps) {
 	const dispatch = useAppDispatch()
 	const store = useAppStore()
+	const navigate = useNavigate()
 	const toasts = useToasts()
 	const settings = useAppSelector((s) => s.settings.settings)
 	const [regenerateTarget, setRegenerateTarget] = useState<Rundown | null>(null)
@@ -106,23 +109,50 @@ export function TemplateList({ templates, onImportTemplate }: TemplateListProps)
 	const defaultAhead = settings?.scheduleAheadCount ?? 5
 	const defaultStart = settings?.scheduleStartTime ?? '18:00'
 
-	const importButton = (
-		<Button
-			variant="outline-primary"
-			size="sm"
-			className="d-inline-flex align-items-center gap-2 mt-3"
-			onClick={onImportTemplate}
-		>
-			<BsBoxArrowInUp aria-hidden />
-			Import template
-		</Button>
+	const handleImportFile = useCallback(
+		async (file: File) => {
+			const text = await file.text()
+			const data = JSON.parse(text) as unknown
+			const originalId = extractOriginalRundownId(data)
+			if (originalId && store.getState().rundowns.some((r) => r.id === originalId)) {
+				throw new Error('A rundown with this id already exists')
+			}
+			parseImportFile(data, true)
+			const created = await dispatch(importRundown({ data, isTemplate: true })).unwrap()
+			await navigate({ to: `/rundown/${created.id}` })
+			toasts.show({
+				headerContent: 'Import template',
+				bodyContent: `Imported “${created.name}”`
+			})
+		},
+		[dispatch, navigate, store, toasts]
+	)
+
+	const importZone = (
+		<DropImportZone
+			label="Import rundown or story-pattern template (JSON)"
+			onFile={handleImportFile}
+		/>
 	)
 
 	if (templates.length === 0) {
 		return (
 			<div className="rundown-empty-state">
-				<p>No templates yet. Create one or import a rundown template to get started.</p>
-				{importButton}
+				<p>
+					No templates yet. Create one, import{' '}
+					<code>examples/demo-rundown.json</code>, or a story-pattern file such as{' '}
+					<code>examples/demo-news-story-template.json</code>.
+				</p>
+				<Button
+					variant="outline-primary"
+					size="sm"
+					className="d-inline-flex align-items-center gap-2 mb-3"
+					onClick={onImportTemplate}
+				>
+					<BsBoxArrowInUp aria-hidden />
+					Import via file picker
+				</Button>
+				{importZone}
 			</div>
 		)
 	}
@@ -220,7 +250,18 @@ export function TemplateList({ templates, onImportTemplate }: TemplateListProps)
 				))}
 			</Row>
 
-			{importButton}
+			<div className="mt-4">
+				<Button
+					variant="outline-primary"
+					size="sm"
+					className="d-inline-flex align-items-center gap-2 mb-2"
+					onClick={onImportTemplate}
+				>
+					<BsBoxArrowInUp aria-hidden />
+					Import via file picker
+				</Button>
+				{importZone}
+			</div>
 
 			<Modal show={regenerateTarget !== null} onHide={() => setRegenerateTarget(null)} centered>
 				<Modal.Header closeButton>

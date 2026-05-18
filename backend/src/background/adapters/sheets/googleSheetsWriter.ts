@@ -32,7 +32,7 @@ function buildRange(sheetName: string | undefined, startRow: number, rowCount?: 
 	return sheetName ? `'${sheetName.replace(/'/g, "''")}'!${range}` : range
 }
 
-function loadCredentialsFromEnv(): object | null {
+export function loadCredentialsFromEnv(): object | null {
 	const inline = process.env.GOOGLE_SHEETS_CREDENTIALS_JSON?.trim()
 	if (inline) {
 		return JSON.parse(inline) as object
@@ -63,13 +63,7 @@ export function isGoogleSheetsConfigured(): boolean {
 	}
 }
 
-async function createSheetsClient(): Promise<sheets_v4.Sheets> {
-	const credentials = loadCredentialsFromEnv()
-	if (!credentials) {
-		throw new Error(
-			'Google Sheets credentials missing. Set GOOGLE_SHEETS_CREDENTIALS_JSON or GOOGLE_SHEETS_CREDENTIALS_PATH.'
-		)
-	}
+async function createSheetsClient(credentials: object): Promise<sheets_v4.Sheets> {
 	const auth = new google.auth.GoogleAuth({
 		credentials,
 		scopes: ['https://www.googleapis.com/auth/spreadsheets']
@@ -77,14 +71,69 @@ async function createSheetsClient(): Promise<sheets_v4.Sheets> {
 	return google.sheets({ version: 'v4', auth })
 }
 
+/** Probe cell in column K (outside A–J automation columns). */
+function buildWriteProbeRange(sheetName: string | undefined, row: number): string {
+	const cell = `K${row}`
+	return sheetName ? `'${sheetName.replace(/'/g, "''")}'!${cell}` : cell
+}
+
+export async function testGoogleSheetsConnection(
+	config: GoogleSheetsWriterConfig,
+	credentials: object
+): Promise<{ title: string; sheetTitle?: string }> {
+	const sheets = await createSheetsClient(credentials)
+	const meta = await sheets.spreadsheets.get({ spreadsheetId: config.spreadsheetId })
+	const title = meta.data.properties?.title ?? config.spreadsheetId
+	const sheetTitle =
+		config.sheetName ??
+		meta.data.sheets?.[0]?.properties?.title ??
+		undefined
+	const readRange = buildRange(config.sheetName, config.startRow ?? 2, 1)
+	await sheets.spreadsheets.values.get({
+		spreadsheetId: config.spreadsheetId,
+		range: readRange
+	})
+
+	const probeRow = config.startRow ?? 2
+	const probeRange = buildWriteProbeRange(config.sheetName, probeRow)
+	const prior = await sheets.spreadsheets.values.get({
+		spreadsheetId: config.spreadsheetId,
+		range: probeRange
+	})
+	const priorValue = prior.data.values?.[0]?.[0] ?? ''
+
+	const probeToken = `__sofie_probe_${Date.now()}__`
+	await sheets.spreadsheets.values.update({
+		spreadsheetId: config.spreadsheetId,
+		range: probeRange,
+		valueInputOption: 'RAW',
+		requestBody: { values: [[probeToken]] }
+	})
+	await sheets.spreadsheets.values.update({
+		spreadsheetId: config.spreadsheetId,
+		range: probeRange,
+		valueInputOption: 'RAW',
+		requestBody: { values: [[priorValue]] }
+	})
+
+	return { title, sheetTitle }
+}
+
 /**
  * Clears existing data rows from startRow downward (columns A–J), then writes new rows.
  */
 export async function writeSheetRows(
 	rows: SheetRow[],
-	config: GoogleSheetsWriterConfig
+	config: GoogleSheetsWriterConfig,
+	credentials?: object
 ): Promise<GoogleSheetsWriteResult> {
-	const sheets = await createSheetsClient()
+	const creds = credentials ?? loadCredentialsFromEnv()
+	if (!creds) {
+		throw new Error(
+			'Google Sheets credentials missing. Set GOOGLE_SHEETS_CREDENTIALS_JSON or GOOGLE_SHEETS_CREDENTIALS_PATH.'
+		)
+	}
+	const sheets = await createSheetsClient(creds)
 	const startRow = config.startRow ?? 2
 	const matrix = sheetRowsToSpreadsheetMatrix(rows)
 	const clearRange = buildRange(config.sheetName, startRow)
@@ -114,6 +163,14 @@ export async function writeSheetRows(
 		updatedRange,
 		rowCount: matrix.length
 	}
+}
+
+export async function writeSheetRowsResolved(
+	rows: SheetRow[],
+	config: GoogleSheetsWriterConfig,
+	credentials: object
+): Promise<GoogleSheetsWriteResult> {
+	return writeSheetRows(rows, config, credentials)
 }
 
 export async function writeSheetRowsFromEnv(rows: SheetRow[]): Promise<GoogleSheetsWriteResult> {

@@ -21,6 +21,9 @@ export {
 	writeSheetRowsFromEnv,
 	getGoogleSheetsConfigFromEnv,
 	isGoogleSheetsConfigured,
+	loadCredentialsFromEnv,
+	testGoogleSheetsConnection,
+	writeSheetRowsResolved,
 	type GoogleSheetsWriterConfig,
 	type GoogleSheetsWriteResult
 } from './googleSheetsWriter'
