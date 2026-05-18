@@ -16,6 +16,8 @@ export {
 	sheetRowsToCoreColumns,
 	sheetRowsToCsv
 } from './rowFormat'
+export { computeVolume } from './volume'
+export { recalculateTransitions, normalizeText } from './transitions'
 export {
 	writeSheetRows,
 	writeSheetRowsFromEnv,
