@@ -1,13 +1,14 @@
 import type { ApplicationSettings } from './interfaces'
 
-const SCHEDULE_TIME_RE = /^([01]?\d|2[0-3]):[0-5]\d$/
+const SCHEDULE_TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/
 
 function isValidTimeZone(timeZone: string): boolean {
 	try {
 		Intl.DateTimeFormat('en-US', { timeZone }).format(new Date())
 		return true
 	} catch (e) {
-		return e instanceof RangeError ? false : true
+		console.warn('Timezone validation failed', { timeZone, e })
+		return false
 	}
 }
 

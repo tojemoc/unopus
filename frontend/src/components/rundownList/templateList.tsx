@@ -36,7 +36,7 @@ export function TemplateList({ templates, onImportTemplate }: TemplateListProps)
 			const updated = await dispatch(
 				updateRundown({ rundown: { ...current, ...patch } })
 			).unwrap()
-			if (patch.scheduleEnabled) {
+			if (updated.scheduleEnabled) {
 				const created = await reconcileTemplateSchedule(updated.id)
 				for (const r of created) {
 					dispatch(pushRundown(r))
