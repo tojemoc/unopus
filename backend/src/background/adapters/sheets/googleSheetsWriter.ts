@@ -26,9 +26,9 @@ function columnLetter(index: number): string {
 	return result
 }
 
-function buildRange(sheetName: string | undefined, startRow: number, rowCount: number): string {
-	const endRow = startRow + rowCount - 1
-	const range = `A${startRow}:J${endRow}`
+function buildRange(sheetName: string | undefined, startRow: number, rowCount?: number): string {
+	const range =
+		rowCount === undefined ? `A${startRow}:J` : `A${startRow}:J${startRow + rowCount - 1}`
 	return sheetName ? `'${sheetName.replace(/'/g, "''")}'!${range}` : range
 }
 
@@ -56,7 +56,11 @@ export function getGoogleSheetsConfigFromEnv(): GoogleSheetsWriterConfig | null 
 }
 
 export function isGoogleSheetsConfigured(): boolean {
-	return Boolean(getGoogleSheetsConfigFromEnv() && loadCredentialsFromEnv())
+	try {
+		return Boolean(getGoogleSheetsConfigFromEnv() && loadCredentialsFromEnv())
+	} catch {
+		return false
+	}
 }
 
 async function createSheetsClient(): Promise<sheets_v4.Sheets> {
@@ -83,7 +87,7 @@ export async function writeSheetRows(
 	const sheets = await createSheetsClient()
 	const startRow = config.startRow ?? 2
 	const matrix = sheetRowsToSpreadsheetMatrix(rows)
-	const clearRange = buildRange(config.sheetName, startRow, 1000)
+	const clearRange = buildRange(config.sheetName, startRow)
 
 	await sheets.spreadsheets.values.clear({
 		spreadsheetId: config.spreadsheetId,
