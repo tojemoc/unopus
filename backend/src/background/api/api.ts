@@ -1,6 +1,7 @@
 import type {
 	ApplicationSettings,
 	CoreConnectionInfo,
+	GenerateRundownFromTemplateRequest,
 	MutationPartCopy,
 	MutationPartCreate,
 	MutationPartMove,
@@ -23,6 +24,10 @@ import type {
 	PartsUpdateEvent,
 	Piece,
 	PiecesUpdateEvent,
+	QuickAddStoryRequest,
+	QuickAddStoryResult,
+	StoryLibraryEntry,
+	StoryLibraryRecallRequest,
 	TypeManifest,
 	Playlist,
 	Rundown,
@@ -85,4 +90,14 @@ export interface BackendApi {
 	onPiecesUpdate: (callback: (update: PiecesUpdateEvent) => void) => void
 	onPartsUpdate: (callback: (update: PartsUpdateEvent) => void) => void
 	onSegmentsUpdate: (callback: (update: SegmentsUpdateEvent) => void) => void
+
+	quickAddStory: (segmentId: string, payload: QuickAddStoryRequest) => Promise<QuickAddStoryResult>
+	searchStoryLibrary: (q: string, limit?: number, offset?: number) => Promise<StoryLibraryEntry[]>
+	recallStory: (
+		partId: string,
+		payload: StoryLibraryRecallRequest
+	) => Promise<{ part: Part; pieces: Piece[] }>
+	generateRundownFromTemplate: (
+		payload: GenerateRundownFromTemplateRequest
+	) => Promise<Rundown>
 }

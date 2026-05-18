@@ -387,3 +387,51 @@ export interface PartsUpdateEvent {
 export interface SegmentsUpdateEvent {
 	segments?: Segment[]
 }
+
+export interface StoryTemplate {
+	id: string
+	name: string
+	pattern: string[]
+	createdAt: number
+}
+
+export type MutationStoryTemplateCreate = SetOptional<
+	Pick<StoryTemplate, 'name' | 'pattern'>,
+	'pattern'
+>
+
+export type MutationStoryTemplateUpdate = Pick<StoryTemplate, 'id'> &
+	Partial<Pick<StoryTemplate, 'name' | 'pattern'>>
+
+export interface QuickAddStoryRequest {
+	storyTemplateId: string
+	rank?: number
+}
+
+export interface QuickAddStoryResult {
+	parts: Part[]
+	pieces: Piece[]
+}
+
+export interface StoryLibraryEntry {
+	id: string
+	name: string
+	script?: string
+	partType: string
+	rundownName: string
+	rundownId: string
+	segmentName: string
+	segmentId: string
+	rundownDate?: number
+	editedAt: number
+}
+
+export interface StoryLibraryRecallRequest {
+	targetSegmentId: string
+	targetRank?: number
+}
+
+export interface GenerateRundownFromTemplateRequest {
+	templateRundownId: string
+	scheduledDate: number
+}
