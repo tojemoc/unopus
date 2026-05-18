@@ -1,16 +1,18 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useCallback, useEffect, useState } from 'react'
-import { Alert, Button, Card, Form, ListGroup, Spinner } from 'react-bootstrap'
+import { Alert, Button, ButtonGroup, Card, Form, ListGroup, Spinner } from 'react-bootstrap'
 import { BsGripVertical, BsPlus, BsTrash } from 'react-icons/bs'
 import type { StoryTemplate } from '~backend/background/interfaces'
 import {
 	createStoryTemplate,
 	deleteStoryTemplate,
 	fetchStoryTemplates,
+	importStoryTemplates,
 	updateStoryTemplate
 } from '~/lib/storyApi'
 import { useAppSelector } from '~/store/app'
 import { useToasts } from '~/components/toasts/useToasts'
+import { DropImportZone } from '~/components/files/dropImportZone'
 
 export const Route = createFileRoute('/_root/settings/story-templates')({
 	component: StoryTemplatesSettings
@@ -128,6 +130,45 @@ function StoryTemplatesSettings() {
 
 	const onDragEnd = () => setDragIndex(null)
 
+	const parseImportPayload = (
+		data: unknown
+	): Array<Pick<StoryTemplate, 'name' | 'pattern'>> => {
+		const isTemplate = (
+			item: unknown
+		): item is Pick<StoryTemplate, 'name' | 'pattern'> =>
+			typeof item === 'object' &&
+			item !== null &&
+			typeof (item as StoryTemplate).name === 'string' &&
+			Array.isArray((item as StoryTemplate).pattern)
+
+		if (Array.isArray(data)) {
+			return data.filter(isTemplate)
+		}
+		if (typeof data === 'object' && data !== null) {
+			const record = data as { templates?: unknown; name?: unknown; pattern?: unknown }
+			if (Array.isArray(record.templates)) {
+				return record.templates.filter(isTemplate)
+			}
+			if (isTemplate(data)) {
+				return [data]
+			}
+		}
+		return []
+	}
+
+	const handleImportFile = async (file: File) => {
+		const parsed = parseImportPayload(JSON.parse(await file.text()) as unknown)
+		if (parsed.length === 0) {
+			throw new Error('No valid templates in file (need name + pattern arrays)')
+		}
+		const imported = await importStoryTemplates(parsed)
+		await load()
+		toasts.show({
+			headerContent: 'Story templates',
+			bodyContent: `Imported ${imported.length} template${imported.length === 1 ? '' : 's'}`
+		})
+	}
+
 	if (loading) {
 		return (
 			<div className="text-center py-4">
@@ -138,10 +179,39 @@ function StoryTemplatesSettings() {
 
 	return (
 		<div>
-			<h2 className="h4 mb-3">Story Templates</h2>
+			<h2 className="h4 mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+				<span>Story Templates</span>
+				<ButtonGroup size="sm">
+					<Button
+						variant="outline-light"
+						onClick={() => {
+							const blob = new Blob([JSON.stringify({ templates }, null, 2)], {
+								type: 'application/json'
+							})
+							const url = URL.createObjectURL(blob)
+							const anchor = document.createElement('a')
+							anchor.href = url
+							anchor.download = 'story-templates.json'
+							anchor.click()
+							URL.revokeObjectURL(url)
+						}}
+						disabled={templates.length === 0}
+					>
+						Export
+					</Button>
+				</ButtonGroup>
+			</h2>
 			<p className="text-muted">
-				Define reusable cue chains for Quick Story (e.g. VO → SOT → VO).
+				Define reusable cue chains for Quick Story (e.g. VO → SOT → VO). Import JSON to
+				restore templates after container restarts when using a persistent data volume.
 			</p>
+
+			<div className="mb-4">
+				<DropImportZone
+					label="Import story templates from JSON"
+					onFile={handleImportFile}
+				/>
+			</div>
 
 			<Card className="mb-4 bg-dark text-light border-secondary">
 				<Card.Body>

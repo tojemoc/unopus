@@ -219,35 +219,33 @@ export function SidebarSegment({
 					</Stack>
 				)}
 			</div>
-			{sortedParts.length > 0 && (
-				<Stack className="add-button-container px-3 pb-2">
+			<div className="segment-footer">
+				{sortedParts.length > 0 && (
 					<button
-						className="add-button"
+						type="button"
+						className="segment-footer-button"
 						onClick={() => {
-							const nextRank =
-								sortedParts.length === 0
-									? 0
-									: Math.max(...sortedParts.map((p) => p.rank ?? -1)) + 1
+							const nextRank = Math.max(...sortedParts.map((p) => p.rank ?? -1)) + 1
 							openQuickStory(nextRank)
 						}}
 					>
 						<BsLightningCharge className="icon-lg" aria-hidden />
 						Quick Story
 					</button>
-				</Stack>
-			)}
+				)}
+				<SegmentButtons
+					rundownId={segment.rundownId}
+					playlistId={segment.playlistId}
+					rank={insertRank}
+					setShowImportModal={setShowImportModal}
+				/>
+			</div>
 			<QuickStoryModal
 				show={showQuickStory}
 				onClose={() => setShowQuickStory(false)}
 				segment={segment}
 				insertRank={quickStoryRank}
 				onCreated={handleQuickStoryCreated}
-			/>
-			<SegmentButtons
-				rundownId={segment.rundownId}
-				playlistId={segment.playlistId}
-				rank={insertRank}
-				setShowImportModal={setShowImportModal}
 			/>
 		</div>
 	)
