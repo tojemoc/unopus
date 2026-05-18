@@ -1,0 +1,54 @@
+{
+	"presenterName": "Anna Nováková",
+	"headlines": [
+		{
+			"title": "Meeting cancelled",
+			"subtitle": "after Moscow visit",
+			"summary": "German chancellor cancelled the meeting with Slovak leadership after returning from Moscow."
+		},
+		{
+			"title": "Energy prices fall",
+			"subtitle": "households see relief",
+			"summary": "Regulated energy prices dropped for the second month in a row."
+		},
+		{
+			"title": "Coalition talks continue",
+			"subtitle": "deadline next week",
+			"summary": "Party leaders met again ahead of the coalition deadline."
+		}
+	],
+	"main_topics": [
+		{
+			"slug": "Fico Merz",
+			"title": "Meeting cancelled",
+			"body": "Narrator intro text about the cancelled summit.\n\nAdditional context on bilateral relations.",
+			"quotes": [
+				{
+					"speaker": "Robert Fico",
+					"role": "Prime Minister",
+					"text": "We respect the decision and remain open to dialogue."
+				}
+			]
+		},
+		{
+			"slug": "EU Budget",
+			"title": "Brussels approves plan",
+			"body": "The European Commission signed off on Slovakia's recovery plan update."
+		}
+	],
+	"one_sentence": [
+		{ "title": "Traffic", "text": "A truck fire closed the D1 motorway near Trnava." },
+		{ "title": "Culture", "text": "The national theatre announced a new season premiere." },
+		{ "title": "Economy", "text": "Inflation slowed to 3.1 percent in April." }
+	],
+	"sports": [
+		{ "title": "Football", "text": "Slovakia beat Poland 2-1 in a friendly." },
+		{ "title": "Hockey", "text": "The national team secured a playoff spot." }
+	],
+	"weather": {
+		"text": "Tomorrow cloudy with rain in the west, highs around 18 degrees."
+	},
+	"recommendation": {
+		"text": "Watch Insider 360 tonight at 22:00."
+	}
+}
