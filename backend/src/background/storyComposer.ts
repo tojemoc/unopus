@@ -106,9 +106,125 @@ async function createDefaultPiecesForPart(
 	return created
 }
 
-export async function quickAddStoryFromTemplate(
+async function pickTemplateSourceSegmentId(templateRundownId: string): Promise<string | undefined> {
+	const { result: segments } = await segmentMutations.read({ rundownId: templateRundownId })
+	if (!segments || !Array.isArray(segments) || segments.length === 0) {
+		return undefined
+	}
+	const sorted = [...segments].sort((a, b) => a.rank - b.rank)
+	let best = sorted[0]
+	let bestCount = 0
+	for (const segment of sorted) {
+		const { result: parts } = await partMutations.read({ segmentId: segment.id })
+		const count = Array.isArray(parts) ? parts.length : parts ? 1 : 0
+		if (count > bestCount) {
+			best = segment
+			bestCount = count
+		}
+	}
+	return best.id
+}
+
+export async function quickAddStoryFromRundownTemplate(
+	targetSegmentId: string,
+	request: QuickAddStoryRequest
+): Promise<{ result?: QuickAddStoryResult; error?: Error }> {
+	const templateRundownId = String(request.templateRundownId ?? '').trim()
+	if (!templateRundownId) {
+		return { error: new Error('templateRundownId is required') }
+	}
+
+	const { result: templateRundown, error: rundownError } =
+		await rundownMutations.readOne(templateRundownId)
+	if (rundownError || !templateRundown) {
+		return { error: rundownError ?? new Error('Template rundown not found') }
+	}
+	if (!templateRundown.isTemplate) {
+		return { error: new Error('Selected rundown is not marked as a template') }
+	}
+
+	const sourceSegmentId = await pickTemplateSourceSegmentId(templateRundownId)
+	if (!sourceSegmentId) {
+		return { error: new Error('Template rundown has no segments to copy from') }
+	}
+
+	const { result: targetSegment, error: segmentError } =
+		await segmentMutations.readOne(targetSegmentId)
+	if (segmentError || !targetSegment) {
+		return { error: segmentError ?? new Error('Segment not found') }
+	}
+
+	const { result: sourceParts } = await partMutations.read({ segmentId: sourceSegmentId })
+	const sourcePartList = Array.isArray(sourceParts) ? sourceParts : sourceParts ? [sourceParts] : []
+	if (sourcePartList.length === 0) {
+		return { error: new Error('Template segment has no parts') }
+	}
+
+	const { result: existingParts } = await partMutations.read({ segmentId: targetSegmentId })
+	const partCount = Array.isArray(existingParts) ? existingParts.length : 0
+	const startRank = request.rank ?? partCount
+
+	const createdParts: Part[] = []
+	const createdPieces: Piece[] = []
+
+	db.exec('BEGIN')
+	try {
+		await shiftPartRanksFrom(targetSegmentId, startRank, sourcePartList.length)
+
+		const orderedSourceParts = [...sourcePartList].sort((a, b) => a.rank - b.rank)
+		for (let i = 0; i < orderedSourceParts.length; i++) {
+			const sourcePart = orderedSourceParts[i]
+			const { result: copyResult, error: copyError } = await partMutations.createPartCopy({
+				id: sourcePart.id,
+				segmentId: targetSegmentId,
+				rundownId: targetSegment.rundownId,
+				preserveName: true
+			})
+			if (copyError || !copyResult) {
+				throw copyError ?? new Error('Failed to copy part from template')
+			}
+			const part = await partMutations.update({
+				...copyResult.part,
+				rank: startRank + i
+			})
+			if (part.error || !part.result) {
+				throw part.error ?? new Error('Failed to position copied part')
+			}
+			createdParts.push(part.result)
+			createdPieces.push(...copyResult.pieces)
+		}
+
+		db.exec('COMMIT')
+	} catch (e) {
+		db.exec('ROLLBACK')
+		return { error: e instanceof Error ? e : new Error(String(e)) }
+	}
+
+	const io = getSocketIO()
+	io?.emit('parts:update', { parts: createdParts })
+	io?.emit('pieces:update', { pieces: createdPieces })
+
+	return { result: { parts: createdParts, pieces: createdPieces } }
+}
+
+export async function quickAddStory(
 	segmentId: string,
 	request: QuickAddStoryRequest
+): Promise<{ result?: QuickAddStoryResult; error?: Error }> {
+	const templateRundownId = String(request.templateRundownId ?? '').trim()
+	if (templateRundownId) {
+		return quickAddStoryFromRundownTemplate(segmentId, request)
+	}
+	const storyTemplateId = String(request.storyTemplateId ?? '').trim()
+	if (!storyTemplateId) {
+		return { error: new Error('templateRundownId or storyTemplateId is required') }
+	}
+	return quickAddStoryFromTemplate(segmentId, { ...request, storyTemplateId })
+}
+
+export async function quickAddStoryFromTemplate(
+	segmentId: string,
+	request: QuickAddStoryRequest & { storyTemplateId: string }
 ): Promise<{ result?: QuickAddStoryResult; error?: Error }> {
 	const template = getStoryTemplateById(request.storyTemplateId)
 	if (!template) {

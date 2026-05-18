@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Button, Form, Modal, Spinner } from 'react-bootstrap'
+import { Button, Form, Modal } from 'react-bootstrap'
 import { Link } from '@tanstack/react-router'
-import type { Segment, StoryTemplate } from '~backend/background/interfaces'
-import { fetchStoryTemplates } from '~/lib/storyApi'
+import type { Rundown, Segment } from '~backend/background/interfaces'
 import { ipcAPI } from '~/lib/IPC'
 import { useAppDispatch, useAppSelector } from '~/store/app'
 import { pushPart } from '~/store/parts'
@@ -28,52 +27,43 @@ export function QuickStoryModal({
 }: QuickStoryModalProps) {
 	const dispatch = useAppDispatch()
 	const toasts = useToasts()
+	const templateRundowns = useAppSelector((s) => s.rundowns.filter((r) => r.isTemplate))
 	const partManifests = useAppSelector((s) =>
 		s.typeManifests.manifests?.filter((m) => m.entityType === 'part')
 	)
 
-	const [templates, setTemplates] = useState<StoryTemplate[]>([])
-	const [loadingTemplates, setLoadingTemplates] = useState(false)
 	const [selectedId, setSelectedId] = useState<string>('')
 	const [submitting, setSubmitting] = useState(false)
 
 	useEffect(() => {
 		if (!show) return
-		setLoadingTemplates(true)
-		fetchStoryTemplates()
-			.then((list) => {
-				setTemplates(list)
-				setSelectedId(list[0]?.id ?? '')
-			})
-			.catch(() => {
-				toasts.show({
-					headerContent: 'Story templates',
-					bodyContent: 'Could not load templates'
-				})
-			})
-			.finally(() => setLoadingTemplates(false))
-	}, [show, toasts])
+		setSelectedId(templateRundowns[0]?.id ?? '')
+	}, [show, templateRundowns])
 
-	const selected = templates.find((t) => t.id === selectedId)
+	const templateParts = useAppSelector((s) => {
+		if (!selectedId) return []
+		return s.parts.parts
+			.filter((p) => p.rundownId === selectedId)
+			.sort((a, b) => a.rank - b.rank)
+	})
 
-	const previewPills = useMemo(() => {
-		if (!selected?.pattern.length) return []
-		return selected.pattern.map((partTypeId, index) => {
-			const manifest = partManifests?.find((m) => m.id === partTypeId)
+	const previewFromStore = useMemo(() => {
+		return templateParts.map((part, index) => {
+			const manifest = partManifests?.find((m) => m.id === part.partType)
 			return {
-				key: `${partTypeId}-${index}`,
-				label: manifest?.shortName ?? partTypeId,
+				key: `${part.id}-${index}`,
+				label: part.name || manifest?.shortName || part.partType,
 				colour: manifest?.colour ?? '#666'
 			}
 		})
-	}, [selected, partManifests])
+	}, [templateParts, partManifests])
 
 	const handleCreate = async () => {
 		if (!selectedId) return
 		setSubmitting(true)
 		try {
 			const result = await ipcAPI.quickAddStory(segment.id, {
-				storyTemplateId: selectedId,
+				templateRundownId: selectedId,
 				rank: insertRank
 			})
 			dispatch(pushPart(result.parts))
@@ -100,36 +90,35 @@ export function QuickStoryModal({
 				<Modal.Title>Quick Story</Modal.Title>
 			</Modal.Header>
 			<Modal.Body style={modalSurface}>
-				{loadingTemplates ? (
-					<div className="text-center py-4">
-						<Spinner animation="border" size="sm" />
-					</div>
-				) : templates.length === 0 ? (
+				{templateRundowns.length === 0 ? (
 					<p className="text-muted mb-0">
-						No story templates yet.{' '}
-						<Link to="/settings/story-templates">Create one in Settings</Link>.
+						No templates yet.{' '}
+						<Link to="/" onClick={onClose}>
+							Import or create one under Rundowns → Templates
+						</Link>
+						.
 					</p>
 				) : (
 					<>
 						<Form.Group className="mb-3">
-							<Form.Label>Story template</Form.Label>
+							<Form.Label>Rundown template</Form.Label>
 							<Form.Select
 								value={selectedId}
 								onChange={(e) => setSelectedId(e.target.value)}
-								aria-label="Story template"
+								aria-label="Rundown template"
 							>
-								{templates.map((t) => (
+								{templateRundowns.map((t: Rundown) => (
 									<option key={t.id} value={t.id}>
 										{t.name}
 									</option>
 								))}
 							</Form.Select>
 						</Form.Group>
-						{previewPills.length > 0 && (
+						{previewFromStore.length > 0 && (
 							<div className="mb-2">
-								<Form.Label className="text-muted small">Cue chain</Form.Label>
+								<Form.Label className="text-muted small">Parts copied from template</Form.Label>
 								<div className="d-flex flex-wrap align-items-center gap-1">
-									{previewPills.map((pill, i) => (
+									{previewFromStore.map((pill, i) => (
 										<span key={pill.key} className="d-inline-flex align-items-center gap-1">
 											{i > 0 && <span className="text-muted small">→</span>}
 											<span
@@ -151,8 +140,8 @@ export function QuickStoryModal({
 				)}
 			</Modal.Body>
 			<Modal.Footer style={modalSurface} className="d-flex justify-content-between">
-				<Link to="/settings/story-templates" className="small" onClick={onClose}>
-					Manage Templates
+				<Link to="/" className="small" onClick={onClose}>
+					Manage templates
 				</Link>
 				<div className="d-flex gap-2">
 					<Button variant="secondary" onClick={onClose}>
@@ -160,7 +149,7 @@ export function QuickStoryModal({
 					</Button>
 					<Button
 						variant="primary"
-						disabled={!selectedId || submitting || templates.length === 0}
+						disabled={!selectedId || submitting || templateRundowns.length === 0}
 						onClick={handleCreate}
 					>
 						{submitting ? 'Creating…' : 'Create'}

@@ -8,7 +8,7 @@ import { useToasts } from '~/components/toasts/useToasts'
 import { ipcAPI } from '~/lib/IPC'
 import { useAppDispatch, useAppSelector } from '~/store/app'
 import { addNewRundown, copyRundown, importRundown } from '~/store/rundowns'
-import { verifyImportIsRundown } from '~/util/verifyImport'
+import { parseImportFile } from '~/util/normalizeImport'
 import type { Rundown } from '~backend/background/interfaces'
 
 export const Route = createFileRoute('/_root/')({
@@ -68,32 +68,29 @@ function Index() {
 	const selectImportRundown = (isTemplate: boolean) => {
 		ipcAPI
 			.openFromFile({ title: isTemplate ? 'Import template' : 'Import rundown' })
-			.then(async (serializedRundown) => {
-				if (verifyImportIsRundown(serializedRundown)) {
+			.then(async (fileData) => {
+				try {
+					const serializedRundown = parseImportFile(fileData, isTemplate)
 					const existing = rundowns.find((rd) => rd.id === serializedRundown.rundown.id)
 					if (existing) {
 						toasts.show({
 							headerContent: 'Import',
-							bodyContent: 'Rundown already exists'
+							bodyContent: 'A rundown with this id already exists'
 						})
 					} else {
-						try {
-							await dispatch(importRundown({ ...serializedRundown, isTemplate })).unwrap()
-							await navigate({
-								to: `/rundown/${serializedRundown.rundown.id}`
-							})
-						} catch (e: unknown) {
-							console.error(e)
-							toasts.show({
-								headerContent: 'Import',
-								bodyContent: 'Encountered an unexpected error'
-							})
-						}
+						const created = await dispatch(
+							importRundown({ data: fileData, isTemplate })
+						).unwrap()
+						await navigate({
+							to: `/rundown/${created.id}`
+						})
 					}
-				} else {
+				} catch (e: unknown) {
+					console.error(e)
 					toasts.show({
 						headerContent: 'Import',
-						bodyContent: 'Imported file is not a valid rundown'
+						bodyContent:
+							e instanceof Error ? e.message : 'Imported file is not a valid rundown or template'
 					})
 				}
 			})

@@ -62,35 +62,45 @@ function RouteComponent() {
 	}
 
 	return (
-		<div style={rootStyle}>
-			<DuopusNavbar rundownName={rundown.name} />
-			<RundownNavbar rundown={rundown} />
+		<>
+			<div style={rootStyle}>
+				<div style={headerStyle}>
+					<DuopusNavbar rundownName={rundown.name} />
+					<RundownNavbar rundown={rundown} />
+				</div>
 
-			<Stack
-				direction="horizontal"
-				className="rundown-editor-panes"
-				style={{
-					flex: 1,
-					minHeight: 0,
-					overflow: 'hidden'
-				}}
-			>
-				<RundownSidebar rundownId={rundown.id} playlistId={rundown.playlistId} />
+				<Stack
+					direction="horizontal"
+					className="rundown-editor-panes"
+					style={{
+						flex: 1,
+						minHeight: 0,
+						overflow: 'hidden'
+					}}
+				>
+					<RundownSidebar rundownId={rundown.id} playlistId={rundown.playlistId} />
 
-				<MyErrorBoundary>
-					<div className="rundown-main-content flex-grow-1" style={{ minWidth: 0 }}>
-						<Outlet />
-					</div>
-				</MyErrorBoundary>
-			</Stack>
+					<MyErrorBoundary>
+						<div className="rundown-main-content flex-grow-1" style={{ minWidth: 0 }}>
+							<Outlet />
+						</div>
+					</MyErrorBoundary>
+				</Stack>
+			</div>
 			<StoryLibraryDrawer rundownId={rundown.id} />
-		</div>
+		</>
 	)
 }
 
 const rootStyle: React.CSSProperties = {
 	display: 'grid',
 	height: '100%',
-	gridTemplateRows: 'auto 1fr auto',
+	gridTemplateRows: 'auto 1fr',
 	overflowX: 'hidden'
+}
+
+const headerStyle: React.CSSProperties = {
+	display: 'flex',
+	flexDirection: 'column',
+	flexShrink: 0
 }

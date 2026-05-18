@@ -1,12 +1,12 @@
 import type {
 	MutationRundownCopy,
-	Part,
 	Rundown,
 	SerializedRundown
 } from '~backend/background/interfaces.js'
 import { createSlice } from '@reduxjs/toolkit'
 import { createAppAsyncThunk } from './app'
 import { ipcAPI } from '~/lib/IPC'
+import { assertIpcSuccess, parseImportFile } from '~/util/normalizeImport'
 import { loadPieces } from './pieces'
 import { loadParts } from './parts'
 import { loadSegments } from './segments'
@@ -63,22 +63,25 @@ export const removeRundown = createAppAsyncThunk(
 
 export const importRundown = createAppAsyncThunk(
 	'rundowns/importRundown',
-	async (rundown: SerializedRundown) => {
-		const createdRundown = await ipcAPI.addNewRundown({
-			...rundown.rundown,
-			sync: false,
-			isTemplate: rundown.isTemplate ?? false
-		})
+	async (payload: SerializedRundown | { data: unknown; isTemplate: boolean }) => {
+		const rundown =
+			'data' in payload
+				? parseImportFile(payload.data, payload.isTemplate)
+				: parseImportFile(payload, payload.isTemplate ?? false)
 
-		// Note: we don't need to update the stores, that will happen when opening the rundown
-
-		// We need to override the ranks, because for the reordering function to work correctly ranks should be the index of the segment/part
-		const orderedSegments = [...rundown.segments].sort((a, b) => a.rank - b.rank)
-		await Promise.all(
-			orderedSegments.map((segment, index) => ipcAPI.addNewSegment({ ...segment, rank: index }))
+		const createdRundown = assertIpcSuccess(
+			await ipcAPI.addNewRundown({
+				...rundown.rundown,
+				sync: false,
+				isTemplate: rundown.isTemplate ?? false
+			})
 		)
 
-		// Group parts by segmentId
+		const orderedSegments = [...rundown.segments].sort((a, b) => a.rank - b.rank)
+		for (const [index, segment] of orderedSegments.entries()) {
+			assertIpcSuccess(await ipcAPI.addNewSegment({ ...segment, rank: index }))
+		}
+
 		const partsGroupedBySegment: Record<string, typeof rundown.parts> = {}
 		for (const part of rundown.parts) {
 			if (!partsGroupedBySegment[part.segmentId]) {
@@ -87,27 +90,26 @@ export const importRundown = createAppAsyncThunk(
 			partsGroupedBySegment[part.segmentId].push(part)
 		}
 
-		// override part.rank based on index
 		const orderedParts: typeof rundown.parts = []
-
 		for (const segment of orderedSegments) {
 			const parts = partsGroupedBySegment[segment.id]
 			if (parts) {
 				const sortedParts = parts
-					.sort((a, b) => a.rank - b.rank) // Sort current segment's parts by original rank
-					.map((part, index) => {
-						const convertedPart = convertOldPartToNew(part)
-						return {
-							...convertedPart,
-							rank: index // Override rank with index
-						}
-					})
+					.sort((a, b) => a.rank - b.rank)
+					.map((part, index) => ({
+						...part,
+						rank: index
+					}))
 				orderedParts.push(...sortedParts)
 			}
 		}
 
-		await Promise.all(orderedParts.map((part) => ipcAPI.addNewPart(part)))
-		await Promise.all(rundown.pieces.map((piece) => ipcAPI.addNewPiece(piece)))
+		for (const part of orderedParts) {
+			assertIpcSuccess(await ipcAPI.addNewPart(part))
+		}
+		for (const piece of rundown.pieces) {
+			assertIpcSuccess(await ipcAPI.addNewPiece(piece))
+		}
 
 		return createdRundown
 	}
@@ -154,30 +156,6 @@ const rundownsSlice = createSlice({
 	}
 })
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function convertOldPartToNew(part: any): Part {
-	if ('payload' in part && 'type' in part.payload) {
-		// Destructure payload and remove legacy fields
-		const { type, script, duration, ...restPayload } = part.payload
-
-		return {
-			id: part.id,
-			playlistId: part.playlistId ?? null,
-			rundownId: part.rundownId,
-			segmentId: part.segmentId,
-			name: part.name,
-			rank: part.rank,
-			float: part.float,
-			partType: type ?? 'unknown',
-			script,
-			duration,
-			payload: restPayload // Keep only remaining payload fields
-		}
-	}
-
-	// Already in new structure
-	return part
-}
 // Export the auto-generated action creator with the same name
 export const { initRundowns } = rundownsSlice.actions
 export const { pushRundown } = rundownsSlice.actions

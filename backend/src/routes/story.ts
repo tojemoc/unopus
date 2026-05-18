@@ -5,7 +5,7 @@ import {
 	importStoryTemplates,
 	generateRundownFromTemplate,
 	listStoryTemplates,
-	quickAddStoryFromTemplate,
+	quickAddStory,
 	recallStoryToSegment,
 	searchStoryLibrary,
 	updateStoryTemplate
@@ -144,15 +144,13 @@ export function registerStoryRoutes(app: Application): void {
 
 	app.post('/api/segments/:segmentId/quick-add-story', async (req: Request, res: Response) => {
 		const body = req.body as QuickAddStoryRequest
+		const templateRundownId = String(body.templateRundownId ?? '').trim()
 		const storyTemplateId = String(body.storyTemplateId ?? '').trim()
-		if (!storyTemplateId) {
-			sendJson(res, 400, { error: 'storyTemplateId is required' })
+		if (!templateRundownId && !storyTemplateId) {
+			sendJson(res, 400, { error: 'templateRundownId or storyTemplateId is required' })
 			return
 		}
-		const { result, error } = await quickAddStoryFromTemplate(String(req.params.segmentId), {
-			...body,
-			storyTemplateId
-		})
+		const { result, error } = await quickAddStory(String(req.params.segmentId), body)
 		if (error) {
 			sendJson(res, 400, { error: error.message })
 			return

@@ -188,6 +188,14 @@ export interface PayloadManifest {
 export interface ApplicationSettings {
 	coreUrl?: string
 	corePort?: number
+	/** Google Sheets spreadsheet ID for NRCS export. */
+	googleSheetsSpreadsheetId?: string
+	/** Worksheet name (default Sheet1). */
+	googleSheetsSheetName?: string
+	/** 1-based row where data starts (default 2). */
+	googleSheetsDataStartRow?: number
+	/** Service account JSON (inline). Prefer env in production. */
+	googleSheetsCredentialsJson?: string
 	/** IANA timezone for scheduling and list grouping (default Europe/Bratislava). */
 	timezone?: string
 	/** Weekday rundowns to keep scheduled ahead per enabled template (default 5). */
@@ -434,7 +442,10 @@ export type MutationStoryTemplateUpdate = Pick<StoryTemplate, 'id'> &
 	Partial<Pick<StoryTemplate, 'name' | 'pattern'>>
 
 export interface QuickAddStoryRequest {
-	storyTemplateId: string
+	/** @deprecated Use templateRundownId — story_templates table is legacy. */
+	storyTemplateId?: string
+	/** Template rundown (isTemplate) whose primary segment is cloned into the target segment. */
+	templateRundownId?: string
 	rank?: number
 }
 
