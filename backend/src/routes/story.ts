@@ -69,15 +69,26 @@ export function registerStoryRoutes(app: Application): void {
 
 	app.patch('/api/story-templates/:id', (req: Request, res: Response) => {
 		const body = req.body as Omit<MutationStoryTemplateUpdate, 'id'>
-		let patch = body
+		let patch: Omit<MutationStoryTemplateUpdate, 'id'> = { ...body }
+
+		if (body.name !== undefined) {
+			const trimmedName = String(body.name).trim()
+			if (!trimmedName) {
+				sendJson(res, 400, { error: 'Name cannot be empty' })
+				return
+			}
+			patch = { ...patch, name: trimmedName }
+		}
+
 		if (body.pattern !== undefined) {
 			const patternResult = normalizeStoryPattern(body.pattern)
 			if (!patternResult.ok) {
 				sendJson(res, 400, { error: patternResult.error })
 				return
 			}
-			patch = { ...body, pattern: patternResult.pattern }
+			patch = { ...patch, pattern: patternResult.pattern }
 		}
+
 		const updated = updateStoryTemplate(String(req.params.id), patch)
 		if (!updated) {
 			sendJson(res, 404, { error: 'Story template not found' })
@@ -97,11 +108,15 @@ export function registerStoryRoutes(app: Application): void {
 
 	app.post('/api/segments/:segmentId/quick-add-story', async (req: Request, res: Response) => {
 		const body = req.body as QuickAddStoryRequest
-		if (!body.storyTemplateId) {
+		const storyTemplateId = String(body.storyTemplateId ?? '').trim()
+		if (!storyTemplateId) {
 			sendJson(res, 400, { error: 'storyTemplateId is required' })
 			return
 		}
-		const { result, error } = await quickAddStoryFromTemplate(String(req.params.segmentId), body)
+		const { result, error } = await quickAddStoryFromTemplate(String(req.params.segmentId), {
+			...body,
+			storyTemplateId
+		})
 		if (error) {
 			sendJson(res, 400, { error: error.message })
 			return
@@ -119,11 +134,15 @@ export function registerStoryRoutes(app: Application): void {
 
 	app.post('/api/story-library/:partId/recall', async (req: Request, res: Response) => {
 		const body = req.body as StoryLibraryRecallRequest
-		if (!body.targetSegmentId) {
+		const targetSegmentId = String(body.targetSegmentId ?? '').trim()
+		if (!targetSegmentId) {
 			sendJson(res, 400, { error: 'targetSegmentId is required' })
 			return
 		}
-		const { result, error } = await recallStoryToSegment(String(req.params.partId), body)
+		const { result, error } = await recallStoryToSegment(String(req.params.partId), {
+			...body,
+			targetSegmentId
+		})
 		if (error) {
 			sendJson(res, 400, { error: error.message })
 			return
@@ -132,12 +151,26 @@ export function registerStoryRoutes(app: Application): void {
 	})
 
 	app.post('/api/rundowns/generate-from-template', async (req: Request, res: Response) => {
-		const body = req.body as GenerateRundownFromTemplateRequest
-		if (!body.templateRundownId || body.scheduledDate === undefined) {
+		const body = req.body as {
+			templateRundownId?: unknown
+			scheduledDate?: unknown
+		}
+		const templateRundownId = String(body.templateRundownId ?? '').trim()
+		const scheduledDateRaw = body.scheduledDate
+		if (
+			!templateRundownId ||
+			scheduledDateRaw == null ||
+			(typeof scheduledDateRaw === 'string' && scheduledDateRaw.trim() === '')
+		) {
 			sendJson(res, 400, { error: 'templateRundownId and scheduledDate are required' })
 			return
 		}
-		const { result, error } = await generateRundownFromTemplate(body)
+		const scheduledDate =
+			typeof scheduledDateRaw === 'number' ? scheduledDateRaw : Number(scheduledDateRaw)
+		const { result, error } = await generateRundownFromTemplate({
+			templateRundownId,
+			scheduledDate
+		} satisfies GenerateRundownFromTemplateRequest)
 		if (error) {
 			sendJson(res, 400, { error: error.message })
 			return
