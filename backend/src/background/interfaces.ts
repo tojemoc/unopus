@@ -39,6 +39,26 @@ export interface Rundown extends IHasPayload {
 	expectedStartTime?: number
 	/** Date of when the rundown is supposed to end */
 	expectedEndTime?: number
+
+	/** When true, auto-create weekday rundowns from this template (per-template override). */
+	scheduleEnabled?: boolean
+	/** Override global count of weekday rundowns to keep scheduled ahead. */
+	scheduleAheadCount?: number
+	/** Override global default start time; HH:mm in 24-hour notation (e.g. 18:00). */
+	scheduleStartTime?: string
+	/** Bumped when template content changes; generated rundowns store the revision they were built from. */
+	templateRevision?: number
+
+	/** Rundown was generated from a template (not a manual copy). */
+	sourceTemplateId?: string
+	/** Template revision at generation time. */
+	sourceTemplateRevision?: number
+	/** Calendar date key in the configured timezone; YYYY-MM-DD (e.g. 2026-05-18). */
+	scheduleDateKey?: string
+	/** User edited segment/part/piece content after generation. */
+	modifiedAfterGeneration?: boolean
+	/** Template was saved after this rundown was generated. */
+	templateOutdated?: boolean
 }
 export interface Segment extends IHasPayload {
 	/** Id of the segment as reported by the ingest gateway. Must be unique for each segment in the rundown */
@@ -168,6 +188,16 @@ export interface PayloadManifest {
 export interface ApplicationSettings {
 	coreUrl?: string
 	corePort?: number
+	/** IANA timezone for scheduling and list grouping (default Europe/Bratislava). */
+	timezone?: string
+	/** Weekday rundowns to keep scheduled ahead per enabled template (default 5). */
+	scheduleAheadCount?: number
+	/** Default expected start time for generated rundowns; HH:mm in 24-hour notation (e.g. 18:00). */
+	scheduleStartTime?: string
+	/** Rundown list: expanded past weekdays (default 2). */
+	rundownListPastVisible?: number
+	/** Rundown list: expanded future weekdays after today (default 4). */
+	rundownListFutureVisible?: number
 }
 export interface DBSettings {
 	id: string
@@ -434,4 +464,20 @@ export interface StoryLibraryRecallRequest {
 export interface GenerateRundownFromTemplateRequest {
 	templateRundownId: string
 	scheduledDate: number
+	/** When set, links the generated rundown to the template schedule. */
+	scheduleDateKey?: string
+	sourceTemplateRevision?: number
+}
+
+export interface RegenerateFromTemplateRequest {
+	templateRundownId: string
+	/** When true, replace generated rundowns even if marked outdated (still skips modified). */
+	force?: boolean
+}
+
+export interface RegenerateFromTemplateResult {
+	created: number
+	updated: number
+	skippedModified: number
+	skippedPast: number
 }

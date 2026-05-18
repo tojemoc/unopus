@@ -5,6 +5,7 @@ import Navbar from 'react-bootstrap/esm/Navbar'
 import { Button, Stack } from 'react-bootstrap'
 import { useAppDispatch, useAppSelector } from '~/store/app'
 import { logout } from '~/store/auth'
+import { ClockDisplay } from './clockDisplay'
 import './duopusNavbar.scss'
 
 interface DuopusNavbarProps {
@@ -47,6 +48,7 @@ export function DuopusNavbar({ rundownName }: DuopusNavbarProps) {
 						</Nav.Link>
 					</Nav>
 					<Stack direction="horizontal" gap={3} className="align-items-center">
+						<ClockDisplay />
 						{user && <span className="user-label">{user.displayName}</span>}
 						<Button variant="outline-secondary" size="sm" onClick={onLogout}>
 							Log out

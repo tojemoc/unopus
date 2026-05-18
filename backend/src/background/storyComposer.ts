@@ -343,10 +343,12 @@ export async function generateRundownFromTemplate(
 	let expectedStartTime: number | undefined
 
 	if (scheduledValid) {
-		const midnight = new Date(scheduled)
-		midnight.setHours(0, 0, 0, 0)
-		expectedStartTime = midnight.getTime()
-		dateLabel = `${midnight.getFullYear()}-${String(midnight.getMonth() + 1).padStart(2, '0')}-${String(midnight.getDate()).padStart(2, '0')}`
+		expectedStartTime = scheduled.getTime()
+		if (request.scheduleDateKey) {
+			dateLabel = request.scheduleDateKey
+		} else {
+			dateLabel = `${scheduled.getFullYear()}-${String(scheduled.getMonth() + 1).padStart(2, '0')}-${String(scheduled.getDate()).padStart(2, '0')}`
+		}
 	} else {
 		console.warn(
 			'generateRundownFromTemplate: invalid scheduledDate',
@@ -369,7 +371,13 @@ export async function generateRundownFromTemplate(
 		name: dateLabel ? `${sourceRundown.name} ${dateLabel}` : copyResult.rundown.name,
 		...(expectedStartTime !== undefined ? { expectedStartTime } : {}),
 		isTemplate: false,
-		sync: false
+		sync: false,
+		sourceTemplateId: sourceRundown.id,
+		sourceTemplateRevision:
+			request.sourceTemplateRevision ?? sourceRundown.templateRevision ?? 0,
+		scheduleDateKey: request.scheduleDateKey ?? dateLabel,
+		modifiedAfterGeneration: false,
+		templateOutdated: false
 	})
 
 	if (updateError || !updatedRundown) {

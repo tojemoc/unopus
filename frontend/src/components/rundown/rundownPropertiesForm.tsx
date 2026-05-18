@@ -107,6 +107,57 @@ export function RundownPropertiesForm({ rundown }: { rundown: Rundown }) {
 					)}
 				</form.Field>
 
+				<form.Subscribe selector={(state) => state.values.isTemplate}>
+					{(isTemplate) =>
+						isTemplate ? (
+					<>
+						<form.Field name="scheduleEnabled">
+							{(field) => (
+								<Form.Group className="mb-3">
+									<Form.Label>Auto-schedule weekday rundowns</Form.Label>
+									<Form.Switch
+										checked={Boolean(field.state.value)}
+										onChange={(e) => field.handleChange(e.target.checked)}
+									/>
+								</Form.Group>
+							)}
+						</form.Field>
+						<form.Field name="scheduleAheadCount">
+							{(field) => (
+								<Form.Group className="mb-3">
+									<Form.Label>Ahead count (override)</Form.Label>
+									<Form.Control
+										type="number"
+										min={1}
+										max={30}
+										placeholder="Use global default"
+										value={field.state.value ?? ''}
+										onChange={(e) =>
+											field.handleChange(
+												e.target.value ? Number(e.target.value) : undefined
+											)
+										}
+									/>
+								</Form.Group>
+							)}
+						</form.Field>
+						<form.Field name="scheduleStartTime">
+							{(field) => (
+								<Form.Group className="mb-3">
+									<Form.Label>Expected start time override (24h)</Form.Label>
+									<Form.Control
+										type="time"
+										value={field.state.value ?? ''}
+										onChange={(e) =>
+											field.handleChange(e.target.value || undefined)
+										}
+									/>
+								</Form.Group>
+							)}
+						</form.Field>
+					</>
+						) : (
+					<>
 				<form.Field
 					name="expectedStartTime"
 					children={(field) => (
@@ -144,6 +195,10 @@ export function RundownPropertiesForm({ rundown }: { rundown: Rundown }) {
 						</>
 					)}
 				/>
+					</>
+						)
+					}
+				</form.Subscribe>
 
 				{metadataFields?.map((fieldInfo) => {
 					return (

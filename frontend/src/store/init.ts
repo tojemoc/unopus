@@ -3,11 +3,13 @@ import type { AppDispatch } from './app'
 import { updateConnectionStatus } from './connectionStatus'
 import { loadTypeManifest } from './typeManifest'
 import { initPlaylists } from './playlists'
-import { initRundowns } from './rundowns'
 import { loadSettings } from './settings'
 import { pushPiece } from './pieces'
 import { pushPart } from './parts'
 import { pushSegment } from './segments'
+import { getSocket } from '~/lib/socket'
+import { initRundowns, pushRundown } from './rundowns'
+import type { Rundown } from '~backend/background/interfaces'
 
 export function initStore(dispatch: AppDispatch): void {
 	ipcAPI
@@ -58,5 +60,13 @@ export function initStore(dispatch: AppDispatch): void {
 	})
 	ipcAPI.onSegmentsUpdate((update) => {
 		dispatch(pushSegment(update.segments ? update.segments : []))
+	})
+
+	getSocket().on('rundowns:update', (payload: { rundowns?: Rundown[] }) => {
+		const list = payload?.rundowns
+		if (!list?.length) {
+			return
+		}
+		dispatch(pushRundown(list))
 	})
 }

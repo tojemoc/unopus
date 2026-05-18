@@ -13,6 +13,10 @@ import {
 import { db } from '../db'
 import { v4 as uuid } from 'uuid'
 import { coreHandler } from '../coreHandler'
+import {
+	bumpTemplateRevision,
+	reconcileTemplateSchedule
+} from '../rundownSchedule'
 import { getMutatedSegmentsFromRundown } from './segments'
 import { mutations as partMutations } from './parts'
 import { mutations as piecesMutations } from './pieces'
@@ -345,6 +349,22 @@ async function handleUpdateRundown(payload: MutationRundownUpdate) {
 			} catch (error) {
 				console.error(error)
 				returnedError = error
+			}
+		}
+
+		if (result?.isTemplate) {
+			try {
+				await bumpTemplateRevision(result.id)
+				if (result.scheduleEnabled) {
+					await reconcileTemplateSchedule(result.id)
+				}
+			} catch (err) {
+				console.error('Template post-update scheduling failed', {
+					templateId: result.id,
+					bumpTemplateRevision: true,
+					reconcileTemplateSchedule: result.scheduleEnabled,
+					err
+				})
 			}
 		}
 
