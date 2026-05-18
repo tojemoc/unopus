@@ -72,6 +72,19 @@ export async function deleteStoryTemplate(id: string): Promise<void> {
 	await request(`/api/story-templates/${id}`, { method: 'DELETE' })
 }
 
+export async function importStoryTemplates(
+	templates: Array<Pick<StoryTemplate, 'name' | 'pattern'>>
+): Promise<StoryTemplate[]> {
+	const data = await request<{ templates: StoryTemplate[]; imported: number }>(
+		'/api/story-templates/import',
+		{
+			method: 'POST',
+			body: JSON.stringify(templates)
+		}
+	)
+	return data.templates
+}
+
 export async function quickAddStory(
 	segmentId: string,
 	payload: QuickAddStoryRequest

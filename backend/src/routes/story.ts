@@ -2,6 +2,7 @@ import type { Application, Request, Response } from 'express'
 import {
 	createStoryTemplate,
 	deleteStoryTemplate,
+	importStoryTemplates,
 	generateRundownFromTemplate,
 	listStoryTemplates,
 	quickAddStoryFromTemplate,
@@ -46,6 +47,41 @@ function normalizeStoryPattern(
 export function registerStoryRoutes(app: Application): void {
 	app.get('/api/story-templates', (_req: Request, res: Response) => {
 		sendJson(res, 200, { templates: listStoryTemplates() })
+	})
+
+	app.post('/api/story-templates/import', (req: Request, res: Response) => {
+		const body = req.body as { templates?: unknown } | unknown
+		const rawList = Array.isArray(body)
+			? body
+			: Array.isArray((body as { templates?: unknown }).templates)
+				? (body as { templates: unknown[] }).templates
+				: null
+
+		if (!rawList) {
+			sendJson(res, 400, {
+				error: 'Body must be a JSON array of templates or { "templates": [...] }'
+			})
+			return
+		}
+
+		const normalized: Array<{ name: string; pattern: string[] }> = []
+		for (const item of rawList) {
+			if (typeof item !== 'object' || item === null) continue
+			const entry = item as { name?: unknown; pattern?: unknown; storyPattern?: unknown }
+			const name = typeof entry.name === 'string' ? entry.name.trim() : ''
+			const patternRaw = entry.pattern ?? entry.storyPattern
+			const patternResult = normalizeStoryPattern(patternRaw)
+			if (!name || !patternResult.ok) continue
+			normalized.push({ name, pattern: patternResult.pattern })
+		}
+
+		if (normalized.length === 0) {
+			sendJson(res, 400, { error: 'No valid story templates found in import file' })
+			return
+		}
+
+		const templates = importStoryTemplates(normalized)
+		sendJson(res, 201, { templates, imported: templates.length })
 	})
 
 	app.post('/api/story-templates', (req: Request, res: Response) => {

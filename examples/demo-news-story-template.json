@@ -1,0 +1,45 @@
+{
+	"templates": [
+		{
+			"name": "Demo news story",
+			"pattern": [
+				"Titles",
+				"Titles",
+				"Titles",
+				"GFX",
+				"VO",
+				"VO",
+				"VO",
+				"VO",
+				"VO",
+				"VO",
+				"VO",
+				"VO",
+				"VO",
+				"VO",
+				"VO",
+				"VO",
+				"GFX"
+			],
+			"cues": [
+				"Headline 1",
+				"Headline 2",
+				"Headline 3",
+				"Intro GFX",
+				"Topic 1",
+				"Topic 2",
+				"Topic 3",
+				"Topic 4",
+				"Topic 5",
+				"One-liner 1",
+				"One-liner 2",
+				"One-liner 3",
+				"Sport 1",
+				"Sport 2",
+				"Weather",
+				"Recommendation",
+				"Outro GFX"
+			]
+		}
+	]
+}

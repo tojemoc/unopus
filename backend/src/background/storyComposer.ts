@@ -256,6 +256,26 @@ export function deleteStoryTemplate(id: string): boolean {
 	return result.changes > 0
 }
 
+export function importStoryTemplates(
+	templates: Array<Pick<StoryTemplate, 'name' | 'pattern'>>
+): StoryTemplate[] {
+	const created: StoryTemplate[] = []
+	for (const template of templates) {
+		const name = template.name?.trim()
+		if (!name || !Array.isArray(template.pattern) || template.pattern.length === 0) {
+			continue
+		}
+		const pattern = template.pattern
+			.map((entry) => (typeof entry === 'string' ? entry.trim() : ''))
+			.filter((entry) => entry.length > 0)
+		if (pattern.length === 0) {
+			continue
+		}
+		created.push(createStoryTemplate({ name, pattern }))
+	}
+	return created
+}
+
 export async function recallStoryToSegment(
 	partId: string,
 	request: StoryLibraryRecallRequest
