@@ -44,7 +44,7 @@ export interface Rundown extends IHasPayload {
 	scheduleEnabled?: boolean
 	/** Override global count of weekday rundowns to keep scheduled ahead. */
 	scheduleAheadCount?: number
-	/** Override global default start time (HH:mm, 24h). */
+	/** Override global default start time; HH:mm in 24-hour notation (e.g. 18:00). */
 	scheduleStartTime?: string
 	/** Bumped when template content changes; generated rundowns store the revision they were built from. */
 	templateRevision?: number
@@ -53,7 +53,7 @@ export interface Rundown extends IHasPayload {
 	sourceTemplateId?: string
 	/** Template revision at generation time. */
 	sourceTemplateRevision?: number
-	/** Calendar date key (YYYY-MM-DD) in the configured timezone for this scheduled instance. */
+	/** Calendar date key in the configured timezone; YYYY-MM-DD (e.g. 2026-05-18). */
 	scheduleDateKey?: string
 	/** User edited segment/part/piece content after generation. */
 	modifiedAfterGeneration?: boolean
@@ -192,7 +192,7 @@ export interface ApplicationSettings {
 	timezone?: string
 	/** Weekday rundowns to keep scheduled ahead per enabled template (default 5). */
 	scheduleAheadCount?: number
-	/** Default expected start time for generated rundowns, 24h HH:mm (default 18:00). */
+	/** Default expected start time for generated rundowns; HH:mm in 24-hour notation (e.g. 18:00). */
 	scheduleStartTime?: string
 	/** Rundown list: expanded past weekdays (default 2). */
 	rundownListPastVisible?: number

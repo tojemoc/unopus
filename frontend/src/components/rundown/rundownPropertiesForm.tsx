@@ -107,7 +107,9 @@ export function RundownPropertiesForm({ rundown }: { rundown: Rundown }) {
 					)}
 				</form.Field>
 
-				{rundown.isTemplate && (
+				<form.Subscribe selector={(state) => state.values.isTemplate}>
+					{(isTemplate) =>
+						isTemplate ? (
 					<>
 						<form.Field name="scheduleEnabled">
 							{(field) => (
@@ -154,9 +156,7 @@ export function RundownPropertiesForm({ rundown }: { rundown: Rundown }) {
 							)}
 						</form.Field>
 					</>
-				)}
-
-				{!rundown.isTemplate && (
+						) : (
 					<>
 				<form.Field
 					name="expectedStartTime"
@@ -196,7 +196,9 @@ export function RundownPropertiesForm({ rundown }: { rundown: Rundown }) {
 					)}
 				/>
 					</>
-				)}
+						)
+					}
+				</form.Subscribe>
 
 				{metadataFields?.map((fieldInfo) => {
 					return (

@@ -17,7 +17,6 @@ import {
 
 let lastDateKeyInZone: string | undefined
 let midnightTimer: ReturnType<typeof setTimeout> | undefined
-let midnightInterval: ReturnType<typeof setInterval> | undefined
 
 export async function getApplicationSettings(): Promise<ApplicationSettings> {
 	const { result } = await settingsMutations.read()
@@ -287,12 +286,6 @@ export function startRundownScheduler(): void {
 		lastDateKeyInZone = getTodayDateKey(timeZone)
 		await reconcileAllEnabledTemplates()
 		scheduleNextMidnightCheck(timeZone)
-		if (midnightInterval) {
-			clearInterval(midnightInterval)
-		}
-		midnightInterval = setInterval(() => {
-			void onMidnightTick(timeZone)
-		}, 60 * 1000)
 	})()
 }
 

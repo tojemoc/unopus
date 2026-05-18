@@ -31,7 +31,7 @@ export function rundownDateKey(
 	if (rundown.scheduleDateKey) {
 		return rundown.scheduleDateKey
 	}
-	if (rundown.expectedStartTime) {
+	if (rundown.expectedStartTime != null) {
 		return formatDateKey(timeZone, rundown.expectedStartTime)
 	}
 	return null
@@ -39,6 +39,19 @@ export function rundownDateKey(
 
 export function compareDateKeys(a: string, b: string): number {
 	return a.localeCompare(b)
+}
+
+export function formatDateTimeInZone(
+	timeZone: string,
+	instant: number,
+	options?: Intl.DateTimeFormatOptions
+): string {
+	return new Intl.DateTimeFormat(undefined, {
+		timeZone,
+		dateStyle: 'medium',
+		timeStyle: 'short',
+		...options
+	}).format(new Date(instant))
 }
 
 export const COMMON_TIMEZONES = [

@@ -11,13 +11,18 @@ import { defaultRundownManifest, TYPE_MANIFESTS } from '../manifest'
 import { mutations as typeManifestMutations } from './typeManifests'
 import { Server, Socket } from 'socket.io'
 import { onApplicationSettingsUpdated } from '../rundownSchedule'
+import { validateApplicationSettingsFields } from '../settingsValidation'
 
 export const mutations = {
 	async create(
 		payload: MutationApplicationSettingsCreate
 	): Promise<{ result?: ApplicationSettings; error?: Error }> {
+		const validated = validateApplicationSettingsFields(payload)
+		if (!validated.ok) {
+			return { error: new Error(validated.error) }
+		}
 		const document = {
-			...payload
+			...validated.sanitized
 		}
 
 		try {
@@ -63,8 +68,12 @@ export const mutations = {
 	async update(
 		payload: MutationApplicationSettingsUpdate
 	): Promise<{ result?: ApplicationSettings; error?: Error }> {
+		const validated = validateApplicationSettingsFields(payload)
+		if (!validated.ok) {
+			return { error: new Error(validated.error) }
+		}
 		const update = {
-			...payload
+			...validated.sanitized
 		}
 
 		try {
@@ -110,7 +119,9 @@ export function registerSettingsHandlers(socket: Socket, _io: Server) {
 				{
 					const { result, error } = await mutations.update(payload)
 					if (result) {
-						await onApplicationSettingsUpdated(result)
+						void onApplicationSettingsUpdated(result).catch((err) => {
+							console.error('onApplicationSettingsUpdated failed after settings save', err)
+						})
 					}
 					callback(result || error)
 				}

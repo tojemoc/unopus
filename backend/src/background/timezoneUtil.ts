@@ -8,6 +8,9 @@ const WEEKDAY_SHORT: Record<string, number> = {
 	Sat: 6
 }
 
+const DEFAULT_TIME_ZONE = 'UTC'
+const MAX_ZONED_TO_UTC_ITERATIONS = 128
+
 export interface ZonedDateTime {
 	year: number
 	month: number
@@ -17,7 +20,7 @@ export interface ZonedDateTime {
 	weekday: number
 }
 
-export function getZonedDateTime(timeZone: string, instant: number = Date.now()): ZonedDateTime {
+function formatZonedDateTime(timeZone: string, instant: number): ZonedDateTime {
 	const formatter = new Intl.DateTimeFormat('en-US', {
 		timeZone,
 		year: 'numeric',
@@ -40,6 +43,18 @@ export function getZonedDateTime(timeZone: string, instant: number = Date.now())
 		hour: Number(get('hour')),
 		minute: Number(get('minute')),
 		weekday: WEEKDAY_SHORT[weekdayShort] ?? 0
+	}
+}
+
+export function getZonedDateTime(timeZone: string, instant: number = Date.now()): ZonedDateTime {
+	try {
+		return formatZonedDateTime(timeZone, instant)
+	} catch (err) {
+		if (err instanceof RangeError) {
+			console.warn(`Invalid timezone "${timeZone}", falling back to ${DEFAULT_TIME_ZONE}`)
+			return formatZonedDateTime(DEFAULT_TIME_ZONE, instant)
+		}
+		throw err
 	}
 }
 
@@ -67,7 +82,9 @@ export function zonedDateTimeToUtc(
 	minute: number
 ): number {
 	let t = Date.UTC(year, month - 1, day, hour, minute, 0, 0)
-	for (let i = 0; i < 48; i++) {
+	let lastDelta = Infinity
+
+	for (let i = 0; i < MAX_ZONED_TO_UTC_ITERATIONS; i++) {
 		const z = getZonedDateTime(timeZone, t)
 		if (
 			z.year === year &&
@@ -80,13 +97,21 @@ export function zonedDateTimeToUtc(
 		}
 		const targetMinutes = hour * 60 + minute
 		const actualMinutes = z.hour * 60 + z.minute
-		const dayDelta =
-			(year - z.year) * 400 +
-			(month - z.month) * 31 +
-			(day - z.day)
-		t += (dayDelta * 24 * 60 + (targetMinutes - actualMinutes)) * 60 * 1000
+		const dayDelta = (year - z.year) * 400 + (month - z.month) * 31 + (day - z.day)
+		const deltaMs = (dayDelta * 24 * 60 + (targetMinutes - actualMinutes)) * 60 * 1000
+		if (Math.abs(deltaMs) < 1) {
+			return t
+		}
+		if (Math.abs(deltaMs) >= Math.abs(lastDelta)) {
+			break
+		}
+		lastDelta = deltaMs
+		t += deltaMs
 	}
-	return t
+
+	throw new Error(
+		`zonedDateTimeToUtc failed to converge for ${timeZone} ${year}-${month}-${day} ${hour}:${minute}`
+	)
 }
 
 export function addCalendarDays(
@@ -107,29 +132,27 @@ export function isWeekday(weekday: number): boolean {
 	return weekday >= 1 && weekday <= 5
 }
 
+function advanceWeekday(weekday: number): number {
+	return weekday === 6 ? 0 : weekday + 1
+}
+
 /** Next `count` weekdays starting from today if weekday, else from next weekday. */
 export function getSchedulingDateKeys(timeZone: string, count: number, now = Date.now()): string[] {
 	const keys: string[] = []
 	let { year, month, day, weekday } = getZonedDateTime(timeZone, now)
 
 	if (!isWeekday(weekday)) {
-		let cursor = addCalendarDays(year, month, day, 1)
+		const cursor = addCalendarDays(year, month, day, 1)
 		year = cursor.year
 		month = cursor.month
 		day = cursor.day
-		weekday = getZonedDateTime(
-			timeZone,
-			zonedDateTimeToUtc(timeZone, year, month, day, 12, 0)
-		).weekday
+		weekday = advanceWeekday(weekday)
 		while (!isWeekday(weekday)) {
-			cursor = addCalendarDays(year, month, day, 1)
-			year = cursor.year
-			month = cursor.month
-			day = cursor.day
-			weekday = getZonedDateTime(
-				timeZone,
-				zonedDateTimeToUtc(timeZone, year, month, day, 12, 0)
-			).weekday
+			const next = addCalendarDays(year, month, day, 1)
+			year = next.year
+			month = next.month
+			day = next.day
+			weekday = advanceWeekday(weekday)
 		}
 	}
 
@@ -143,10 +166,7 @@ export function getSchedulingDateKeys(timeZone: string, count: number, now = Dat
 		year = next.year
 		month = next.month
 		day = next.day
-		weekday = getZonedDateTime(
-			timeZone,
-			zonedDateTimeToUtc(timeZone, year, month, day, 12, 0)
-		).weekday
+		weekday = advanceWeekday(weekday)
 	}
 
 	return keys

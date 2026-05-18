@@ -19,26 +19,23 @@ export function TemplateList({ templates, onImportTemplate }: TemplateListProps)
 	const store = useAppStore()
 	const toasts = useToasts()
 	const settings = useAppSelector((s) => s.settings.settings)
+	const allRundowns = useAppSelector((s) => s.rundowns)
 	const [regenerateTarget, setRegenerateTarget] = useState<Rundown | null>(null)
 	const [busyId, setBusyId] = useState<string | null>(null)
 
-	if (templates.length === 0) {
-		return (
-			<div className="rundown-empty-state">
-				<p>No templates yet. Create one or import a rundown template to get started.</p>
-			</div>
-		)
-	}
-
 	const saveTemplateSchedule = async (
-		template: Rundown,
+		templateId: string,
 		patch: Partial<
 			Pick<Rundown, 'scheduleEnabled' | 'scheduleAheadCount' | 'scheduleStartTime'>
 		>
 	) => {
+		const current = allRundowns.find((r) => r.id === templateId)
+		if (!current) {
+			return
+		}
 		try {
 			const updated = await dispatch(
-				updateRundown({ rundown: { ...template, ...patch } })
+				updateRundown({ rundown: { ...current, ...patch } })
 			).unwrap()
 			if (patch.scheduleEnabled) {
 				const created = await reconcileTemplateSchedule(updated.id)
@@ -110,6 +107,27 @@ export function TemplateList({ templates, onImportTemplate }: TemplateListProps)
 	const defaultAhead = settings?.scheduleAheadCount ?? 5
 	const defaultStart = settings?.scheduleStartTime ?? '18:00'
 
+	const importButton = (
+		<Button
+			variant="outline-primary"
+			size="sm"
+			className="d-inline-flex align-items-center gap-2 mt-3"
+			onClick={onImportTemplate}
+		>
+			<BsBoxArrowInUp aria-hidden />
+			Import template
+		</Button>
+	)
+
+	if (templates.length === 0) {
+		return (
+			<div className="rundown-empty-state">
+				<p>No templates yet. Create one or import a rundown template to get started.</p>
+				{importButton}
+			</div>
+		)
+	}
+
 	return (
 		<>
 			<Row xs={1} lg={2} className="g-3">
@@ -132,7 +150,7 @@ export function TemplateList({ templates, onImportTemplate }: TemplateListProps)
 									label="Auto-schedule weekday rundowns"
 									checked={template.scheduleEnabled === true}
 									onChange={(e) =>
-										void saveTemplateSchedule(template, {
+										void saveTemplateSchedule(template.id, {
 											scheduleEnabled: e.target.checked
 										})
 									}
@@ -150,7 +168,7 @@ export function TemplateList({ templates, onImportTemplate }: TemplateListProps)
 											value={template.scheduleAheadCount ?? ''}
 											onChange={(e) => {
 												const v = e.target.value
-												void saveTemplateSchedule(template, {
+												void saveTemplateSchedule(template.id, {
 													scheduleAheadCount: v ? Number(v) : undefined
 												})
 											}}
@@ -163,7 +181,7 @@ export function TemplateList({ templates, onImportTemplate }: TemplateListProps)
 											type="time"
 											value={template.scheduleStartTime ?? defaultStart}
 											onChange={(e) =>
-												void saveTemplateSchedule(template, {
+												void saveTemplateSchedule(template.id, {
 													scheduleStartTime: e.target.value
 												})
 											}
@@ -203,17 +221,7 @@ export function TemplateList({ templates, onImportTemplate }: TemplateListProps)
 				))}
 			</Row>
 
-			<div className="mt-3">
-				<Button
-					variant="outline-primary"
-					size="sm"
-					className="d-inline-flex align-items-center gap-2"
-					onClick={onImportTemplate}
-				>
-					<BsBoxArrowInUp aria-hidden />
-					Import template
-				</Button>
-			</div>
+			{importButton}
 
 			<Modal show={regenerateTarget !== null} onHide={() => setRegenerateTarget(null)} centered>
 				<Modal.Header closeButton>

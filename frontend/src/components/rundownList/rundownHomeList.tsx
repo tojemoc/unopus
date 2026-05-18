@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Button, Row } from 'react-bootstrap'
 import type { Rundown } from '~backend/background/interfaces'
 import { useAppSelector } from '~/store/app'
@@ -9,6 +9,19 @@ interface RundownHomeListProps {
 	rundowns: Rundown[]
 }
 
+function msUntilNextMidnight(timeZone: string): number {
+	const now = Date.now()
+	const todayKey = formatDateKey(timeZone, now)
+	let probe = now + 60_000
+	for (let i = 0; i < 48; i++) {
+		if (formatDateKey(timeZone, probe) !== todayKey) {
+			return Math.max(probe - now, 60_000)
+		}
+		probe += 60 * 60 * 1000
+	}
+	return 24 * 60 * 60 * 1000
+}
+
 export function RundownHomeList({ rundowns }: RundownHomeListProps) {
 	const parts = useAppSelector((s) => s.parts.parts)
 	const settings = useAppSelector((s) => s.settings.settings)
@@ -17,7 +30,26 @@ export function RundownHomeList({ rundowns }: RundownHomeListProps) {
 	const timeZone = settings?.timezone ?? 'Europe/Bratislava'
 	const pastVisible = settings?.rundownListPastVisible ?? 2
 	const futureVisible = settings?.rundownListFutureVisible ?? 4
-	const todayKey = formatDateKey(timeZone)
+	const [todayKey, setTodayKey] = useState(() => formatDateKey(timeZone))
+
+	useEffect(() => {
+		setTodayKey(formatDateKey(timeZone))
+		const scheduleRefresh = () => setTodayKey(formatDateKey(timeZone))
+		const timeoutId = setTimeout(scheduleRefresh, msUntilNextMidnight(timeZone))
+		const intervalId = setInterval(scheduleRefresh, 60_000)
+		return () => {
+			clearTimeout(timeoutId)
+			clearInterval(intervalId)
+		}
+	}, [timeZone])
+
+	const storyCountsByRundownId = useMemo(() => {
+		const counts = new Map<string, number>()
+		for (const part of parts) {
+			counts.set(part.rundownId, (counts.get(part.rundownId) ?? 0) + 1)
+		}
+		return counts
+	}, [parts])
 
 	const { pastCollapsed, pastHidden, today, futureExpanded, futureHidden, undated } = useMemo(() => {
 		const withKeys: Array<{ rundown: Rundown; dateKey: string | null }> = rundowns.map((r) => ({
@@ -59,7 +91,7 @@ export function RundownHomeList({ rundowns }: RundownHomeListProps) {
 		)
 	}
 
-	const storyCount = (rundownId: string) => parts.filter((p) => p.rundownId === rundownId).length
+	const storyCount = (rundownId: string) => storyCountsByRundownId.get(rundownId) ?? 0
 
 	const renderSection = (
 		title: string,
@@ -78,6 +110,7 @@ export function RundownHomeList({ rundowns }: RundownHomeListProps) {
 							key={rundown.id}
 							rundown={rundown}
 							storyCount={storyCount(rundown.id)}
+							timeZone={timeZone}
 							collapsed={collapsed}
 						/>
 					))}

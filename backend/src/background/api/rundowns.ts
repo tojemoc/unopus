@@ -353,9 +353,18 @@ async function handleUpdateRundown(payload: MutationRundownUpdate) {
 		}
 
 		if (result?.isTemplate) {
-			await bumpTemplateRevision(result.id)
-			if (result.scheduleEnabled) {
-				await reconcileTemplateSchedule(result.id)
+			try {
+				await bumpTemplateRevision(result.id)
+				if (result.scheduleEnabled) {
+					await reconcileTemplateSchedule(result.id)
+				}
+			} catch (err) {
+				console.error('Template post-update scheduling failed', {
+					templateId: result.id,
+					bumpTemplateRevision: true,
+					reconcileTemplateSchedule: result.scheduleEnabled,
+					err
+				})
 			}
 		}
 

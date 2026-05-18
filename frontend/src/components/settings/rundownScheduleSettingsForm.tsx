@@ -19,12 +19,38 @@ export function RundownScheduleSettingsForm({ settings }: { settings: Applicatio
 			rundownListFutureVisible: settings.rundownListFutureVisible ?? 4
 		},
 		onSubmit: async (values) => {
+			const raw = values.value
+			const scheduleAheadCount = Math.min(
+				30,
+				Math.max(1, Math.round(Number(raw.scheduleAheadCount) || 5))
+			)
+			const rundownListPastVisible = Math.min(
+				14,
+				Math.max(0, Math.round(Number(raw.rundownListPastVisible) || 0))
+			)
+			const rundownListFutureVisible = Math.min(
+				14,
+				Math.max(0, Math.round(Number(raw.rundownListFutureVisible) || 0))
+			)
+			const scheduleStartTime = String(raw.scheduleStartTime ?? '').trim()
+			if (!/^([01]?\d|2[0-3]):[0-5]\d$/.test(scheduleStartTime)) {
+				toasts.show({
+					headerContent: 'Schedule settings',
+					bodyContent: 'Start time must be HH:mm in 24-hour notation (e.g. 18:00)'
+				})
+				return
+			}
+
 			try {
 				await dispatch(
 					updateSettings({
 						settings: {
 							...settings,
-							...values.value
+							timezone: raw.timezone,
+							scheduleAheadCount,
+							scheduleStartTime,
+							rundownListPastVisible,
+							rundownListFutureVisible
 						}
 					})
 				).unwrap()

@@ -26,7 +26,7 @@ import { spliceReorder } from '../util'
 import { mutations as piecesMutations } from './pieces'
 import { Server, Socket } from 'socket.io'
 import { recordEntityEdit } from '../auth/authStore'
-import { notifyRundownTreeMutation } from '../rundownSchedule'
+import { notifyRundownTreeMutationSafe } from '../notifyRundownTreeMutationSafe'
 import type { AuthenticatedSocket } from '../auth/socketAuth'
 
 async function mutatePart(part: Part): Promise<MutatedPart> {
@@ -655,7 +655,7 @@ async function handlePartUpdate(
 				console.error(error)
 				returnedError = error
 			}
-			await notifyRundownTreeMutation(result.rundownId)
+			await notifyRundownTreeMutationSafe(result.rundownId)
 		}
 
 		return { result, error: returnedError }

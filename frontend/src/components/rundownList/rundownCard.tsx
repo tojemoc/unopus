@@ -3,6 +3,7 @@ import { Link } from '@tanstack/react-router'
 import type { Rundown } from '~backend/background/interfaces'
 import { CoreConnectionStatus } from '~backend/background/interfaces'
 import { useAppSelector } from '~/store/app'
+import { formatDateTimeInZone } from '~/util/timezone'
 
 function syncLabel(rundown: Rundown, coreStatus: CoreConnectionStatus): string {
 	if (!rundown.sync) {
@@ -25,11 +26,18 @@ function syncClass(rundown: Rundown, coreStatus: CoreConnectionStatus): string {
 export interface RundownCardProps {
 	rundown: Rundown
 	storyCount: number
+	timeZone: string
 	collapsed?: boolean
 	extraActions?: React.ReactNode
 }
 
-export function RundownCard({ rundown, storyCount, collapsed, extraActions }: RundownCardProps) {
+export function RundownCard({
+	rundown,
+	storyCount,
+	timeZone,
+	collapsed,
+	extraActions
+}: RundownCardProps) {
 	const coreStatus = useAppSelector((s) => s.coreConnectionStatus.status)
 
 	return (
@@ -40,8 +48,8 @@ export function RundownCard({ rundown, storyCount, collapsed, extraActions }: Ru
 					{!collapsed && (
 						<>
 							<Card.Text className="text-muted small mb-2">
-								{rundown.expectedStartTime
-									? new Date(rundown.expectedStartTime).toLocaleString()
+								{rundown.expectedStartTime != null
+									? formatDateTimeInZone(timeZone, rundown.expectedStartTime)
 									: 'No scheduled time'}
 							</Card.Text>
 							<div className="d-flex gap-2 flex-wrap mb-3 small">
