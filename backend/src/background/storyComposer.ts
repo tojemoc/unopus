@@ -156,7 +156,12 @@ export async function quickAddStoryFromRundownTemplate(
 		return { error: new Error('Selected rundown is not marked as a template') }
 	}
 
-	const sourceSegmentId = await pickTemplateSourceSegmentId(templateRundownId)
+	let sourceSegmentId: string | undefined
+	try {
+		sourceSegmentId = await pickTemplateSourceSegmentId(templateRundownId)
+	} catch (err) {
+		return { error: err instanceof Error ? err : new Error(String(err)) }
+	}
 	if (!sourceSegmentId) {
 		return { error: new Error('Template rundown has no segments to copy from') }
 	}

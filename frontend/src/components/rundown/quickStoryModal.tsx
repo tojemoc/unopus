@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button, Form, Modal } from 'react-bootstrap'
 import { Link } from '@tanstack/react-router'
 import type { Rundown, Segment } from '~backend/background/interfaces'
@@ -35,10 +35,20 @@ export function QuickStoryModal({
 
 	const [selectedId, setSelectedId] = useState<string>('')
 	const [submitting, setSubmitting] = useState(false)
+	const prevShowRef = useRef(false)
 
 	useEffect(() => {
-		if (!show) return
-		setSelectedId(templateRundowns[0]?.id ?? '')
+		const justOpened = show && !prevShowRef.current
+		prevShowRef.current = show
+		if (!show) {
+			return
+		}
+		setSelectedId((current) => {
+			if (!justOpened && current && templateRundowns.some((t) => t.id === current)) {
+				return current
+			}
+			return templateRundowns[0]?.id ?? ''
+		})
 	}, [show, templateRundowns])
 
 	const templateParts = useAppSelector((s) => {
