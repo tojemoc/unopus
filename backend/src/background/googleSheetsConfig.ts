@@ -1,7 +1,9 @@
+import fs from 'fs'
 import type { ApplicationSettings } from './interfaces'
 import {
 	getGoogleSheetsConfigFromEnv,
 	isGoogleSheetsConfigured as isGoogleSheetsConfiguredFromEnv,
+	loadCredentialsFromEnv,
 	type GoogleSheetsWriterConfig
 } from './adapters/sheets/googleSheetsWriter'
 import { mutations as settingsMutations } from './api/settings'
@@ -12,6 +14,18 @@ function parseCredentialsJson(raw: string | undefined): object | null {
 	}
 	try {
 		return JSON.parse(raw) as object
+	} catch {
+		return null
+	}
+}
+
+function loadCredentialsFromPath(filePath: string | undefined): object | null {
+	if (!filePath?.trim()) {
+		return null
+	}
+	try {
+		const raw = fs.readFileSync(filePath.trim(), 'utf8')
+		return parseCredentialsJson(raw)
 	} catch {
 		return null
 	}
@@ -40,15 +54,20 @@ export function getGoogleSheetsConfigFromSettings(
 export function getGoogleSheetsCredentials(
 	settings?: ApplicationSettings
 ): object | null {
-	const fromSettings = parseCredentialsJson(settings?.googleSheetsCredentialsJson)
-	if (fromSettings) {
-		return fromSettings
+	const envVarName = settings?.googleSheetsCredentialsEnvVar?.trim()
+	if (envVarName) {
+		const fromNamedEnv = parseCredentialsJson(process.env[envVarName])
+		if (fromNamedEnv) {
+			return fromNamedEnv
+		}
 	}
-	const inline = process.env.GOOGLE_SHEETS_CREDENTIALS_JSON?.trim()
-	if (inline) {
-		return parseCredentialsJson(inline)
+
+	const fromSettingsPath = loadCredentialsFromPath(settings?.googleSheetsCredentialsPath)
+	if (fromSettingsPath) {
+		return fromSettingsPath
 	}
-	return null
+
+	return loadCredentialsFromEnv()
 }
 
 export async function resolveGoogleSheetsConfig(): Promise<GoogleSheetsWriterConfig | null> {

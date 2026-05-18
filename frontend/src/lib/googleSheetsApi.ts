@@ -1,5 +1,3 @@
-import type { ApplicationSettings } from '~backend/background/interfaces'
-
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
 	const response = await fetch(path, {
 		...init,
@@ -44,19 +42,3 @@ export async function testGoogleSheetsConnection(): Promise<{
 	}
 }
 
-export function googleSheetsFieldsFromSettings(
-	settings: ApplicationSettings
-): Pick<
-	ApplicationSettings,
-	| 'googleSheetsSpreadsheetId'
-	| 'googleSheetsSheetName'
-	| 'googleSheetsDataStartRow'
-	| 'googleSheetsCredentialsJson'
-> {
-	return {
-		googleSheetsSpreadsheetId: settings.googleSheetsSpreadsheetId ?? '',
-		googleSheetsSheetName: settings.googleSheetsSheetName ?? '',
-		googleSheetsDataStartRow: settings.googleSheetsDataStartRow ?? 2,
-		googleSheetsCredentialsJson: settings.googleSheetsCredentialsJson ?? ''
-	}
-}

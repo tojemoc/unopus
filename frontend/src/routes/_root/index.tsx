@@ -8,7 +8,7 @@ import { useToasts } from '~/components/toasts/useToasts'
 import { ipcAPI } from '~/lib/IPC'
 import { useAppDispatch, useAppSelector } from '~/store/app'
 import { addNewRundown, copyRundown, importRundown } from '~/store/rundowns'
-import { parseImportFile } from '~/util/normalizeImport'
+import { extractOriginalRundownId } from '~/util/normalizeImport'
 import type { Rundown } from '~backend/background/interfaces'
 
 export const Route = createFileRoute('/_root/')({
@@ -70,8 +70,9 @@ function Index() {
 			.openFromFile({ title: isTemplate ? 'Import template' : 'Import rundown' })
 			.then(async (fileData) => {
 				try {
-					const serializedRundown = parseImportFile(fileData, isTemplate)
-					const existing = rundowns.find((rd) => rd.id === serializedRundown.rundown.id)
+					const originalId = extractOriginalRundownId(fileData)
+					const existing =
+						originalId && rundowns.find((rd) => rd.id === originalId)
 					if (existing) {
 						toasts.show({
 							headerContent: 'Import',

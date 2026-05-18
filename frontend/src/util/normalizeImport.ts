@@ -144,14 +144,18 @@ function storyPatternToSerialized(
 	}
 }
 
-function tryParseStoryTemplates(data: unknown): SerializedRundown | null {
-	if (!isRecord(data)) {
-		return null
+/** Original rundown id from import file before remap (for duplicate detection). */
+export function extractOriginalRundownId(data: unknown): string | undefined {
+	if (!isRecord(data) || !isRecord(data.rundown)) {
+		return undefined
 	}
+	return asString(data.rundown.id)
+}
 
+function tryParseStoryTemplates(data: unknown): SerializedRundown | null {
 	const rawList = Array.isArray(data)
 		? data
-		: Array.isArray(data.templates)
+		: isRecord(data) && Array.isArray(data.templates)
 			? data.templates
 			: null
 

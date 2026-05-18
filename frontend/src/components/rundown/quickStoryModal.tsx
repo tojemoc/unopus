@@ -7,6 +7,7 @@ import { useAppDispatch, useAppSelector } from '~/store/app'
 import { pushPart } from '~/store/parts'
 import { pushPiece } from '~/store/pieces'
 import { useToasts } from '~/components/toasts/useToasts'
+import { pickTemplateSourceSegmentId } from '~/util/templateSourceSegment'
 
 const modalSurface = { backgroundColor: '#1a1d20ff' }
 
@@ -42,8 +43,14 @@ export function QuickStoryModal({
 
 	const templateParts = useAppSelector((s) => {
 		if (!selectedId) return []
+		const sourceSegmentId = pickTemplateSourceSegmentId(
+			selectedId,
+			s.segments.segments,
+			s.parts.parts
+		)
+		if (!sourceSegmentId) return []
 		return s.parts.parts
-			.filter((p) => p.rundownId === selectedId)
+			.filter((p) => p.rundownId === selectedId && p.segmentId === sourceSegmentId)
 			.sort((a, b) => a.rank - b.rank)
 	})
 

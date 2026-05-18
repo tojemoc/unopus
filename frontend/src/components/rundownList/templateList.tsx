@@ -7,7 +7,7 @@ import { DropImportZone } from '~/components/files/dropImportZone'
 import { useAppDispatch, useAppSelector, useAppStore } from '~/store/app'
 import { ipcAPI } from '~/lib/IPC'
 import { regenerateFromTemplate, reconcileTemplateSchedule } from '~/lib/rundownScheduleApi'
-import { parseImportFile } from '~/util/normalizeImport'
+import { extractOriginalRundownId, parseImportFile } from '~/util/normalizeImport'
 import { importRundown, updateRundown, pushRundown, initRundowns } from '~/store/rundowns'
 import { useToasts } from '~/components/toasts/useToasts'
 
@@ -113,10 +113,11 @@ export function TemplateList({ templates, onImportTemplate }: TemplateListProps)
 		async (file: File) => {
 			const text = await file.text()
 			const data = JSON.parse(text) as unknown
-			const preview = parseImportFile(data, true)
-			if (store.getState().rundowns.some((r) => r.id === preview.rundown.id)) {
+			const originalId = extractOriginalRundownId(data)
+			if (originalId && store.getState().rundowns.some((r) => r.id === originalId)) {
 				throw new Error('A rundown with this id already exists')
 			}
+			parseImportFile(data, true)
 			const created = await dispatch(importRundown({ data, isTemplate: true })).unwrap()
 			await navigate({ to: `/rundown/${created.id}` })
 			toasts.show({

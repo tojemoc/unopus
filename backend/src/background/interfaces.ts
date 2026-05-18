@@ -194,8 +194,10 @@ export interface ApplicationSettings {
 	googleSheetsSheetName?: string
 	/** 1-based row where data starts (default 2). */
 	googleSheetsDataStartRow?: number
-	/** Service account JSON (inline). Prefer env in production. */
-	googleSheetsCredentialsJson?: string
+	/** Env var name whose value is service-account JSON (never store the JSON in settings). */
+	googleSheetsCredentialsEnvVar?: string
+	/** Server-local path to service-account JSON file (optional). */
+	googleSheetsCredentialsPath?: string
 	/** IANA timezone for scheduling and list grouping (default Europe/Bratislava). */
 	timezone?: string
 	/** Weekday rundowns to keep scheduled ahead per enabled template (default 5). */

@@ -62,6 +62,16 @@ function getPartTypeLabel(partTypeId: string, manifests: TypeManifest[]): string
 	return manifest?.shortName ?? manifest?.name ?? partTypeId
 }
 
+function clampInsertRank(requested: number | undefined, partCount: number): number {
+	if (requested === undefined) {
+		return partCount
+	}
+	if (typeof requested !== 'number' || !Number.isFinite(requested)) {
+		return partCount
+	}
+	return Math.max(0, Math.min(partCount, Math.floor(requested)))
+}
+
 async function shiftPartRanksFrom(
 	segmentId: string,
 	fromRank: number,
@@ -115,7 +125,10 @@ async function pickTemplateSourceSegmentId(templateRundownId: string): Promise<s
 	let best = sorted[0]
 	let bestCount = 0
 	for (const segment of sorted) {
-		const { result: parts } = await partMutations.read({ segmentId: segment.id })
+		const { result: parts, error } = await partMutations.read({ segmentId: segment.id })
+		if (error) {
+			throw error
+		}
 		const count = Array.isArray(parts) ? parts.length : parts ? 1 : 0
 		if (count > bestCount) {
 			best = segment
@@ -154,15 +167,25 @@ export async function quickAddStoryFromRundownTemplate(
 		return { error: segmentError ?? new Error('Segment not found') }
 	}
 
-	const { result: sourceParts } = await partMutations.read({ segmentId: sourceSegmentId })
+	const { result: sourceParts, error: sourcePartsError } = await partMutations.read({
+		segmentId: sourceSegmentId
+	})
+	if (sourcePartsError) {
+		return { error: sourcePartsError }
+	}
 	const sourcePartList = Array.isArray(sourceParts) ? sourceParts : sourceParts ? [sourceParts] : []
 	if (sourcePartList.length === 0) {
 		return { error: new Error('Template segment has no parts') }
 	}
 
-	const { result: existingParts } = await partMutations.read({ segmentId: targetSegmentId })
+	const { result: existingParts, error: existingPartsError } = await partMutations.read({
+		segmentId: targetSegmentId
+	})
+	if (existingPartsError) {
+		return { error: existingPartsError }
+	}
 	const partCount = Array.isArray(existingParts) ? existingParts.length : 0
-	const startRank = request.rank ?? partCount
+	const startRank = clampInsertRank(request.rank, partCount)
 
 	const createdParts: Part[] = []
 	const createdPieces: Piece[] = []
@@ -236,9 +259,14 @@ export async function quickAddStoryFromTemplate(
 		return { error: segmentError ?? new Error('Segment not found') }
 	}
 
-	const { result: existingParts } = await partMutations.read({ segmentId })
+	const { result: existingParts, error: existingPartsError } = await partMutations.read({
+		segmentId
+	})
+	if (existingPartsError) {
+		return { error: existingPartsError }
+	}
 	const partCount = Array.isArray(existingParts) ? existingParts.length : 0
-	const startRank = request.rank ?? partCount
+	const startRank = clampInsertRank(request.rank, partCount)
 	const patternLength = template.pattern.length
 
 	if (patternLength === 0) {

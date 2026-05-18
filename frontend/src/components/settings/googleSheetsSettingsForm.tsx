@@ -25,8 +25,11 @@ export function GoogleSheetsSettingsForm({ settings }: { settings: ApplicationSe
 	)
 	const [sheetName, setSheetName] = useState(settings.googleSheetsSheetName ?? 'Sheet1')
 	const [dataStartRow, setDataStartRow] = useState(String(settings.googleSheetsDataStartRow ?? 2))
-	const [credentialsJson, setCredentialsJson] = useState(
-		settings.googleSheetsCredentialsJson ?? ''
+	const [credentialsEnvVar, setCredentialsEnvVar] = useState(
+		settings.googleSheetsCredentialsEnvVar ?? ''
+	)
+	const [credentialsPath, setCredentialsPath] = useState(
+		settings.googleSheetsCredentialsPath ?? ''
 	)
 
 	const refreshStatus = useCallback(async () => {
@@ -44,7 +47,7 @@ export function GoogleSheetsSettingsForm({ settings }: { settings: ApplicationSe
 		void refreshStatus()
 	}, [refreshStatus])
 
-	const saveSheetsSettings = async () => {
+	const saveSheetsSettings = async (): Promise<boolean> => {
 		setSaving(true)
 		try {
 			const row = Math.max(Number(dataStartRow) || 2, 1)
@@ -55,7 +58,8 @@ export function GoogleSheetsSettingsForm({ settings }: { settings: ApplicationSe
 						googleSheetsSpreadsheetId: spreadsheetId.trim() || undefined,
 						googleSheetsSheetName: sheetName.trim() || undefined,
 						googleSheetsDataStartRow: row,
-						googleSheetsCredentialsJson: credentialsJson.trim() || undefined
+						googleSheetsCredentialsEnvVar: credentialsEnvVar.trim() || undefined,
+						googleSheetsCredentialsPath: credentialsPath.trim() || undefined
 					}
 				})
 			).unwrap()
@@ -64,12 +68,14 @@ export function GoogleSheetsSettingsForm({ settings }: { settings: ApplicationSe
 				headerContent: 'Google Sheets',
 				bodyContent: 'Settings saved'
 			})
+			return true
 		} catch (e) {
 			console.error(e)
 			toasts.show({
 				headerContent: 'Google Sheets',
 				bodyContent: 'Could not save settings'
 			})
+			return false
 		} finally {
 			setSaving(false)
 		}
@@ -78,14 +84,19 @@ export function GoogleSheetsSettingsForm({ settings }: { settings: ApplicationSe
 	const runTest = async () => {
 		setTesting(true)
 		setTestMessage(null)
+		const saved = await saveSheetsSettings()
+		if (!saved) {
+			setTesting(false)
+			return
+		}
 		try {
-			await saveSheetsSettings()
 			const result = await testGoogleSheetsConnection()
 			if (result.ok) {
 				setTestVariant('success')
 				setTestMessage(
 					`Connected to “${result.title ?? 'spreadsheet'}”` +
-						(result.sheetTitle ? ` (sheet: ${result.sheetTitle})` : '')
+						(result.sheetTitle ? ` (sheet: ${result.sheetTitle})` : '') +
+						' — read and write verified'
 				)
 			} else {
 				setTestVariant('danger')
@@ -106,8 +117,9 @@ export function GoogleSheetsSettingsForm({ settings }: { settings: ApplicationSe
 		<section className="mt-4 pt-3 border-top border-secondary">
 			<h3 className="h5">Google Sheets (NRCS export)</h3>
 			<p className="text-muted small">
-				Used by the NRCS → Sheets adapter to push automation rows for vMix. Environment
-				variables (<code>GOOGLE_SHEETS_*</code>) are used when fields below are empty.
+				Used by the NRCS → Sheets adapter to push automation rows for vMix. Service account
+				credentials are read from environment variables or a server path — they are not stored
+				in the database.
 			</p>
 
 			{loadingStatus ? (
@@ -116,7 +128,7 @@ export function GoogleSheetsSettingsForm({ settings }: { settings: ApplicationSe
 				<Alert variant={configured ? 'success' : 'warning'} className="py-2 small">
 					{configured
 						? 'Configured — spreadsheet and credentials are available.'
-						: 'Not fully configured — set spreadsheet ID and service account JSON, or use env vars.'}
+						: 'Not fully configured — set spreadsheet ID and credentials via env or path below.'}
 					{status && !configured && status.hasCredentials && !status.spreadsheetId && (
 						<span> Credentials are set; spreadsheet ID is missing.</span>
 					)}
@@ -144,18 +156,28 @@ export function GoogleSheetsSettingsForm({ settings }: { settings: ApplicationSe
 					onChange={(e) => setDataStartRow(e.target.value)}
 				/>
 			</Form.Group>
-			<Form.Group className="mb-3">
-				<Form.Label>Service account JSON</Form.Label>
+			<Form.Group className="mb-2">
+				<Form.Label>Credentials env var</Form.Label>
 				<Form.Control
-					as="textarea"
-					rows={4}
-					value={credentialsJson}
-					onChange={(e) => setCredentialsJson(e.target.value)}
-					placeholder='{"type":"service_account",...}'
-					spellCheck={false}
+					value={credentialsEnvVar}
+					onChange={(e) => setCredentialsEnvVar(e.target.value)}
+					placeholder="GOOGLE_SHEETS_CREDENTIALS_JSON"
 				/>
 				<Form.Text className="text-muted">
-					Paste the full JSON key for a Google service account with access to the spreadsheet.
+					Name of an environment variable containing the service-account JSON. Defaults to{' '}
+					<code>GOOGLE_SHEETS_CREDENTIALS_JSON</code> when empty.
+				</Form.Text>
+			</Form.Group>
+			<Form.Group className="mb-3">
+				<Form.Label>Credentials file path (server)</Form.Label>
+				<Form.Control
+					value={credentialsPath}
+					onChange={(e) => setCredentialsPath(e.target.value)}
+					placeholder="/path/to/service-account.json"
+				/>
+				<Form.Text className="text-muted">
+					Optional path on the backend host. <code>GOOGLE_SHEETS_CREDENTIALS_PATH</code> env is
+					used when this is empty.
 				</Form.Text>
 			</Form.Group>
 
