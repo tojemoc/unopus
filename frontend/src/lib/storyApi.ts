@@ -22,11 +22,24 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 		},
 		...init
 	})
-	const body = (await response.json()) as T & { error?: string }
+
 	if (!response.ok) {
-		throw new Error('error' in body && body.error ? body.error : 'Request failed')
+		const raw = await response.text()
+		let message = raw || 'Request failed'
+		try {
+			const parsed = JSON.parse(raw) as { error?: string; message?: string }
+			if (parsed.error) {
+				message = parsed.error
+			} else if (parsed.message) {
+				message = parsed.message
+			}
+		} catch {
+			// keep raw text
+		}
+		throw new Error(`HTTP ${response.status}: ${message}`)
 	}
-	return body
+
+	return (await response.json()) as T
 }
 
 export async function fetchStoryTemplates(): Promise<StoryTemplate[]> {

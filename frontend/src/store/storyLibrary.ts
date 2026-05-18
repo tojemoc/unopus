@@ -14,6 +14,7 @@ interface StoryLibraryState {
 	searchResults: StoryLibraryEntry[]
 	searchStatus: 'idle' | 'pending' | 'succeeded' | 'failed'
 	error: string | null
+	latestSearchRequestId: string | null
 }
 
 const initialState: StoryLibraryState = {
@@ -21,7 +22,8 @@ const initialState: StoryLibraryState = {
 	searchQuery: '',
 	searchResults: [],
 	searchStatus: 'idle',
-	error: null
+	error: null,
+	latestSearchRequestId: null
 }
 
 const storyLibrarySlice = createSlice({
@@ -40,15 +42,22 @@ const storyLibrarySlice = createSlice({
 	},
 	extraReducers: (builder) => {
 		builder
-			.addCase(searchStoryLibrary.pending, (state) => {
+			.addCase(searchStoryLibrary.pending, (state, action) => {
 				state.searchStatus = 'pending'
 				state.error = null
+				state.latestSearchRequestId = action.meta.requestId
 			})
 			.addCase(searchStoryLibrary.fulfilled, (state, action) => {
+				if (action.meta.requestId !== state.latestSearchRequestId) {
+					return
+				}
 				state.searchStatus = 'succeeded'
 				state.searchResults = action.payload
 			})
 			.addCase(searchStoryLibrary.rejected, (state, action) => {
+				if (action.meta.requestId !== state.latestSearchRequestId) {
+					return
+				}
 				state.searchStatus = 'failed'
 				state.error = action.error.message ?? 'Search failed'
 			})

@@ -21,6 +21,28 @@ function sendJson(res: Response, status: number, body: unknown): void {
 	res.status(status).json(body)
 }
 
+function normalizeStoryPattern(
+	pattern: unknown
+): { ok: true; pattern: string[] } | { ok: false; error: string } {
+	if (!Array.isArray(pattern) || pattern.length === 0) {
+		return {
+			ok: false,
+			error: 'Pattern must be a non-empty array of part type IDs'
+		}
+	}
+	const normalized: string[] = []
+	for (const item of pattern) {
+		if (typeof item !== 'string' || item.trim().length === 0) {
+			return {
+				ok: false,
+				error: 'Each pattern entry must be a non-empty part type ID string'
+			}
+		}
+		normalized.push(item.trim())
+	}
+	return { ok: true, pattern: normalized }
+}
+
 export function registerStoryRoutes(app: Application): void {
 	app.get('/api/story-templates', (_req: Request, res: Response) => {
 		sendJson(res, 200, { templates: listStoryTemplates() })
@@ -28,25 +50,35 @@ export function registerStoryRoutes(app: Application): void {
 
 	app.post('/api/story-templates', (req: Request, res: Response) => {
 		const body = req.body as MutationStoryTemplateCreate & { storyPattern?: string[] }
-		const pattern = body.pattern ?? body.storyPattern
+		const patternRaw = body.pattern ?? body.storyPattern
 		if (!body.name?.trim()) {
 			sendJson(res, 400, { error: 'Name is required' })
 			return
 		}
-		if (!Array.isArray(pattern) || pattern.length === 0) {
-			sendJson(res, 400, { error: 'Pattern must be a non-empty array of part type IDs' })
+		const patternResult = normalizeStoryPattern(patternRaw)
+		if (!patternResult.ok) {
+			sendJson(res, 400, { error: patternResult.error })
 			return
 		}
 		const template = createStoryTemplate({
 			name: body.name.trim(),
-			pattern
+			pattern: patternResult.pattern
 		})
 		sendJson(res, 201, { template })
 	})
 
 	app.patch('/api/story-templates/:id', (req: Request, res: Response) => {
 		const body = req.body as Omit<MutationStoryTemplateUpdate, 'id'>
-		const updated = updateStoryTemplate(String(req.params.id), body)
+		let patch = body
+		if (body.pattern !== undefined) {
+			const patternResult = normalizeStoryPattern(body.pattern)
+			if (!patternResult.ok) {
+				sendJson(res, 400, { error: patternResult.error })
+				return
+			}
+			patch = { ...body, pattern: patternResult.pattern }
+		}
+		const updated = updateStoryTemplate(String(req.params.id), patch)
 		if (!updated) {
 			sendJson(res, 404, { error: 'Story template not found' })
 			return

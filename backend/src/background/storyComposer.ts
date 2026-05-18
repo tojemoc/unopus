@@ -129,41 +129,45 @@ export async function quickAddStoryFromTemplate(
 		return { error: new Error('Story template pattern is empty') }
 	}
 
-	await shiftPartRanksFrom(segmentId, startRank, patternLength)
-
 	const manifests = await loadPartTypeManifests()
 	const typeCounters: Record<string, number> = {}
 	const createdParts: Part[] = []
 	const createdPieces: Piece[] = []
 
-	for (let i = 0; i < template.pattern.length; i++) {
-		const partTypeId = template.pattern[i]
-		const label = getPartTypeLabel(partTypeId, manifests)
-		typeCounters[label] = (typeCounters[label] ?? 0) + 1
-		const partName = `${label} ${typeCounters[label]}`
+	db.exec('BEGIN')
+	try {
+		await shiftPartRanksFrom(segmentId, startRank, patternLength)
 
-		const { result: part, error: createError } = await partMutations.create({
-			playlistId: segment.playlistId,
-			rundownId: segment.rundownId,
-			segmentId: segment.id,
-			name: partName,
-			partType: partTypeId,
-			rank: startRank + i,
-			float: false,
-			payload: {}
-		})
+		for (let i = 0; i < template.pattern.length; i++) {
+			const partTypeId = template.pattern[i]
+			const label = getPartTypeLabel(partTypeId, manifests)
+			typeCounters[label] = (typeCounters[label] ?? 0) + 1
+			const partName = `${label} ${typeCounters[label]}`
 
-		if (createError || !part) {
-			return { error: createError ?? new Error('Failed to create part') }
-		}
+			const { result: part, error: createError } = await partMutations.create({
+				playlistId: segment.playlistId,
+				rundownId: segment.rundownId,
+				segmentId: segment.id,
+				name: partName,
+				partType: partTypeId,
+				rank: startRank + i,
+				float: false,
+				payload: {}
+			})
 
-		try {
+			if (createError || !part) {
+				throw createError ?? new Error('Failed to create part')
+			}
+
 			const pieces = await createDefaultPiecesForPart(part, partTypeId)
 			createdParts.push(part)
 			createdPieces.push(...pieces)
-		} catch (e) {
-			return { error: e instanceof Error ? e : new Error(String(e)) }
 		}
+
+		db.exec('COMMIT')
+	} catch (e) {
+		db.exec('ROLLBACK')
+		return { error: e instanceof Error ? e : new Error(String(e)) }
 	}
 
 	const io = getSocketIO()
@@ -258,13 +262,13 @@ export async function recallStoryToSegment(
 ): Promise<{ result?: MutationPartCopyResult; error?: Error }> {
 	const targetRank = request.targetRank
 
-	if (targetRank !== undefined) {
-		await shiftPartRanksFrom(request.targetSegmentId, targetRank, 1)
-	}
-
 	const { result: sourcePart, error: sourceError } = await partMutations.readOne(partId)
 	if (sourceError || !sourcePart) {
 		return { error: sourceError ?? new Error('Source part not found') }
+	}
+
+	if (targetRank !== undefined) {
+		await shiftPartRanksFrom(request.targetSegmentId, targetRank, 1)
 	}
 
 	const { result, error } = await partMutations.createPartCopy({
@@ -275,6 +279,9 @@ export async function recallStoryToSegment(
 	})
 
 	if (error || !result) {
+		if (targetRank !== undefined) {
+			await shiftPartRanksFrom(request.targetSegmentId, targetRank, -1)
+		}
 		return { error: error instanceof Error ? error : new Error(String(error)) }
 	}
 
@@ -311,11 +318,22 @@ export async function generateRundownFromTemplate(
 	}
 
 	const scheduled = new Date(request.scheduledDate)
-	const midnight = new Date(scheduled)
-	midnight.setHours(0, 0, 0, 0)
+	const scheduledValid = !Number.isNaN(scheduled.getTime())
+	let dateLabel: string | undefined
+	let expectedStartTime: number | undefined
 
-	const dateLabel = `${midnight.getFullYear()}-${String(midnight.getMonth() + 1).padStart(2, '0')}-${String(midnight.getDate()).padStart(2, '0')}`
-	const newName = `${sourceRundown.name} ${dateLabel}`
+	if (scheduledValid) {
+		const midnight = new Date(scheduled)
+		midnight.setHours(0, 0, 0, 0)
+		expectedStartTime = midnight.getTime()
+		dateLabel = `${midnight.getFullYear()}-${String(midnight.getMonth() + 1).padStart(2, '0')}-${String(midnight.getDate()).padStart(2, '0')}`
+	} else {
+		console.warn(
+			'generateRundownFromTemplate: invalid scheduledDate',
+			request.scheduledDate,
+			'— using copy name without date suffix'
+		)
+	}
 
 	const { result: copyResult, error: copyError } = await rundownMutations.createRundownCopy({
 		id: request.templateRundownId,
@@ -328,8 +346,8 @@ export async function generateRundownFromTemplate(
 
 	const { result: updatedRundown, error: updateError } = await rundownMutations.update({
 		...copyResult.rundown,
-		name: newName,
-		expectedStartTime: midnight.getTime(),
+		name: dateLabel ? `${sourceRundown.name} ${dateLabel}` : copyResult.rundown.name,
+		...(expectedStartTime !== undefined ? { expectedStartTime } : {}),
 		isTemplate: false,
 		sync: false
 	})

@@ -34,6 +34,19 @@ function RecallPopover({
 	const [targetSegmentId, setTargetSegmentId] = useState(segments[0]?.id ?? '')
 	const [submitting, setSubmitting] = useState(false)
 
+	useEffect(() => {
+		if (segments.length === 0) {
+			if (targetSegmentId !== '') {
+				setTargetSegmentId('')
+			}
+			return
+		}
+		const stillValid = segments.some((s) => s.id === targetSegmentId)
+		if (!targetSegmentId || !stillValid) {
+			setTargetSegmentId(segments[0].id)
+		}
+	}, [segments, targetSegmentId])
+
 	const handleRecall = async () => {
 		if (!targetSegmentId) return
 		setSubmitting(true)

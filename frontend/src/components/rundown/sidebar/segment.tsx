@@ -221,7 +221,16 @@ export function SidebarSegment({
 			</div>
 			{sortedParts.length > 0 && (
 				<Stack className="add-button-container px-3 pb-2">
-					<button className="add-button" onClick={() => openQuickStory(sortedParts.length)}>
+					<button
+						className="add-button"
+						onClick={() => {
+							const nextRank =
+								sortedParts.length === 0
+									? 0
+									: Math.max(...sortedParts.map((p) => p.rank ?? -1)) + 1
+							openQuickStory(nextRank)
+						}}
+					>
 						<BsLightningCharge className="icon-lg" aria-hidden />
 						Quick Story
 					</button>
