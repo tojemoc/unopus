@@ -1,6 +1,7 @@
 'use strict'
 
 import { initializeDefaults as initializeSettingsDefaults } from './background/api/settings'
+import { startRundownScheduler } from './background/rundownSchedule'
 import { ControlAPI } from './background'
 
 async function startRundownEditorServer() {
@@ -9,6 +10,8 @@ async function startRundownEditorServer() {
 		: undefined
 
 	await initializeSettingsDefaults()
+
+	startRundownScheduler()
 
 	const api = new ControlAPI()
 	await api.init(portNumber).catch((error) => {

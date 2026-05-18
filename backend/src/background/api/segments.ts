@@ -20,6 +20,7 @@ import {
 import { db } from '../db'
 import { v4 as uuid } from 'uuid'
 import { coreHandler } from '../coreHandler'
+import { notifyRundownTreeMutation } from '../rundownSchedule'
 import { getMutatedPartsFromSegment } from './parts'
 import { mutations as rundownMutations, sendRundownDiffToCore } from './rundowns'
 import { mutations as partMutations } from './parts'
@@ -661,6 +662,10 @@ async function handleUpdateSegment(payload: MutationSegmentUpdate) {
 				}
 			}
 		} else returnedError = updateError
+
+		if (result && !returnedError) {
+			await notifyRundownTreeMutation(result.rundownId)
+		}
 
 		// TODO: handle core errors better
 		return { result, error: returnedError }

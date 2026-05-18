@@ -40,7 +40,7 @@ export function RundownNavbar({ rundown }: { rundown: Rundown }) {
 	}
 
 	return (
-		<Navbar expand="lg" className="rundown-navbar">
+		<Navbar className="rundown-navbar py-1">
 			<Container fluid className="d-flex justify-content-between">
 				<Stack className="timing" direction="horizontal" gap={3}>
 					<Stack>

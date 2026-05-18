@@ -17,6 +17,7 @@ import { sendPartUpdateToCore } from './parts'
 import { mutations as partsMutations } from './parts'
 import { Server, Socket } from 'socket.io'
 import { mutations as typeManifestMutations } from './typeManifests'
+import { notifyRundownTreeMutation } from '../rundownSchedule'
 
 export const mutations = {
 	async create(payload: MutationPieceCreate): Promise<{ result?: Piece; error?: Error }> {
@@ -362,6 +363,7 @@ async function handleCreatePiece(payload: MutationPieceCreate) {
 				console.error(error)
 				returnedError = error
 			}
+			await notifyRundownTreeMutation(result.rundownId)
 		}
 
 		return { result, error: returnedError }
@@ -402,6 +404,7 @@ async function handleUpdatePiece(payload: MutationPieceUpdate) {
 				console.error(error)
 				returnedError = error
 			}
+			await notifyRundownTreeMutation(result.rundownId)
 		}
 
 		return { result, error: returnedError }
@@ -424,6 +427,7 @@ async function handleDeletePiece(payload: MutationPieceDelete) {
 				console.error(error)
 				returnedError = error
 			}
+			await notifyRundownTreeMutation(document.rundownId)
 		}
 
 		return { result: returnedError === undefined ? true : undefined, error: returnedError }

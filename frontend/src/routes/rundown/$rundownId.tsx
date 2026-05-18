@@ -68,15 +68,19 @@ function RouteComponent() {
 
 			<Stack
 				direction="horizontal"
+				className="rundown-editor-panes"
 				style={{
-					height: '100%',
-					overflowX: 'hidden'
+					flex: 1,
+					minHeight: 0,
+					overflow: 'hidden'
 				}}
 			>
 				<RundownSidebar rundownId={rundown.id} playlistId={rundown.playlistId} />
 
 				<MyErrorBoundary>
-					<Outlet />
+					<div className="rundown-main-content flex-grow-1" style={{ minWidth: 0 }}>
+						<Outlet />
+					</div>
 				</MyErrorBoundary>
 			</Stack>
 			<StoryLibraryDrawer rundownId={rundown.id} />
