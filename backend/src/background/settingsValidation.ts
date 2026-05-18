@@ -29,7 +29,7 @@ function validatePositiveInt(
 	fieldName: string
 ): { ok: true; value: number } | { ok: false; error: string } {
 	if (value === undefined || value === null) {
-		return { ok: true, value: 0 }
+		return { ok: false, error: `${fieldName} must be a positive integer` }
 	}
 	if (typeof value !== 'number' || !Number.isInteger(value) || value < 1) {
 		return { ok: false, error: `${fieldName} must be a positive integer` }

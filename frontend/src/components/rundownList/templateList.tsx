@@ -19,7 +19,6 @@ export function TemplateList({ templates, onImportTemplate }: TemplateListProps)
 	const store = useAppStore()
 	const toasts = useToasts()
 	const settings = useAppSelector((s) => s.settings.settings)
-	const allRundowns = useAppSelector((s) => s.rundowns)
 	const [regenerateTarget, setRegenerateTarget] = useState<Rundown | null>(null)
 	const [busyId, setBusyId] = useState<string | null>(null)
 
@@ -29,7 +28,7 @@ export function TemplateList({ templates, onImportTemplate }: TemplateListProps)
 			Pick<Rundown, 'scheduleEnabled' | 'scheduleAheadCount' | 'scheduleStartTime'>
 		>
 	) => {
-		const current = allRundowns.find((r) => r.id === templateId)
+		const current = store.getState().rundowns.find((r) => r.id === templateId)
 		if (!current) {
 			return
 		}
