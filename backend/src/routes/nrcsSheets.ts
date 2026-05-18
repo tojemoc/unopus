@@ -1,7 +1,9 @@
 import type { Application, Request, Response } from 'express'
 import {
+	computeVolume,
 	mapNrcsToSheetRows,
 	parseNrcsRundown,
+	recalculateTransitions,
 	sheetRowsToCoreColumns,
 	sheetRowsToCsv,
 	testGoogleSheetsConnection,
@@ -22,12 +24,30 @@ function parseErrorMessage(err: unknown): string {
 	return err instanceof Error ? err.message : 'Invalid NRCS payload'
 }
 
+const SHEET_ROW_COLUMNS = [
+	'block',
+	'longText1',
+	'headline1',
+	'headline2',
+	'transition',
+	'playout',
+	'volume'
+] as const
+
+function finalizeSheetRows(rows: ReturnType<typeof mapNrcsToSheetRows>) {
+	const withTransitions = recalculateTransitions(rows)
+	return withTransitions.map((row) => ({
+		...row,
+		volume: computeVolume(row.playout)
+	}))
+}
+
 function mapNrcsBody(body: unknown): ReturnType<typeof mapNrcsToSheetRows> {
 	if (body === null || body === undefined || typeof body !== 'object' || Array.isArray(body)) {
 		throw new Error('Request body must be a JSON object')
 	}
 	const input = parseNrcsRundown(body)
-	return mapNrcsToSheetRows(input)
+	return finalizeSheetRows(mapNrcsToSheetRows(input))
 }
 
 export function registerNrcsSheetsRoutes(app: Application): void {
@@ -78,7 +98,7 @@ export function registerNrcsSheetsRoutes(app: Application): void {
 		}
 		sendJson(res, 200, {
 			rows,
-			columns: ['block', 'longText1', 'headline1', 'headline2', 'transition', 'playout'],
+			columns: [...SHEET_ROW_COLUMNS],
 			coreColumns: sheetRowsToCoreColumns(rows),
 			csv: sheetRowsToCsv(rows)
 		})
@@ -103,7 +123,7 @@ export function registerNrcsSheetsRoutes(app: Application): void {
 		const sheetsConfigured = await isGoogleSheetsConfigured()
 		const payload: Record<string, unknown> = {
 			rows,
-			columns: ['block', 'longText1', 'headline1', 'headline2', 'transition', 'playout'],
+			columns: [...SHEET_ROW_COLUMNS],
 			coreColumns: sheetRowsToCoreColumns(rows),
 			csv: sheetRowsToCsv(rows),
 			sheetsConfigured

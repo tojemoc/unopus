@@ -1,8 +1,11 @@
 .rundown-main-content {
 	flex-grow: 1;
-	overflow: hidden;
+	min-height: 0;
+	overflow-x: hidden;
+	overflow-y: auto;
 	.rundown-main-content-properties {
-		height: 100%;
+		min-height: 0;
+		flex: 1 1 auto;
 		overflow-y: auto;
 		> .hstack {
 			min-height: 100%;

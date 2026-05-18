@@ -2,6 +2,8 @@ import fs from 'fs'
 import { google, type sheets_v4 } from 'googleapis'
 import type { SheetRow } from './types'
 import { sheetRowsToSpreadsheetMatrix } from './rowFormat'
+import { recalculateTransitions } from './transitions'
+import { computeVolume } from './volume'
 
 export interface GoogleSheetsWriterConfig {
 	spreadsheetId: string
@@ -28,7 +30,7 @@ function columnLetter(index: number): string {
 
 function buildRange(sheetName: string | undefined, startRow: number, rowCount?: number): string {
 	const range =
-		rowCount === undefined ? `A${startRow}:J` : `A${startRow}:J${startRow + rowCount - 1}`
+		rowCount === undefined ? `A${startRow}:K` : `A${startRow}:K${startRow + rowCount - 1}`
 	return sheetName ? `'${sheetName.replace(/'/g, "''")}'!${range}` : range
 }
 
@@ -71,9 +73,9 @@ async function createSheetsClient(credentials: object): Promise<sheets_v4.Sheets
 	return google.sheets({ version: 'v4', auth })
 }
 
-/** Probe cell in column K (outside A–J automation columns). */
+/** Probe cell in column L (outside A–K automation columns). */
 function buildWriteProbeRange(sheetName: string | undefined, row: number): string {
-	const cell = `K${row}`
+	const cell = `L${row}`
 	return sheetName ? `'${sheetName.replace(/'/g, "''")}'!${cell}` : cell
 }
 
@@ -119,8 +121,16 @@ export async function testGoogleSheetsConnection(
 	return { title, sheetTitle }
 }
 
+function prepareRowsForSheet(rows: SheetRow[]): SheetRow[] {
+	const withTransitions = recalculateTransitions(rows)
+	return withTransitions.map((row) => ({
+		...row,
+		volume: computeVolume(row.playout)
+	}))
+}
+
 /**
- * Clears existing data rows from startRow downward (columns A–J), then writes new rows.
+ * Clears existing data rows from startRow downward (columns A–K), then writes new rows.
  */
 export async function writeSheetRows(
 	rows: SheetRow[],
@@ -135,7 +145,7 @@ export async function writeSheetRows(
 	}
 	const sheets = await createSheetsClient(creds)
 	const startRow = config.startRow ?? 2
-	const matrix = sheetRowsToSpreadsheetMatrix(rows)
+	const matrix = sheetRowsToSpreadsheetMatrix(prepareRowsForSheet(rows))
 	const clearRange = buildRange(config.sheetName, startRow)
 
 	await sheets.spreadsheets.values.clear({
@@ -157,7 +167,7 @@ export async function writeSheetRows(
 
 	const updatedRange =
 		response.data.updatedRange ??
-		`${columnLetter(0)}${startRow}:${columnLetter(9)}${startRow + matrix.length - 1}`
+		`${columnLetter(0)}${startRow}:${columnLetter(10)}${startRow + matrix.length - 1}`
 
 	return {
 		updatedRange,

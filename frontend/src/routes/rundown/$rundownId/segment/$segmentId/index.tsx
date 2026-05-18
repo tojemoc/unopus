@@ -20,7 +20,7 @@ function RouteComponent() {
 	return (
 		<Stack className="rundown-main-content">
 			<RundownBreadcrumbs rundownId={rundownId} />
-			<div className="p-4" style={{ backgroundColor: 'rgb(30, 30, 30)', height: '100%' }}>
+			<div className="p-4" style={{ backgroundColor: 'rgb(30, 30, 30)' }}>
 				<SegmentPropertiesForm segment={segment} rundownIsTemplate={rundown?.isTemplate ?? false} />
 			</div>
 		</Stack>
