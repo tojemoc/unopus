@@ -549,7 +549,26 @@ export async function generateRundownFromTemplate(
 		try {
 			await sendRundownDiffToCore(updatedRundown, syncedRundown)
 		} catch (error) {
-			return { error: error instanceof Error ? error : new Error(String(error)) }
+			const coreError = error instanceof Error ? error : new Error(String(error))
+			const { result: rolledBack, error: rollbackError } = await rundownMutations.update({
+				...syncedRundown,
+				sync: false
+			})
+			if (rollbackError || !rolledBack) {
+				const rollbackMessage =
+					rollbackError instanceof Error
+						? rollbackError.message
+						: rollbackError
+							? String(rollbackError)
+							: 'rollback update returned no rundown'
+				return {
+					error: new Error(
+						`${coreError.message}; failed to roll back sync: ${rollbackMessage}`
+					)
+				}
+			}
+			finalRundown = rolledBack
+			return { error: coreError }
 		}
 		finalRundown = syncedRundown
 	}
