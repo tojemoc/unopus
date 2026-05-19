@@ -561,14 +561,17 @@ export async function generateRundownFromTemplate(
 						: rollbackError
 							? String(rollbackError)
 							: 'rollback update returned no rundown'
+				copyResult.rundown = syncedRundown
 				return {
 					error: new Error(
 						`${coreError.message}; failed to roll back sync: ${rollbackMessage}`
-					)
+					),
+					result: copyResult
 				}
 			}
 			finalRundown = rolledBack
-			return { error: coreError }
+			copyResult.rundown = finalRundown
+			return { error: coreError, result: copyResult }
 		}
 		finalRundown = syncedRundown
 	}

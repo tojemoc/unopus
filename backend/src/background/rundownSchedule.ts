@@ -156,9 +156,17 @@ export async function reconcileTemplateSchedule(
 			scheduleDateKey: dateKey,
 			sourceTemplateRevision: revision
 		})
-		if (error || !result?.rundown) {
+		if (!result?.rundown) {
 			console.error('reconcileTemplateSchedule:', templateId, dateKey, error)
 			continue
+		}
+		if (error) {
+			console.error(
+				'reconcileTemplateSchedule: rundown created but not synced to Core',
+				templateId,
+				dateKey,
+				error
+			)
 		}
 		created.push(result.rundown)
 	}
@@ -240,8 +248,16 @@ export async function regenerateFromTemplate(
 			scheduleDateKey: dateKey,
 			sourceTemplateRevision: revision
 		})
-		if (error || !result?.rundown) {
+		if (!result?.rundown) {
 			return { error: error ?? new Error('Failed to regenerate rundown') }
+		}
+		if (error) {
+			console.error(
+				'regenerateFromTemplate: rundown created but not synced to Core',
+				templateId,
+				dateKey,
+				error
+			)
 		}
 		updatedRundowns.push(result.rundown)
 		if (existing) {
