@@ -73,19 +73,22 @@ export async function enrichRowsWithPieces(
 		if (error || !parts || !Array.isArray(parts)) return rows
 
 		const lookup = buildPartLookup(parts)
-		const enriched: SheetRow[] = []
-
-		for (const row of rows) {
+		const rowJobs = rows.map((row) => {
 			const key = rowMatchKey(row.block, row.headline1)
 			const part = takeMatchingPart(lookup, key)
-			if (!part) {
-				enriched.push(row)
-				continue
-			}
-			enriched.push(await enrichRowFromPart(row, part))
-		}
+			return { row, part }
+		})
 
-		return enriched
+		return Promise.all(
+			rowJobs.map(async ({ row, part }) => {
+				if (!part) return row
+				try {
+					return await enrichRowFromPart(row, part)
+				} catch {
+					return row
+				}
+			})
+		)
 	} catch {
 		return rows
 	}

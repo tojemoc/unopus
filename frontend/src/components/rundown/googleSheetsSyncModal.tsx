@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Alert, Button, Form, Modal, Spinner } from 'react-bootstrap'
 import { Link } from '@tanstack/react-router'
 import { DropImportZone } from '~/components/files/dropImportZone'
@@ -60,6 +60,8 @@ export function GoogleSheetsSyncModal({ rundownId, show, onHide }: GoogleSheetsS
 		}
 	}, [show, refreshStatus, storageKey])
 
+	const previewRequestId = useRef(0)
+
 	useEffect(() => {
 		if (!show || !nrcsText.trim()) {
 			setPreviewRowCount(null)
@@ -68,24 +70,31 @@ export function GoogleSheetsSyncModal({ rundownId, show, onHide }: GoogleSheetsS
 		}
 
 		const handle = window.setTimeout(() => {
+			const requestId = ++previewRequestId.current
 			try {
 				const nrcs = parseNrcsJson(nrcsText)
 				void previewNrcsSheetRows(nrcs)
 					.then((result) => {
+						if (requestId !== previewRequestId.current) return
 						setPreviewRowCount(result.rows.length)
 						setPreviewError(null)
 					})
 					.catch((e) => {
+						if (requestId !== previewRequestId.current) return
 						setPreviewRowCount(null)
 						setPreviewError(e instanceof Error ? e.message : 'Preview failed')
 					})
 			} catch (e) {
+				if (requestId !== previewRequestId.current) return
 				setPreviewRowCount(null)
 				setPreviewError(e instanceof Error ? e.message : 'Invalid JSON')
 			}
 		}, 400)
 
-		return () => window.clearTimeout(handle)
+		return () => {
+			window.clearTimeout(handle)
+			previewRequestId.current += 1
+		}
 	}, [nrcsText, show])
 
 	const loadNrcsFile = async (file: File) => {
@@ -110,7 +119,18 @@ export function GoogleSheetsSyncModal({ rundownId, show, onHide }: GoogleSheetsS
 			const nrcs = parseNrcsJson(nrcsText)
 			persistNrcs(nrcsText)
 			const result = await syncRundownToGoogleSheets(rundownId, nrcs)
-			const range = result.sheetWrite?.updatedRange
+			if (!result.ok || result.error || !result.sheetWrite) {
+				const message = result.error ?? 'Sync did not complete — no rows were written to Google Sheets'
+				setLastSyncVariant('danger')
+				setLastSyncMessage(message)
+				toasts.show({
+					headerContent: 'Google Sheets',
+					bodyContent: message,
+					color: 'danger'
+				})
+				return
+			}
+			const range = result.sheetWrite.updatedRange
 			setLastSyncVariant('success')
 			setLastSyncMessage(
 				`Wrote ${result.rowCount} row${result.rowCount === 1 ? '' : 's'} to Google Sheets` +
