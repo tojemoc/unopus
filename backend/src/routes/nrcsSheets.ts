@@ -172,4 +172,62 @@ export function registerNrcsSheetsRoutes(app: Application): void {
 
 		sendJson(res, 200, payload)
 	})
+
+	/**
+	 * POST /api/rundowns/:rundownId/google-sheets/sync
+	 * Body: NRCS rundown JSON. Maps rows, enriches l3d timing from this rundown, writes to Google Sheets.
+	 */
+	app.post('/api/rundowns/:rundownId/google-sheets/sync', async (req: Request, res: Response) => {
+		const rundownId = String(req.params.rundownId ?? '').trim()
+		if (!rundownId) {
+			sendJson(res, 400, { error: 'rundownId is required' })
+			return
+		}
+
+		let rows
+		try {
+			rows = mapNrcsBody(req.body)
+		} catch (err) {
+			sendJson(res, 400, { error: parseErrorMessage(err) })
+			return
+		}
+
+		rows = await enrichRowsWithPieces(rows, rundownId)
+
+		const sheetsConfigured = await isGoogleSheetsConfigured()
+		if (!sheetsConfigured) {
+			sendJson(res, 503, {
+				error:
+					'Google Sheets is not configured. Set spreadsheet ID and credentials in Settings → Connection or via GOOGLE_SHEETS_* env vars.',
+				sheetsConfigured: false,
+				rowCount: rows.length
+			})
+			return
+		}
+
+		const settings = await getApplicationSettingsForSheets()
+		const config = await resolveGoogleSheetsConfig()
+		const credentials = getGoogleSheetsCredentials(settings)
+		if (!config || !credentials) {
+			sendJson(res, 503, {
+				error: 'Google Sheets configuration or credentials are missing.',
+				sheetsConfigured: false,
+				rowCount: rows.length
+			})
+			return
+		}
+
+		try {
+			const writeResult = await writeSheetRowsResolved(rows, config, credentials)
+			sendJson(res, 200, {
+				ok: true,
+				sheetsConfigured: true,
+				rowCount: rows.length,
+				sheetWrite: writeResult
+			})
+		} catch (err) {
+			const message = err instanceof Error ? err.message : String(err)
+			sendJson(res, 502, { error: message, sheetsConfigured: true, rowCount: rows.length })
+		}
+	})
 }
