@@ -7,6 +7,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { useAppDispatch, useAppSelector } from '~/store/app'
 import { removePiece, updatePiece } from '~/store/pieces'
 import { useToasts } from '../toasts/useToasts'
+import { MediaClipPicker } from './mediaClipPicker'
 
 export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 	const dispatch = useAppDispatch()
@@ -123,7 +124,16 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 									<Form.Group className="mb-3">
 										<Form.Label htmlFor={field.name}>{fieldInfo.label}:</Form.Label>
 
-										{fieldInfo.type === 'string' && (
+										{fieldInfo.type === 'string' && fieldInfo.id === 'fileName' && (
+											<MediaClipPicker
+												name={field.name}
+												value={String(field.state.value ?? '')}
+												onBlur={field.handleBlur}
+												onChange={(next) => field.handleChange(next)}
+											/>
+										)}
+
+										{fieldInfo.type === 'string' && fieldInfo.id !== 'fileName' && (
 											<Form.Control
 												name={field.name}
 												type="text"
