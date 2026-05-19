@@ -51,6 +51,9 @@ function takeMatchingPart(lookup: Map<string, Part[]>, key: string): Part | unde
 	return list.shift()
 }
 
+/** Max parallel getMutatedPiecesFromPart calls per rundown export. */
+const ENRICH_CONCURRENCY = 10
+
 async function enrichRowFromPart(row: SheetRow, part: Part): Promise<SheetRow> {
 	const timing = pickL3dTiming(await getMutatedPiecesFromPart(part.id))
 	if (!timing) return row
@@ -59,6 +62,27 @@ async function enrichRowFromPart(row: SheetRow, part: Part): Promise<SheetRow> {
 		l3dStart: timing.start,
 		l3dDuration: timing.duration
 	}
+}
+
+async function enrichRowJobs(
+	rowJobs: Array<{ row: SheetRow; part: Part | undefined }>
+): Promise<SheetRow[]> {
+	const enriched: SheetRow[] = []
+	for (let i = 0; i < rowJobs.length; i += ENRICH_CONCURRENCY) {
+		const batch = rowJobs.slice(i, i + ENRICH_CONCURRENCY)
+		const batchResults = await Promise.all(
+			batch.map(async ({ row, part }) => {
+				if (!part) return row
+				try {
+					return await enrichRowFromPart(row, part)
+				} catch {
+					return row
+				}
+			})
+		)
+		enriched.push(...batchResults)
+	}
+	return enriched
 }
 
 export async function enrichRowsWithPieces(
@@ -79,16 +103,7 @@ export async function enrichRowsWithPieces(
 			return { row, part }
 		})
 
-		return Promise.all(
-			rowJobs.map(async ({ row, part }) => {
-				if (!part) return row
-				try {
-					return await enrichRowFromPart(row, part)
-				} catch {
-					return row
-				}
-			})
-		)
+		return enrichRowJobs(rowJobs)
 	} catch {
 		return rows
 	}
