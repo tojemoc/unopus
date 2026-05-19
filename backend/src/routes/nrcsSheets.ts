@@ -1,6 +1,7 @@
 import type { Application, Request, Response } from 'express'
 import {
 	computeVolume,
+	enrichRowsWithPieces,
 	mapNrcsToSheetRows,
 	parseNrcsRundown,
 	recalculateTransitions,
@@ -31,8 +32,21 @@ const SHEET_ROW_COLUMNS = [
 	'headline2',
 	'transition',
 	'playout',
-	'volume'
+	'volume',
+	'l3dStart',
+	'l3dDuration'
 ] as const
+
+function resolveRundownId(req: Request): string | undefined {
+	const fromQuery = req.query.rundownId
+	if (typeof fromQuery === 'string' && fromQuery.trim()) return fromQuery.trim()
+	const body = req.body
+	if (body !== null && typeof body === 'object' && !Array.isArray(body)) {
+		const fromBody = (body as { rundownId?: unknown }).rundownId
+		if (typeof fromBody === 'string' && fromBody.trim()) return fromBody.trim()
+	}
+	return undefined
+}
 
 function finalizeSheetRows(rows: ReturnType<typeof mapNrcsToSheetRows>) {
 	const withTransitions = recalculateTransitions(rows)
@@ -108,6 +122,7 @@ export function registerNrcsSheetsRoutes(app: Application): void {
 	 * POST /api/nrcs/export-to-sheet
 	 * Body: NRCS rundown JSON. Maps rows and optionally writes to Google Sheets when configured.
 	 * Query: ?write=true to push to Sheets (requires env credentials).
+	 * Optional rundownId (query or body): when set, enriches rows with l3d timing from DB parts/pieces.
 	 */
 	app.post('/api/nrcs/export-to-sheet', async (req: Request, res: Response) => {
 		let rows
@@ -116,6 +131,10 @@ export function registerNrcsSheetsRoutes(app: Application): void {
 		} catch (err) {
 			sendJson(res, 400, { error: parseErrorMessage(err) })
 			return
+		}
+		const rundownId = resolveRundownId(req)
+		if (rundownId) {
+			rows = await enrichRowsWithPieces(rows, rundownId)
 		}
 		const shouldWrite =
 			req.query.write === 'true' || req.query.write === '1' || req.body?.writeToSheet === true

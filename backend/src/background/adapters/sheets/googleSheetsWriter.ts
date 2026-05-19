@@ -30,7 +30,7 @@ function columnLetter(index: number): string {
 
 function buildRange(sheetName: string | undefined, startRow: number, rowCount?: number): string {
 	const range =
-		rowCount === undefined ? `A${startRow}:K` : `A${startRow}:K${startRow + rowCount - 1}`
+		rowCount === undefined ? `A${startRow}:M` : `A${startRow}:M${startRow + rowCount - 1}`
 	return sheetName ? `'${sheetName.replace(/'/g, "''")}'!${range}` : range
 }
 
@@ -73,9 +73,9 @@ async function createSheetsClient(credentials: object): Promise<sheets_v4.Sheets
 	return google.sheets({ version: 'v4', auth })
 }
 
-/** Probe cell in column L (outside A–K automation columns). */
+/** Probe cell in column O (outside A–M automation columns). */
 function buildWriteProbeRange(sheetName: string | undefined, row: number): string {
-	const cell = `L${row}`
+	const cell = `O${row}`
 	return sheetName ? `'${sheetName.replace(/'/g, "''")}'!${cell}` : cell
 }
 
@@ -130,7 +130,7 @@ function prepareRowsForSheet(rows: SheetRow[]): SheetRow[] {
 }
 
 /**
- * Clears existing data rows from startRow downward (columns A–K), then writes new rows.
+ * Clears existing data rows from startRow downward (columns A–M), then writes new rows.
  */
 export async function writeSheetRows(
 	rows: SheetRow[],
@@ -167,7 +167,7 @@ export async function writeSheetRows(
 
 	const updatedRange =
 		response.data.updatedRange ??
-		`${columnLetter(0)}${startRow}:${columnLetter(10)}${startRow + matrix.length - 1}`
+		`${columnLetter(0)}${startRow}:${columnLetter(12)}${startRow + matrix.length - 1}`
 
 	return {
 		updatedRange,
