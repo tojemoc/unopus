@@ -25,25 +25,23 @@ export function SyncStatusIndicator({ rundown }: { rundown: Rundown }) {
 	const coreStatus = useAppSelector((s) => s.coreConnectionStatus.status)
 	const state = getSyncState(rundown, coreStatus)
 
-	const labels: Record<SyncVisualState, string> = rundown.isTemplate
-		? {
-				synced: 'Generated rundowns sync to Sofie',
-				pending: rundown.sync
-					? 'Waiting for Sofie connection'
-					: 'Generated rundowns stay local only',
-				error: 'Could not reach Sofie Core — check connection settings'
-			}
-		: {
-				synced: 'Synced to Sofie',
-				pending: rundown.sync ? 'Waiting for Sofie connection' : 'Sync off — changes stay local',
-				error: 'Could not reach Sofie Core — check connection settings'
-			}
+	const label = rundown.isTemplate
+		? state === 'synced'
+			? 'Generated rundowns sync to Sofie'
+			: 'Generated rundowns stay local only'
+		: (
+				{
+					synced: 'Synced to Sofie',
+					pending: rundown.sync ? 'Waiting for Sofie connection' : 'Sync off — changes stay local',
+					error: 'Could not reach Sofie Core — check connection settings'
+				} satisfies Record<SyncVisualState, string>
+			)[state]
 
 	return (
-		<OverlayTrigger overlay={<Tooltip>{labels[state]}</Tooltip>}>
+		<OverlayTrigger overlay={<Tooltip>{label}</Tooltip>}>
 			<div className={`sync-status-indicator sync-status-indicator--${state}`} role="status">
 				<span className="sync-status-indicator__dot" />
-				<span className="sync-status-indicator__label">{labels[state]}</span>
+				<span className="sync-status-indicator__label">{label}</span>
 			</div>
 		</OverlayTrigger>
 	)
