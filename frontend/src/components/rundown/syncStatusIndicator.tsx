@@ -6,10 +6,13 @@ import './syncStatusIndicator.scss'
 type SyncVisualState = 'synced' | 'pending' | 'error'
 
 function getSyncState(rundown: Rundown, coreStatus: CoreConnectionStatus): SyncVisualState {
+	if (rundown.isTemplate) {
+		return rundown.sync ? 'synced' : 'pending'
+	}
 	if (!rundown.sync) {
 		return 'pending'
 	}
-	if (rundown.sync && coreStatus === CoreConnectionStatus.DISCONNECTED) {
+	if (coreStatus === CoreConnectionStatus.DISCONNECTED) {
 		return 'error'
 	}
 	if (coreStatus === CoreConnectionStatus.CONNECTED) {
@@ -22,11 +25,19 @@ export function SyncStatusIndicator({ rundown }: { rundown: Rundown }) {
 	const coreStatus = useAppSelector((s) => s.coreConnectionStatus.status)
 	const state = getSyncState(rundown, coreStatus)
 
-	const labels: Record<SyncVisualState, string> = {
-		synced: 'Synced to Sofie',
-		pending: rundown.sync ? 'Waiting for Sofie connection' : 'Sync off — changes stay local',
-		error: 'Could not reach Sofie Core — check connection settings'
-	}
+	const labels: Record<SyncVisualState, string> = rundown.isTemplate
+		? {
+				synced: 'Generated rundowns sync to Sofie',
+				pending: rundown.sync
+					? 'Waiting for Sofie connection'
+					: 'Generated rundowns stay local only',
+				error: 'Could not reach Sofie Core — check connection settings'
+			}
+		: {
+				synced: 'Synced to Sofie',
+				pending: rundown.sync ? 'Waiting for Sofie connection' : 'Sync off — changes stay local',
+				error: 'Could not reach Sofie Core — check connection settings'
+			}
 
 	return (
 		<OverlayTrigger overlay={<Tooltip>{labels[state]}</Tooltip>}>

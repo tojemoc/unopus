@@ -520,7 +520,7 @@ export async function generateRundownFromTemplate(
 		name: dateLabel ? `${sourceRundown.name} ${dateLabel}` : copyResult.rundown.name,
 		...(expectedStartTime !== undefined ? { expectedStartTime } : {}),
 		isTemplate: false,
-		sync: false,
+		sync: sourceRundown.sync === true,
 		sourceTemplateId: sourceRundown.id,
 		sourceTemplateRevision:
 			request.sourceTemplateRevision ?? sourceRundown.templateRevision ?? 0,

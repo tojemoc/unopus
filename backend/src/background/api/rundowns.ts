@@ -15,6 +15,7 @@ import { v4 as uuid } from 'uuid'
 import { coreHandler } from '../coreHandler'
 import {
 	bumpTemplateRevision,
+	listAllRundowns,
 	reconcileTemplateSchedule
 } from '../rundownSchedule'
 import { getMutatedSegmentsFromRundown } from './segments'
@@ -354,6 +355,9 @@ async function handleUpdateRundown(payload: MutationRundownUpdate) {
 
 		if (result?.isTemplate) {
 			try {
+				if (document && !Array.isArray(document) && document.sync !== result.sync) {
+					await applyTemplateSyncToGeneratedRundowns(result, result.sync)
+				}
 				await bumpTemplateRevision(result.id)
 				if (result.scheduleEnabled) {
 					await reconcileTemplateSchedule(result.id)
@@ -390,6 +394,34 @@ async function handleDeleteRundown(payload: MutationRundownDelete) {
 		}
 
 		return { result: returnedError === undefined ? true : undefined, error: returnedError }
+	}
+}
+
+async function applyTemplateSyncToGeneratedRundowns(
+	template: Rundown,
+	enableSync: boolean
+): Promise<void> {
+	const allRundowns = await listAllRundowns()
+	const generated = allRundowns.filter(
+		(r) => !r.isTemplate && r.sourceTemplateId === template.id
+	)
+
+	for (const rundown of generated) {
+		if (rundown.sync === enableSync) {
+			continue
+		}
+		const { result: updated } = await mutations.update({ ...rundown, sync: enableSync })
+		if (updated) {
+			try {
+				await sendRundownDiffToCore(rundown, updated)
+			} catch (error) {
+				console.error('Failed to sync generated rundown to Core', {
+					rundownId: rundown.id,
+					enableSync,
+					error
+				})
+			}
+		}
 	}
 }
 

@@ -11,21 +11,21 @@ export function SyncControl({ rundown }: { rundown: Rundown }) {
 	return (
 		<Stack direction="horizontal" gap={3} className="align-items-center mb-3 p-2 sync-control-bar">
 			<SyncStatusIndicator rundown={rundown} />
-			{!rundown.isTemplate && (
-				<Form.Check
-					type="switch"
-					id={`sync-${rundown.id}`}
-					label={friendlyLabel('sync')}
-					checked={rundown.sync}
-					onChange={(e) =>
-						void dispatch(
-							updateRundown({
-								rundown: { ...rundown, sync: e.target.checked }
-							})
-						)
-					}
-				/>
-			)}
+			<Form.Check
+				type="switch"
+				id={`sync-${rundown.id}`}
+				label={
+					rundown.isTemplate ? friendlyLabel('syncGeneratedRundowns') : friendlyLabel('sync')
+				}
+				checked={rundown.sync}
+				onChange={(e) =>
+					void dispatch(
+						updateRundown({
+							rundown: { ...rundown, sync: e.target.checked }
+						})
+					)
+				}
+			/>
 		</Stack>
 	)
 }
