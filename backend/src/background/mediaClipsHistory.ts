@@ -11,10 +11,9 @@ export function getVideoFileNameHistory(): MediaClipSummary[] {
 	const rows = db
 		.prepare(
 			`
-			SELECT DISTINCT json_extract(document, '$.payload.fileName') AS fileName
+			SELECT DISTINCT trim(json_extract(document, '$.payload.fileName')) AS fileName
 			FROM pieces
 			WHERE json_extract(document, '$.pieceType') = 'video'
-				AND json_extract(document, '$.payload.fileName') IS NOT NULL
 				AND trim(json_extract(document, '$.payload.fileName')) != ''
 			ORDER BY fileName COLLATE NOCASE
 		`
