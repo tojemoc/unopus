@@ -10,11 +10,15 @@ import { toTime, toTimeDiff } from '~/util/lib'
 import { useAppSelector } from '~/store/app'
 import { Button, Stack } from 'react-bootstrap'
 import { BsArchive } from 'react-icons/bs'
+import { useState } from 'react'
 import { useAppDispatch } from '~/store/app'
 import { toggleStoryLibrary } from '~/store/storyLibrary'
+import { GoogleSheetsSyncModal } from './googleSheetsSyncModal'
+import { BsTable } from 'react-icons/bs'
 
 export function RundownNavbar({ rundown }: { rundown: Rundown }) {
 	const dispatch = useAppDispatch()
+	const [showSheetsSync, setShowSheetsSync] = useState(false)
 	const parts = useAppSelector((state) =>
 		state.parts.parts.filter((p) => p.rundownId === rundown.id)
 	)
@@ -66,6 +70,15 @@ export function RundownNavbar({ rundown }: { rundown: Rundown }) {
 						variant="outline-light"
 						size="sm"
 						className="d-inline-flex align-items-center gap-1"
+						onClick={() => setShowSheetsSync(true)}
+					>
+						<BsTable aria-hidden />
+						Sheets
+					</Button>
+					<Button
+						variant="outline-light"
+						size="sm"
+						className="d-inline-flex align-items-center gap-1"
 						onClick={() => dispatch(toggleStoryLibrary())}
 					>
 						<BsArchive aria-hidden />
@@ -76,6 +89,11 @@ export function RundownNavbar({ rundown }: { rundown: Rundown }) {
 					</Nav.Link>
 				</Nav>
 			</Container>
+			<GoogleSheetsSyncModal
+				rundownId={rundown.id}
+				show={showSheetsSync}
+				onHide={() => setShowSheetsSync(false)}
+			/>
 		</Navbar>
 	)
 }

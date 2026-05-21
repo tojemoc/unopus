@@ -2,7 +2,7 @@ import { v4 as uuid } from 'uuid'
 import { mutations as partMutations } from './api/parts'
 import { mutations as pieceMutations } from './api/pieces'
 import { mutations as segmentMutations } from './api/segments'
-import { mutations as rundownMutations } from './api/rundowns'
+import { mutations as rundownMutations, sendRundownDiffToCore } from './api/rundowns'
 import { mutations as typeManifestMutations } from './api/typeManifests'
 import { getSocketIO } from './socket'
 import { db } from './db'
@@ -515,6 +515,8 @@ export async function generateRundownFromTemplate(
 		return { error: copyError instanceof Error ? copyError : new Error(String(copyError)) }
 	}
 
+	const shouldSync = sourceRundown.sync === true
+
 	const { result: updatedRundown, error: updateError } = await rundownMutations.update({
 		...copyResult.rundown,
 		name: dateLabel ? `${sourceRundown.name} ${dateLabel}` : copyResult.rundown.name,
@@ -533,7 +535,48 @@ export async function generateRundownFromTemplate(
 		return { error: updateError ?? new Error('Failed to update generated rundown') }
 	}
 
-	copyResult.rundown = updatedRundown
+	let finalRundown = updatedRundown
+	if (shouldSync) {
+		const { result: syncedRundown, error: syncUpdateError } = await rundownMutations.update({
+			...updatedRundown,
+			sync: true
+		})
+		if (syncUpdateError || !syncedRundown) {
+			return {
+				error: syncUpdateError ?? new Error('Failed to enable sync for generated rundown')
+			}
+		}
+		try {
+			await sendRundownDiffToCore(updatedRundown, syncedRundown)
+		} catch (error) {
+			const coreError = error instanceof Error ? error : new Error(String(error))
+			const { result: rolledBack, error: rollbackError } = await rundownMutations.update({
+				...syncedRundown,
+				sync: false
+			})
+			if (rollbackError || !rolledBack) {
+				const rollbackMessage =
+					rollbackError instanceof Error
+						? rollbackError.message
+						: rollbackError
+							? String(rollbackError)
+							: 'rollback update returned no rundown'
+				copyResult.rundown = syncedRundown
+				return {
+					error: new Error(
+						`${coreError.message}; failed to roll back sync: ${rollbackMessage}`
+					),
+					result: copyResult
+				}
+			}
+			finalRundown = rolledBack
+			copyResult.rundown = finalRundown
+			return { error: coreError, result: copyResult }
+		}
+		finalRundown = syncedRundown
+	}
+
+	copyResult.rundown = finalRundown
 
 	const io = getSocketIO()
 	io?.emit('segments:update', { segments: copyResult.segments })

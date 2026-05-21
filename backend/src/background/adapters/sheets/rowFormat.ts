@@ -6,9 +6,14 @@ function volumeToCell(volume: SheetRow['volume']): string {
 	return String(volume)
 }
 
-/** Full A–K row with empty cells in unused columns (matches sheet column positions). */
+function l3dNumberToCell(value: number | '' | undefined): string {
+	if (value === '' || value === undefined) return ''
+	return String(value)
+}
+
+/** Full A–M row with empty cells in unused columns (matches sheet column positions). */
 export function sheetRowToSpreadsheetCells(row: SheetRow): string[] {
-	const cells = new Array<string>(11).fill('')
+	const cells = new Array<string>(13).fill('')
 	cells[SHEET_COLUMN_INDEX.C] = row.block
 	cells[SHEET_COLUMN_INDEX.D] = row.longText1
 	cells[SHEET_COLUMN_INDEX.E] = row.headline1
@@ -16,6 +21,8 @@ export function sheetRowToSpreadsheetCells(row: SheetRow): string[] {
 	cells[SHEET_COLUMN_INDEX.I] = row.transition
 	cells[SHEET_COLUMN_INDEX.J] = row.playout
 	cells[SHEET_COLUMN_INDEX.K] = volumeToCell(row.volume)
+	cells[SHEET_COLUMN_INDEX.L] = l3dNumberToCell(row.l3dStart)
+	cells[SHEET_COLUMN_INDEX.M] = l3dNumberToCell(row.l3dDuration)
 	return cells
 }
 
@@ -43,7 +50,7 @@ function escapeCsvField(value: string): string {
 	return value
 }
 
-/** CSV with columns A–K so column letters align when imported into Google Sheets. */
+/** CSV with columns A–M so column letters align when imported into Google Sheets. */
 export function sheetRowsToCsv(rows: SheetRow[]): string {
 	const lines = sheetRowsToSpreadsheetMatrix(rows).map((cells) =>
 		cells.map(escapeCsvField).join(',')

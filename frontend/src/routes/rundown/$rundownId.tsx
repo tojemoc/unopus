@@ -83,7 +83,13 @@ function RouteComponent() {
 					<MyErrorBoundary>
 						<div
 							className="rundown-main-content flex-grow-1"
-							style={{ minWidth: 0, minHeight: 0 }}
+							style={{
+								minWidth: 0,
+								minHeight: 0,
+								display: 'flex',
+								flexDirection: 'column',
+								overflow: 'hidden'
+							}}
 						>
 							<Outlet />
 						</div>
