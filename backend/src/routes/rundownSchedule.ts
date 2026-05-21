@@ -42,7 +42,11 @@ export function registerRundownScheduleRoutes(app: Express): void {
 			const templateId = String(req.params.templateId).trim()
 			const { result, error } = await regenerateFromTemplate(templateId)
 			if (error) {
-				sendJson(res, 400, { ok: false, error: error.message })
+				sendJson(res, 400, {
+					ok: false,
+					error: error.message,
+					...(result ?? {})
+				})
 				return
 			}
 			sendJson(res, 200, result)
