@@ -103,7 +103,7 @@ export async function enrichRowsWithPieces(
 			return { row, part }
 		})
 
-		return enrichRowJobs(rowJobs)
+		return await enrichRowJobs(rowJobs)
 	} catch {
 		return rows
 	}
