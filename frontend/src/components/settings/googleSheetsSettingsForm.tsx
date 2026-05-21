@@ -117,9 +117,9 @@ export function GoogleSheetsSettingsForm({ settings }: { settings: ApplicationSe
 		<section className="mt-4 pt-3 border-top border-secondary">
 			<h3 className="h5">Google Sheets (NRCS export)</h3>
 			<p className="text-muted small">
-				Used by the NRCS → Sheets adapter to push automation rows for vMix. Service account
-				credentials are read from environment variables or a server path — they are not stored
-				in the database.
+				Used by the NRCS → Sheets adapter to push automation rows for vMix. Configure here, then
+				use <strong>Sheets</strong> in the rundown editor to sync. Service account credentials are
+				read from environment variables or a server path — they are not stored in the database.
 			</p>
 
 			{loadingStatus ? (

@@ -10,6 +10,7 @@ export type {
 	NrcsRecommendation
 } from '../nrcs/types'
 export { mapNrcsToSheetRows } from './templateMapper'
+export { enrichRowsWithPieces } from './enrichRowsWithPieces'
 export {
 	sheetRowToSpreadsheetCells,
 	sheetRowsToSpreadsheetMatrix,
