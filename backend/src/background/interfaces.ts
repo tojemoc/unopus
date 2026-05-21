@@ -30,9 +30,12 @@ export interface Rundown extends IHasPayload {
 	playlistId: string | null
 	/** Name of the rundown */
 	name: string
-	/** Whether to sync the rundown to Sofie */
+	/**
+	 * For normal rundowns: sync this rundown to Sofie.
+	 * For templates: when true, rundowns generated from this template are created with sync enabled.
+	 */
 	sync: boolean
-	/** Flags the rundown as template. Template rundowns cannot sync to Sofie. */
+	/** Flags the rundown as template. The template itself is never synced to Sofie. */
 	isTemplate: boolean
 
 	/** Date of when the rundown is supposed to start */

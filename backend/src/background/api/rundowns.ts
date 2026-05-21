@@ -15,6 +15,7 @@ import { v4 as uuid } from 'uuid'
 import { coreHandler } from '../coreHandler'
 import {
 	bumpTemplateRevision,
+	listAllRundowns,
 	reconcileTemplateSchedule
 } from '../rundownSchedule'
 import { getMutatedSegmentsFromRundown } from './segments'
@@ -354,17 +355,19 @@ async function handleUpdateRundown(payload: MutationRundownUpdate) {
 
 		if (result?.isTemplate) {
 			try {
+				if (document && !Array.isArray(document) && document.sync !== result.sync) {
+					await applyTemplateSyncToGeneratedRundowns(result, result.sync)
+				}
 				await bumpTemplateRevision(result.id)
 				if (result.scheduleEnabled) {
 					await reconcileTemplateSchedule(result.id)
 				}
 			} catch (err) {
-				console.error('Template post-update scheduling failed', {
+				console.error('Template post-update failed', {
 					templateId: result.id,
-					bumpTemplateRevision: true,
-					reconcileTemplateSchedule: result.scheduleEnabled,
 					err
 				})
+				returnedError = err instanceof Error ? err : new Error(String(err))
 			}
 		}
 
@@ -390,6 +393,47 @@ async function handleDeleteRundown(payload: MutationRundownDelete) {
 		}
 
 		return { result: returnedError === undefined ? true : undefined, error: returnedError }
+	}
+}
+
+async function applyTemplateSyncToGeneratedRundowns(
+	template: Rundown,
+	enableSync: boolean
+): Promise<void> {
+	const allRundowns = await listAllRundowns()
+	const generated = allRundowns.filter(
+		(r) => !r.isTemplate && r.sourceTemplateId === template.id
+	)
+
+	const failures: Error[] = []
+
+	for (const rundown of generated) {
+		if (rundown.sync === enableSync) {
+			continue
+		}
+		const { result: updated, error: updateError } = await mutations.update({
+			...rundown,
+			sync: enableSync
+		})
+		if (updateError) {
+			failures.push(updateError instanceof Error ? updateError : new Error(String(updateError)))
+			continue
+		}
+		if (!updated) {
+			failures.push(new Error(`Failed to update sync for rundown ${rundown.id}`))
+			continue
+		}
+		try {
+			await sendRundownDiffToCore(rundown, updated)
+		} catch (error) {
+			failures.push(error instanceof Error ? error : new Error(String(error)))
+		}
+	}
+
+	if (failures.length > 0) {
+		throw new Error(
+			`Failed to apply template sync to ${failures.length} generated rundown(s): ${failures[0].message}`
+		)
 	}
 }
 

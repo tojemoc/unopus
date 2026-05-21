@@ -156,11 +156,19 @@ export async function reconcileTemplateSchedule(
 			scheduleDateKey: dateKey,
 			sourceTemplateRevision: revision
 		})
-		if (error || !result?.rundown) {
+		if (!result?.rundown) {
 			console.error('reconcileTemplateSchedule:', templateId, dateKey, error)
 			continue
 		}
 		created.push(result.rundown)
+		if (error) {
+			if (created.length > 0) {
+				getSocketIO()?.emit('rundowns:update', { rundowns: created })
+			}
+			throw new Error(
+				`reconcileTemplateSchedule: rundown created but not synced to Core (templateId=${templateId}, dateKey=${dateKey}): ${error.message}`
+			)
+		}
 	}
 
 	if (created.length > 0) {
@@ -240,7 +248,7 @@ export async function regenerateFromTemplate(
 			scheduleDateKey: dateKey,
 			sourceTemplateRevision: revision
 		})
-		if (error || !result?.rundown) {
+		if (!result?.rundown) {
 			return { error: error ?? new Error('Failed to regenerate rundown') }
 		}
 		updatedRundowns.push(result.rundown)
@@ -248,6 +256,17 @@ export async function regenerateFromTemplate(
 			summary.updated++
 		} else {
 			summary.created++
+		}
+		if (error) {
+			if (updatedRundowns.length > 0) {
+				io?.emit('rundowns:update', { rundowns: updatedRundowns })
+			}
+			return {
+				error: new Error(
+					`regenerateFromTemplate: rundown created but not synced to Core (templateId=${templateId}, dateKey=${dateKey}): ${error.message}`
+				),
+				result: summary
+			}
 		}
 	}
 
