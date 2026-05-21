@@ -18,6 +18,7 @@ import { registerEditsRoutes } from './routes/edits'
 import { registerStoryRoutes } from './routes/story'
 import { registerRundownScheduleRoutes } from './routes/rundownSchedule'
 import { registerNrcsSheetsRoutes } from './routes/nrcsSheets'
+import { registerMediaRoutes } from './routes/media'
 
 const frontendPath = path.resolve(__dirname, '../../frontend/dist')
 
@@ -75,6 +76,7 @@ export async function initSocketServer(port: number = 3010) {
 	registerStoryRoutes(app)
 	registerRundownScheduleRoutes(app)
 	registerNrcsSheetsRoutes(app)
+	registerMediaRoutes(app)
 
 	if (io) {
 		type SocketIOHandler = (socket: Socket, io: Server) => void
