@@ -201,6 +201,8 @@ export interface ApplicationSettings {
 	googleSheetsCredentialsEnvVar?: string
 	/** Server-local path to service-account JSON file (optional). */
 	googleSheetsCredentialsPath?: string
+	/** Use bundled NRCS sample JSON when no rundown-specific NRCS JSON is saved. */
+	googleSheetsUseBundledNrcsFallback?: boolean
 	/** IANA timezone for scheduling and list grouping (default Europe/Bratislava). */
 	timezone?: string
 	/** Weekday rundowns to keep scheduled ahead per enabled template (default 5). */

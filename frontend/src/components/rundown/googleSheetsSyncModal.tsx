@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Alert, Button, Modal, Spinner } from 'react-bootstrap'
 import { Link } from '@tanstack/react-router'
 import { useToasts } from '~/components/toasts/useToasts'
+import { useAppSelector } from '~/store/app'
+import { defaultNrcsRundownText } from '~/lib/defaultNrcsRundown'
 import {
 	fetchGoogleSheetsStatus,
 	nrcsLocalStorageKey,
@@ -26,6 +28,7 @@ function parseNrcsJson(text: string): unknown {
 
 export function GoogleSheetsSyncModal({ rundownId, show, onHide }: GoogleSheetsSyncModalProps) {
 	const toasts = useToasts()
+	const settings = useAppSelector((state) => state.settings.settings)
 	const [status, setStatus] = useState<GoogleSheetsStatus | null>(null)
 	const [loadingStatus, setLoadingStatus] = useState(false)
 	const [nrcsText, setNrcsText] = useState('')
@@ -34,8 +37,10 @@ export function GoogleSheetsSyncModal({ rundownId, show, onHide }: GoogleSheetsS
 	const [syncing, setSyncing] = useState(false)
 	const [lastSyncMessage, setLastSyncMessage] = useState<string | null>(null)
 	const [lastSyncVariant, setLastSyncVariant] = useState<'success' | 'danger'>('success')
+	const [loadedFromFallback, setLoadedFromFallback] = useState(false)
 
 	const storageKey = useMemo(() => nrcsLocalStorageKey(rundownId), [rundownId])
+	const useBundledFallback = settings?.googleSheetsUseBundledNrcsFallback ?? false
 
 	const refreshStatus = useCallback(async () => {
 		setLoadingStatus(true)
@@ -53,12 +58,19 @@ export function GoogleSheetsSyncModal({ rundownId, show, onHide }: GoogleSheetsS
 		void refreshStatus()
 		try {
 			const saved = localStorage.getItem(storageKey)
-			setNrcsText(saved ?? '')
+			if (saved && saved.trim().length > 0) {
+				setNrcsText(saved)
+				setLoadedFromFallback(false)
+			} else {
+				setNrcsText(useBundledFallback ? defaultNrcsRundownText : '')
+				setLoadedFromFallback(useBundledFallback)
+			}
 		} catch {
 			// ignore storage errors
-			setNrcsText('')
+			setNrcsText(useBundledFallback ? defaultNrcsRundownText : '')
+			setLoadedFromFallback(useBundledFallback)
 		}
-	}, [show, refreshStatus, storageKey])
+	}, [show, refreshStatus, storageKey, useBundledFallback])
 
 	const previewRequestId = useRef(0)
 
@@ -179,6 +191,12 @@ export function GoogleSheetsSyncModal({ rundownId, show, onHide }: GoogleSheetsS
 								spreadsheet ID and credentials.
 							</>
 						)}
+					</Alert>
+				)}
+
+				{loadedFromFallback && hasSavedNrcs && (
+					<Alert variant="info" className="py-2 small mt-3">
+						Using bundled NRCS fallback from Settings because this rundown has no saved NRCS JSON.
 					</Alert>
 				)}
 

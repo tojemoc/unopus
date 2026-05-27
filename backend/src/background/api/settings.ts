@@ -141,6 +141,7 @@ export function registerSettingsHandlers(socket: Socket, _io: Server) {
 const DEFAULT_SETTINGS: ApplicationSettings = {
 	coreUrl: '127.0.0.1',
 	corePort: 3000,
+	googleSheetsUseBundledNrcsFallback: false,
 	timezone: 'Europe/Bratislava',
 	scheduleAheadCount: 5,
 	scheduleStartTime: '18:00',
