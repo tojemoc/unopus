@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Alert, Button, Form, Modal, Spinner } from 'react-bootstrap'
+import { Alert, Button, Modal, Spinner } from 'react-bootstrap'
 import { Link } from '@tanstack/react-router'
-import { DropImportZone } from '~/components/files/dropImportZone'
 import { useToasts } from '~/components/toasts/useToasts'
 import {
 	fetchGoogleSheetsStatus,
@@ -54,9 +53,10 @@ export function GoogleSheetsSyncModal({ rundownId, show, onHide }: GoogleSheetsS
 		void refreshStatus()
 		try {
 			const saved = localStorage.getItem(storageKey)
-			if (saved) setNrcsText(saved)
+			setNrcsText(saved ?? '')
 		} catch {
 			// ignore storage errors
+			setNrcsText('')
 		}
 	}, [show, refreshStatus, storageKey])
 
@@ -97,27 +97,11 @@ export function GoogleSheetsSyncModal({ rundownId, show, onHide }: GoogleSheetsS
 		}
 	}, [nrcsText, show])
 
-	const loadNrcsFile = async (file: File) => {
-		const text = await file.text()
-		parseNrcsJson(text)
-		setNrcsText(text)
-		setLastSyncMessage(null)
-	}
-
-	const persistNrcs = (text: string) => {
-		try {
-			localStorage.setItem(storageKey, text)
-		} catch {
-			// ignore
-		}
-	}
-
 	const runSync = async () => {
 		setSyncing(true)
 		setLastSyncMessage(null)
 		try {
 			const nrcs = parseNrcsJson(nrcsText)
-			persistNrcs(nrcsText)
 			const result = await syncRundownToGoogleSheets(rundownId, nrcs)
 			if (!result.ok || result.error || !result.sheetWrite) {
 				const message = result.error ?? 'Sync did not complete — no rows were written to Google Sheets'
@@ -157,6 +141,8 @@ export function GoogleSheetsSyncModal({ rundownId, show, onHide }: GoogleSheetsS
 	}
 
 	const configured = status?.configured ?? false
+	const hasSavedNrcs = nrcsText.trim().length > 0
+	const trimmedPreviewError = previewError?.trim() || null
 	const canSync = configured && nrcsText.trim().length > 0 && previewError === null && previewRowCount !== null
 
 	return (
@@ -196,35 +182,20 @@ export function GoogleSheetsSyncModal({ rundownId, show, onHide }: GoogleSheetsS
 					</Alert>
 				)}
 
-				<DropImportZone
-					label="NRCS rundown JSON"
-					accept=".json,application/json"
-					onFile={loadNrcsFile}
-				/>
-
-				<Form.Group className="mt-3">
-					<Form.Label>NRCS JSON</Form.Label>
-					<Form.Control
-						as="textarea"
-						rows={10}
-						value={nrcsText}
-						onChange={(e) => {
-							setNrcsText(e.target.value)
-							setLastSyncMessage(null)
-						}}
-						placeholder='Paste NRCS export JSON (e.g. main_topics, headlines, …)'
-						className="font-monospace small"
-						spellCheck={false}
-					/>
-					{previewError && (
-						<Form.Text className="text-danger">{previewError}</Form.Text>
-					)}
-					{!previewError && previewRowCount !== null && (
-						<Form.Text className="text-muted">
-							{previewRowCount} sheet row{previewRowCount === 1 ? '' : 's'} ready to sync.
-						</Form.Text>
-					)}
-				</Form.Group>
+				{!hasSavedNrcs ? (
+					<Alert variant="warning" className="py-2 small mt-3">
+						No valid NRCS JSON is saved for this rundown yet. Import and sync a rundown once to
+						store NRCS data, then push to Google Sheets from here.
+					</Alert>
+				) : trimmedPreviewError ? (
+					<Alert variant="danger" className="py-2 small mt-3">
+						{trimmedPreviewError}
+					</Alert>
+				) : previewRowCount !== null ? (
+					<Alert variant="info" className="py-2 small mt-3">
+						{previewRowCount} sheet row{previewRowCount === 1 ? '' : 's'} ready to push.
+					</Alert>
+				) : null}
 
 				{lastSyncMessage && (
 					<Alert variant={lastSyncVariant} className="mt-3 mb-0 py-2 small">
@@ -237,7 +208,7 @@ export function GoogleSheetsSyncModal({ rundownId, show, onHide }: GoogleSheetsS
 					Close
 				</Button>
 				<Button variant="primary" disabled={!canSync || syncing} onClick={() => void runSync()}>
-					{syncing ? 'Syncing…' : 'Sync to Google Sheets'}
+					{syncing ? 'Pushing…' : 'Push to Google Sheets'}
 				</Button>
 			</Modal.Footer>
 		</Modal>
