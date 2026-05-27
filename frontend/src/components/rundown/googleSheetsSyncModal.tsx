@@ -142,6 +142,7 @@ export function GoogleSheetsSyncModal({ rundownId, show, onHide }: GoogleSheetsS
 
 	const configured = status?.configured ?? false
 	const hasSavedNrcs = nrcsText.trim().length > 0
+	const trimmedPreviewError = previewError?.trim() || null
 	const canSync = configured && nrcsText.trim().length > 0 && previewError === null && previewRowCount !== null
 
 	return (
@@ -181,10 +182,14 @@ export function GoogleSheetsSyncModal({ rundownId, show, onHide }: GoogleSheetsS
 					</Alert>
 				)}
 
-				{!hasSavedNrcs || previewError ? (
+				{!hasSavedNrcs ? (
 					<Alert variant="warning" className="py-2 small mt-3">
 						No valid NRCS JSON is saved for this rundown yet. Import and sync a rundown once to
 						store NRCS data, then push to Google Sheets from here.
+					</Alert>
+				) : trimmedPreviewError ? (
+					<Alert variant="danger" className="py-2 small mt-3">
+						{trimmedPreviewError}
 					</Alert>
 				) : previewRowCount !== null ? (
 					<Alert variant="info" className="py-2 small mt-3">
