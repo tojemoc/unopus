@@ -31,6 +31,9 @@ export function GoogleSheetsSettingsForm({ settings }: { settings: ApplicationSe
 	const [credentialsPath, setCredentialsPath] = useState(
 		settings.googleSheetsCredentialsPath ?? ''
 	)
+	const [useBundledNrcsFallback, setUseBundledNrcsFallback] = useState(
+		settings.googleSheetsUseBundledNrcsFallback ?? false
+	)
 
 	const refreshStatus = useCallback(async () => {
 		setLoadingStatus(true)
@@ -59,7 +62,8 @@ export function GoogleSheetsSettingsForm({ settings }: { settings: ApplicationSe
 						googleSheetsSheetName: sheetName.trim() || undefined,
 						googleSheetsDataStartRow: row,
 						googleSheetsCredentialsEnvVar: credentialsEnvVar.trim() || undefined,
-						googleSheetsCredentialsPath: credentialsPath.trim() || undefined
+						googleSheetsCredentialsPath: credentialsPath.trim() || undefined,
+						googleSheetsUseBundledNrcsFallback: useBundledNrcsFallback
 					}
 				})
 			).unwrap()
@@ -178,6 +182,18 @@ export function GoogleSheetsSettingsForm({ settings }: { settings: ApplicationSe
 				<Form.Text className="text-muted">
 					Optional path on the backend host. <code>GOOGLE_SHEETS_CREDENTIALS_PATH</code> env is
 					used when this is empty.
+				</Form.Text>
+			</Form.Group>
+			<Form.Group className="mb-3">
+				<Form.Check
+					type="switch"
+					id="google-sheets-bundled-nrcs-fallback"
+					label="Use bundled NRCS fallback when this rundown has no saved NRCS JSON"
+					checked={useBundledNrcsFallback}
+					onChange={(e) => setUseBundledNrcsFallback(e.target.checked)}
+				/>
+				<Form.Text className="text-muted">
+					Useful for testing the NRCS → Sheets flow without importing NRCS first.
 				</Form.Text>
 			</Form.Group>
 
