@@ -47,7 +47,7 @@ function mapHeadlines(input: NrcsRundownInput): SheetRow[] {
 	const headlines = (input.headlines ?? []).slice(0, 3)
 	return headlines.map((story, index) =>
 		emptyRow({
-			longText1: story.summary ?? '',
+			longText1: '',
 			headline1: story.title,
 			headline2: story.subtitle ?? '',
 			transition: HEADLINE_TRANSITIONS[index] ?? TRANSITION.HEADLINE_3,
