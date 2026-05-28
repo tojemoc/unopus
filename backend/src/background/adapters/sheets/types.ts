@@ -1,4 +1,4 @@
-/** One logical row in the vMix Google Sheet automation layout (columns C–M). */
+/** One logical row in the vMix Google Sheet automation layout (columns C–K). */
 export interface SheetRow {
 	block: string
 	longText1: string
@@ -8,10 +8,6 @@ export interface SheetRow {
 	playout: string
 	/** Column K (hlasitost); empty when no ILU/SYN playout rule applies. */
 	volume?: number | ''
-	/** Column L: l3d piece start offset in seconds from part start. */
-	l3dStart?: number | ''
-	/** Column M: l3d piece duration in seconds. */
-	l3dDuration?: number | ''
 }
 
 export const SHEET_COLUMN = {
@@ -23,7 +19,7 @@ export const SHEET_COLUMN = {
 	PLAYOUT: 'J'
 } as const
 
-/** 0-based column index in a full A–M row (A = 0). */
+/** 0-based column index in a full A–K row (A = 0). */
 export const SHEET_COLUMN_INDEX = {
 	A: 0,
 	B: 1,
@@ -35,9 +31,7 @@ export const SHEET_COLUMN_INDEX = {
 	H: 7,
 	I: 8,
 	J: 9,
-	K: 10,
-	L: 11,
-	M: 12
+	K: 10
 } as const
 
 export const TRANSITION = {
