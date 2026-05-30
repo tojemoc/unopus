@@ -257,16 +257,19 @@ function mapPartPiecesToRows(segment: Segment, part: Part, pieces: Piece[]): She
 	const rows: SheetRow[] = []
 	let pendingL3d: Piece[] = []
 
-	const flushL3dOntoLastRow = (): void => {
-		if (pendingL3d.length === 0 || rows.length === 0) {
-			pendingL3d = []
-			return
-		}
-		const last = rows[rows.length - 1]
+	const applyPendingL3dToRow = (row: SheetRow): void => {
+		if (pendingL3d.length === 0) return
 		for (const l3d of pendingL3d) {
-			applyL3dToRow(last, l3d)
+			if (!row.headline1.trim()) {
+				applyL3dToRow(row, l3d)
+			}
 		}
 		pendingL3d = []
+	}
+
+	const applyL3dToLastRow = (): void => {
+		if (pendingL3d.length === 0 || rows.length === 0) return
+		applyPendingL3dToRow(rows[rows.length - 1])
 	}
 
 	for (const piece of partPieces) {
@@ -276,12 +279,19 @@ function mapPartPiecesToRows(segment: Segment, part: Part, pieces: Piece[]): She
 		if (type === 'camera') continue
 
 		if (type === 'l3d') {
-			pendingL3d.push(piece)
+			if (rows.length > 0) {
+				const last = rows[rows.length - 1]
+				if (!last.headline1.trim()) {
+					applyL3dToRow(last, piece)
+				}
+			} else {
+				pendingL3d.push(piece)
+			}
 			continue
 		}
 
 		if (type === 'head') {
-			flushL3dOntoLastRow()
+			applyL3dToLastRow()
 			continue
 		}
 
@@ -294,20 +304,12 @@ function mapPartPiecesToRows(segment: Segment, part: Part, pieces: Piece[]): She
 		}
 
 		if (row) {
-			flushL3dOntoLastRow()
 			rows.push(row)
-			if (pendingL3d.length > 0) {
-				for (const l3d of pendingL3d) {
-					if (!row.headline1.trim()) {
-						applyL3dToRow(row, l3d)
-					}
-				}
-				pendingL3d = []
-			}
+			applyPendingL3dToRow(row)
 		}
 	}
 
-	flushL3dOntoLastRow()
+	applyL3dToLastRow()
 	return rows
 }
 

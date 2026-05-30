@@ -231,9 +231,10 @@ export function GoogleSheetsSyncModal({ rundownId, show, onHide }: GoogleSheetsS
 				)}
 
 				{!hasSavedNrcs ? (
-					<Alert variant="warning" className="py-2 small mt-3">
-						No valid NRCS JSON is saved for this rundown yet. Import and sync a rundown once to
-						store NRCS data, then push to Google Sheets from here.
+					<Alert variant="info" className="py-2 small mt-3">
+						No NRCS JSON is saved for this rundown. <strong>Push from Rundown Editor</strong> works
+						without it; use <strong>Push from NRCS JSON</strong> only after you paste or import NRCS
+						data below.
 					</Alert>
 				) : trimmedPreviewError ? (
 					<Alert variant="danger" className="py-2 small mt-3">

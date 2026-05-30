@@ -25,6 +25,11 @@ function parseErrorMessage(err: unknown): string {
 	return err instanceof Error ? err.message : 'Invalid NRCS payload'
 }
 
+function isRundownNotFoundError(err: unknown): boolean {
+	const message = parseErrorMessage(err)
+	return /rundown not found/i.test(message)
+}
+
 function finalizeSheetRows(rows: SheetRow[]) {
 	const withTransitions = recalculateTransitions(rows)
 	return withTransitions.map((row) => ({
@@ -153,7 +158,8 @@ export function registerNrcsSheetsRoutes(app: Application): void {
 			try {
 				rows = finalizeSheetRows(await mapRundownToSheetRows(rundownId))
 			} catch (err) {
-				sendJson(res, 400, { error: parseErrorMessage(err) })
+				const error = parseErrorMessage(err)
+				sendJson(res, isRundownNotFoundError(err) ? 404 : 400, { error })
 				return
 			}
 
