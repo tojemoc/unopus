@@ -2,6 +2,7 @@ import type { Application, Request, Response } from 'express'
 import {
 	computeVolume,
 	mapNrcsToSheetRows,
+	mapRundownToSheetRows,
 	parseNrcsRundown,
 	recalculateTransitions,
 	sheetRowsToCoreColumns,
@@ -9,6 +10,7 @@ import {
 	testGoogleSheetsConnection,
 	writeSheetRowsResolved
 } from '../background/adapters/sheets'
+import type { SheetRow } from '../background/adapters/sheets'
 import {
 	getApplicationSettingsForSheets,
 	getGoogleSheetsCredentials,
@@ -23,7 +25,7 @@ function parseErrorMessage(err: unknown): string {
 	return err instanceof Error ? err.message : 'Invalid NRCS payload'
 }
 
-function finalizeSheetRows(rows: ReturnType<typeof mapNrcsToSheetRows>) {
+function finalizeSheetRows(rows: SheetRow[]) {
 	const withTransitions = recalculateTransitions(rows)
 	return withTransitions.map((row) => ({
 		...row,
@@ -133,4 +135,50 @@ export function registerNrcsSheetsRoutes(app: Application): void {
 			sendJson(res, 502, { error: message, rowCount: rows.length })
 		}
 	})
+
+	/**
+	 * POST /api/rundowns/:rundownId/google-sheets/sync-from-rundown
+	 * Maps Rundown Editor segments/parts/pieces and writes to Google Sheets.
+	 */
+	app.post(
+		'/api/rundowns/:rundownId/google-sheets/sync-from-rundown',
+		async (req: Request, res: Response) => {
+			const rundownId = String(req.params.rundownId ?? '').trim()
+			if (!rundownId) {
+				sendJson(res, 400, { error: 'rundownId is required' })
+				return
+			}
+
+			let rows: SheetRow[]
+			try {
+				rows = finalizeSheetRows(await mapRundownToSheetRows(rundownId))
+			} catch (err) {
+				sendJson(res, 400, { error: parseErrorMessage(err) })
+				return
+			}
+
+			const settings = await getApplicationSettingsForSheets()
+			const config = await resolveGoogleSheetsConfig()
+			const credentials = getGoogleSheetsCredentials(settings)
+			if (!config || !credentials) {
+				sendJson(res, 503, {
+					error: 'Google Sheets configuration or credentials are missing.',
+					rowCount: rows.length
+				})
+				return
+			}
+
+			try {
+				const writeResult = await writeSheetRowsResolved(rows, config, credentials)
+				sendJson(res, 200, {
+					ok: true,
+					rowCount: rows.length,
+					sheetWrite: writeResult
+				})
+			} catch (err) {
+				const message = err instanceof Error ? err.message : String(err)
+				sendJson(res, 502, { error: message, rowCount: rows.length })
+			}
+		}
+	)
 }
