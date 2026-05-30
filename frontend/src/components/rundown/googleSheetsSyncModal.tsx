@@ -8,6 +8,7 @@ import {
 	fetchGoogleSheetsStatus,
 	nrcsLocalStorageKey,
 	previewNrcsSheetRows,
+	syncRundownEditorToGoogleSheets,
 	syncRundownToGoogleSheets,
 	type GoogleSheetsStatus
 } from '~/lib/googleSheetsApi'
@@ -35,6 +36,7 @@ export function GoogleSheetsSyncModal({ rundownId, show, onHide }: GoogleSheetsS
 	const [previewRowCount, setPreviewRowCount] = useState<number | null>(null)
 	const [previewError, setPreviewError] = useState<string | null>(null)
 	const [syncing, setSyncing] = useState(false)
+	const [syncingFromRundown, setSyncingFromRundown] = useState(false)
 	const [lastSyncMessage, setLastSyncMessage] = useState<string | null>(null)
 	const [lastSyncVariant, setLastSyncVariant] = useState<'success' | 'danger'>('success')
 	const [loadedFromFallback, setLoadedFromFallback] = useState(false)
@@ -109,35 +111,40 @@ export function GoogleSheetsSyncModal({ rundownId, show, onHide }: GoogleSheetsS
 		}
 	}, [nrcsText, show])
 
+	const handleSyncResult = (result: Awaited<ReturnType<typeof syncRundownToGoogleSheets>>, source: string) => {
+		if (!result.ok || result.error || !result.sheetWrite) {
+			const message = result.error ?? 'Sync did not complete — no rows were written to Google Sheets'
+			setLastSyncVariant('danger')
+			setLastSyncMessage(message)
+			toasts.show({
+				headerContent: 'Google Sheets',
+				bodyContent: message,
+				color: 'danger'
+			})
+			return
+		}
+		const range = result.sheetWrite.updatedRange
+		setLastSyncVariant('success')
+		setLastSyncMessage(
+			`${source}: wrote ${result.rowCount} row${result.rowCount === 1 ? '' : 's'} to Google Sheets` +
+				(range ? ` (${range})` : '') +
+				(source === 'Push from NRCS JSON'
+					? '. Lower-third timing was merged from this rundown where parts matched.'
+					: '.')
+		)
+		toasts.show({
+			headerContent: 'Google Sheets',
+			bodyContent: `Synced ${result.rowCount} rows`,
+			color: 'success'
+		})
+	}
+
 	const runSync = async () => {
 		setSyncing(true)
 		setLastSyncMessage(null)
 		try {
 			const nrcs = parseNrcsJson(nrcsText)
-			const result = await syncRundownToGoogleSheets(rundownId, nrcs)
-			if (!result.ok || result.error || !result.sheetWrite) {
-				const message = result.error ?? 'Sync did not complete — no rows were written to Google Sheets'
-				setLastSyncVariant('danger')
-				setLastSyncMessage(message)
-				toasts.show({
-					headerContent: 'Google Sheets',
-					bodyContent: message,
-					color: 'danger'
-				})
-				return
-			}
-			const range = result.sheetWrite.updatedRange
-			setLastSyncVariant('success')
-			setLastSyncMessage(
-				`Wrote ${result.rowCount} row${result.rowCount === 1 ? '' : 's'} to Google Sheets` +
-					(range ? ` (${range})` : '') +
-					'. Lower-third timing was merged from this rundown where parts matched.'
-			)
-			toasts.show({
-				headerContent: 'Google Sheets',
-				bodyContent: `Synced ${result.rowCount} rows`,
-				color: 'success'
-			})
+			handleSyncResult(await syncRundownToGoogleSheets(rundownId, nrcs), 'Push from NRCS JSON')
 		} catch (e) {
 			const message = e instanceof Error ? e.message : 'Sync failed'
 			setLastSyncVariant('danger')
@@ -149,6 +156,28 @@ export function GoogleSheetsSyncModal({ rundownId, show, onHide }: GoogleSheetsS
 			})
 		} finally {
 			setSyncing(false)
+		}
+	}
+
+	const runSyncFromRundown = async () => {
+		setSyncingFromRundown(true)
+		setLastSyncMessage(null)
+		try {
+			handleSyncResult(
+				await syncRundownEditorToGoogleSheets(rundownId),
+				'Push from Rundown Editor'
+			)
+		} catch (e) {
+			const message = e instanceof Error ? e.message : 'Sync failed'
+			setLastSyncVariant('danger')
+			setLastSyncMessage(message)
+			toasts.show({
+				headerContent: 'Google Sheets',
+				bodyContent: message,
+				color: 'danger'
+			})
+		} finally {
+			setSyncingFromRundown(false)
 		}
 	}
 
@@ -164,9 +193,10 @@ export function GoogleSheetsSyncModal({ rundownId, show, onHide }: GoogleSheetsS
 			</Modal.Header>
 			<Modal.Body>
 				<p className="text-muted small">
-					Push NRCS rundown data to your vMix automation spreadsheet. Rows are mapped from the
-					NRCS JSON; columns L/M are filled from lower-third pieces in this rundown when block and
-					headline match a part.
+					Push to your vMix automation spreadsheet. Use <strong>Push from Rundown Editor</strong> to
+					map segments, parts, and pieces already in this rundown, or <strong>Push from NRCS JSON</strong>{' '}
+					for the legacy NRCS import path (columns L/M merge lower-thirds when block and headline
+					match a part).
 				</p>
 
 				{loadingStatus ? (
@@ -201,9 +231,10 @@ export function GoogleSheetsSyncModal({ rundownId, show, onHide }: GoogleSheetsS
 				)}
 
 				{!hasSavedNrcs ? (
-					<Alert variant="warning" className="py-2 small mt-3">
-						No valid NRCS JSON is saved for this rundown yet. Import and sync a rundown once to
-						store NRCS data, then push to Google Sheets from here.
+					<Alert variant="info" className="py-2 small mt-3">
+						No NRCS JSON is saved for this rundown. <strong>Push from Rundown Editor</strong> works
+						without it; use <strong>Push from NRCS JSON</strong> only after you paste or import NRCS
+						data below.
 					</Alert>
 				) : trimmedPreviewError ? (
 					<Alert variant="danger" className="py-2 small mt-3">
@@ -222,11 +253,18 @@ export function GoogleSheetsSyncModal({ rundownId, show, onHide }: GoogleSheetsS
 				)}
 			</Modal.Body>
 			<Modal.Footer>
-				<Button variant="secondary" onClick={onHide} disabled={syncing}>
+				<Button variant="secondary" onClick={onHide} disabled={syncing || syncingFromRundown}>
 					Close
 				</Button>
-				<Button variant="primary" disabled={!canSync || syncing} onClick={() => void runSync()}>
-					{syncing ? 'Pushing…' : 'Push to Google Sheets'}
+				<Button
+					variant="outline-primary"
+					disabled={!configured || syncing || syncingFromRundown}
+					onClick={() => void runSyncFromRundown()}
+				>
+					{syncingFromRundown ? 'Pushing…' : 'Push from Rundown Editor'}
+				</Button>
+				<Button variant="primary" disabled={!canSync || syncing || syncingFromRundown} onClick={() => void runSync()}>
+					{syncing ? 'Pushing…' : 'Push from NRCS JSON'}
 				</Button>
 			</Modal.Footer>
 		</Modal>

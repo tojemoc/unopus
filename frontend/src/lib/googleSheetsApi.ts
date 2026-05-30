@@ -78,3 +78,15 @@ export async function syncRundownToGoogleSheets(
 		body: JSON.stringify(nrcs)
 	})
 }
+
+export async function syncRundownEditorToGoogleSheets(
+	rundownId: string
+): Promise<GoogleSheetsSyncResult> {
+	return request<GoogleSheetsSyncResult>(
+		`/api/rundowns/${encodeURIComponent(rundownId)}/google-sheets/sync-from-rundown`,
+		{
+			method: 'POST',
+			body: '{}'
+		}
+	)
+}
