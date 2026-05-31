@@ -16,6 +16,10 @@ export interface GoogleSheetsFieldMapping {
 /** Per piece-type rules for push/pull between Rundown Editor and Google Sheets. */
 export interface GoogleSheetsPieceTypeMapping {
 	pieceTypeId: string
+	/** Shown in Settings (defaults to piece type id). */
+	label?: string
+	/** Short explanation of what this mapping is for. */
+	description?: string
 	fields: GoogleSheetsFieldMapping[]
 	/** Max sheet rows for this piece type (e.g. three headlines). */
 	maxRows?: number
@@ -35,9 +39,13 @@ export const GOOGLE_SHEETS_COLUMN_OPTIONS: { value: GoogleSheetsColumnKey; label
 	{ value: 'playout', label: 'Playout (J)' }
 ]
 
-export const DEFAULT_GOOGLE_SHEETS_PIECE_MAPPINGS: GoogleSheetsPieceTypeMapping[] = [
+/** Recommended bridge mappings (1:1 with the Sheets + Companion workflow). */
+export const GOOGLE_SHEETS_RECOMMENDED_MAPPINGS: GoogleSheetsPieceTypeMapping[] = [
 	{
 		pieceTypeId: 'head',
+		label: 'Headline',
+		description:
+			'Three headline rows at the top of the sheet. Title → E, subtitle → F, VO script → D. Pull only touches rows whose transition contains “Headline”.',
 		maxRows: 3,
 		transitionContains: 'Headline',
 		fields: [
@@ -47,6 +55,8 @@ export const DEFAULT_GOOGLE_SHEETS_PIECE_MAPPINGS: GoogleSheetsPieceTypeMapping[
 		]
 	}
 ]
+
+export const DEFAULT_GOOGLE_SHEETS_PIECE_MAPPINGS = GOOGLE_SHEETS_RECOMMENDED_MAPPINGS
 
 export function resolveGoogleSheetsPieceMappings(
 	mappings: GoogleSheetsPieceTypeMapping[] | undefined

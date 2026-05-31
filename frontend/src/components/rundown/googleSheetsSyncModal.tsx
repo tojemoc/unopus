@@ -165,10 +165,15 @@ export function GoogleSheetsSyncModal({ rundownId, show, onHide }: GoogleSheetsS
 				<Modal.Title>Google Sheets</Modal.Title>
 			</Modal.Header>
 			<Modal.Body>
-				<p className="text-muted small">
-					<strong>Push</strong> maps this rundown to your vMix automation sheet using piece-type
-					column mappings from Settings. <strong>Pull</strong> reads the sheet back into headline
-					pieces (and other mapped types), adding parts when the sheet has more rows than the rundown.
+				<Alert variant="info" className="py-2 small">
+					Bridge to your existing <strong>Google Sheets + Companion + vMix</strong> grid. Rundown
+					Editor is the source of truth for stories; push writes the same columns (C–K) your show
+					already uses. When you are on Sofie-only, you will not need this step.
+				</Alert>
+				<p className="text-muted small mb-0">
+					<strong>Push</strong> — full rundown → sheet (segment order, transitions, playout cues, plus
+					mapped piece fields). <strong>Pull</strong> — only fields you configured under Settings →
+					mappings (e.g. headline title/subtitle from E/F).
 				</p>
 
 				{loadingStatus ? (

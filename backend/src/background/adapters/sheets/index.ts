@@ -1,7 +1,14 @@
 export { mapRundownToSheetRows } from './rundownMapper'
 export { pullRundownFromGoogleSheets } from './rundownPull'
 export {
+	VMIX_AUTOMATION_SHEET_COLUMNS,
+	VMIX_SHEET_PULL_AUTOMATION,
+	VMIX_SHEET_PUSH_AUTOMATION,
+	type VmixSheetColumnSpec
+} from './sheetLayout'
+export {
 	DEFAULT_GOOGLE_SHEETS_PIECE_MAPPINGS,
+	GOOGLE_SHEETS_RECOMMENDED_MAPPINGS,
 	GOOGLE_SHEETS_COLUMN_OPTIONS,
 	resolveGoogleSheetsPieceMappings,
 	type GoogleSheetsColumnKey,

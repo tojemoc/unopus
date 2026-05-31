@@ -6,6 +6,7 @@ import type {
 	GoogleSheetsFieldMapping,
 	GoogleSheetsPieceTypeMapping
 } from '~backend/background/interfaces'
+import { GOOGLE_SHEETS_COLUMN_OPTIONS, GOOGLE_SHEETS_RECOMMENDED_MAPPINGS } from '~backend/background/interfaces'
 import {
 	fetchGoogleSheetsStatus,
 	testGoogleSheetsConnection,
@@ -14,31 +15,16 @@ import {
 import { useAppDispatch } from '~/store/app'
 import { updateSettings } from '~/store/settings'
 import { useToasts } from '../toasts/useToasts'
+import { GoogleSheetsSheetReference } from './googleSheetsSheetReference'
 
-const SHEET_COLUMN_OPTIONS: { value: GoogleSheetsColumnKey; label: string }[] = [
-	{ value: 'block', label: 'Block (C)' },
-	{ value: 'longText1', label: 'Long text (D)' },
-	{ value: 'headline1', label: 'Headline 1 (E)' },
-	{ value: 'headline2', label: 'Headline 2 (F)' },
-	{ value: 'transition', label: 'Transition (I)' },
-	{ value: 'playout', label: 'Playout (J)' }
-]
-
-const DEFAULT_HEAD_MAPPING: GoogleSheetsPieceTypeMapping = {
-	pieceTypeId: 'head',
-	maxRows: 3,
-	transitionContains: 'Headline',
-	fields: [
-		{ sourceField: 'title', sheetColumn: 'headline1' },
-		{ sourceField: 'subtitle', sheetColumn: 'headline2' },
-		{ sourceField: 'part.script', sheetColumn: 'longText1' }
-	]
+function cloneMappings(mappings: GoogleSheetsPieceTypeMapping[]): GoogleSheetsPieceTypeMapping[] {
+	return mappings.map((m) => ({ ...m, fields: m.fields.map((f) => ({ ...f })) }))
 }
 
 function initialMappings(settings: ApplicationSettings): GoogleSheetsPieceTypeMapping[] {
 	const saved = settings.googleSheetsPieceMappings
-	if (saved && saved.length > 0) return saved.map((m) => ({ ...m, fields: [...m.fields] }))
-	return [{ ...DEFAULT_HEAD_MAPPING, fields: [...DEFAULT_HEAD_MAPPING.fields] }]
+	if (saved && saved.length > 0) return cloneMappings(saved)
+	return cloneMappings(GOOGLE_SHEETS_RECOMMENDED_MAPPINGS)
 }
 
 export function GoogleSheetsSettingsForm({ settings }: { settings: ApplicationSettings }) {
@@ -144,6 +130,8 @@ export function GoogleSheetsSettingsForm({ settings }: { settings: ApplicationSe
 				.map((m) => ({
 					...m,
 					pieceTypeId: m.pieceTypeId.trim(),
+					label: m.label?.trim() || undefined,
+					description: m.description?.trim() || undefined,
 					transitionContains: m.transitionContains?.trim() || undefined,
 					maxRows: m.maxRows && m.maxRows > 0 ? m.maxRows : undefined,
 					fields: m.fields.filter((f) => f.sourceField.trim())
@@ -214,13 +202,22 @@ export function GoogleSheetsSettingsForm({ settings }: { settings: ApplicationSe
 
 	const configured = status?.configured ?? false
 
+	const restoreRecommendedMappings = () => {
+		setPieceMappings(cloneMappings(GOOGLE_SHEETS_RECOMMENDED_MAPPINGS))
+	}
+
 	return (
 		<section className="mt-4 pt-3 border-top border-secondary">
-			<h3 className="h5">Google Sheets</h3>
+			<h3 className="h5">Google Sheets bridge (vMix + Companion)</h3>
+			<Alert variant="info" className="py-2 small">
+				<strong>Interim workflow.</strong> This keeps your existing automation spreadsheet in sync
+				with Rundown Editor until you run fully on Sofie Core. When that migration is done, you can
+				stop using Sheets here and rely on Sofie sync only — these settings will no longer be needed.
+			</Alert>
 			<p className="text-muted small">
-				Connect a vMix automation spreadsheet for push and pull. Assign each piece type ID (e.g.{' '}
-				<code>head</code>) to sheet columns; rows are created or updated from matching sheet lines
-				(filtered by transition text when set).
+				Edit stories in Rundown Editor (parts, pieces, scripts), then <strong>push</strong> to the
+				sheet for tonight’s show. Optionally <strong>pull</strong> headline (and other mapped) fields
+				back from the sheet when someone still edits cells C–F in Google Sheets.
 			</p>
 
 			{loadingStatus ? (
@@ -282,16 +279,34 @@ export function GoogleSheetsSettingsForm({ settings }: { settings: ApplicationSe
 				</Form.Text>
 			</Form.Group>
 
-			<h4 className="h6 mt-4">Piece type → column mappings</h4>
+			<GoogleSheetsSheetReference />
+
+			<h4 className="h6 mt-2">Piece type → column mappings</h4>
 			<p className="text-muted small">
-				<code>part.script</code> maps the part script field (not piece payload). For headlines, use
-				transition filter <code>Headline</code> so pull only reads Headline 1–3 rows.
+				Each row links a <strong>piece type ID</strong> from Type Manifests to spreadsheet columns.
+				Use <code>part.script</code> for the part’s VO script (column D). Set a transition filter so
+				pull only touches the rows you mean (e.g. <code>Headline</code> for the three headline lines).
 			</p>
+
+			<div className="d-flex flex-wrap gap-2 mb-3">
+				<Button variant="outline-secondary" size="sm" onClick={restoreRecommendedMappings}>
+					Restore recommended mappings
+				</Button>
+			</div>
 
 			{pieceMappings.map((mapping, mappingIndex) => (
 				<div key={mappingIndex} className="border border-secondary rounded p-3 mb-3">
 					<div className="row g-2 mb-2">
-						<div className="col-md-4">
+						<div className="col-md-3">
+							<Form.Label className="small mb-0">Display name</Form.Label>
+							<Form.Control
+								size="sm"
+								value={mapping.label ?? ''}
+								onChange={(e) => updateMapping(mappingIndex, { label: e.target.value })}
+								placeholder="Headline"
+							/>
+						</div>
+						<div className="col-md-3">
 							<Form.Label className="small mb-0">Piece type ID</Form.Label>
 							<Form.Control
 								size="sm"
@@ -300,7 +315,7 @@ export function GoogleSheetsSettingsForm({ settings }: { settings: ApplicationSe
 								placeholder="head"
 							/>
 						</div>
-						<div className="col-md-4">
+						<div className="col-md-3">
 							<Form.Label className="small mb-0">Max rows (push/pull)</Form.Label>
 							<Form.Control
 								size="sm"
@@ -315,7 +330,7 @@ export function GoogleSheetsSettingsForm({ settings }: { settings: ApplicationSe
 								placeholder="e.g. 3"
 							/>
 						</div>
-						<div className="col-md-4">
+						<div className="col-md-3">
 							<Form.Label className="small mb-0">Pull: transition contains</Form.Label>
 							<Form.Control
 								size="sm"
@@ -327,6 +342,17 @@ export function GoogleSheetsSettingsForm({ settings }: { settings: ApplicationSe
 							/>
 						</div>
 					</div>
+					<Form.Group className="mb-2">
+						<Form.Label className="small mb-0">What this mapping does</Form.Label>
+						<Form.Control
+							size="sm"
+							as="textarea"
+							rows={2}
+							value={mapping.description ?? ''}
+							onChange={(e) => updateMapping(mappingIndex, { description: e.target.value })}
+							placeholder="Explain for your team when to use this mapping."
+						/>
+					</Form.Group>
 					<Table size="sm" className="mb-2">
 						<thead>
 							<tr>
@@ -360,7 +386,7 @@ export function GoogleSheetsSettingsForm({ settings }: { settings: ApplicationSe
 												})
 											}
 										>
-											{SHEET_COLUMN_OPTIONS.map((opt) => (
+											{GOOGLE_SHEETS_COLUMN_OPTIONS.map((opt) => (
 												<option key={opt.value} value={opt.value}>
 													{opt.label}
 												</option>

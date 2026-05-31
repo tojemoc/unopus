@@ -1,7 +1,15 @@
 import type { SetOptional } from 'type-fest'
 import type { GoogleSheetsPieceTypeMapping } from './adapters/sheets/sheetMapping'
 
-export type { GoogleSheetsColumnKey, GoogleSheetsFieldMapping, GoogleSheetsPieceTypeMapping } from './adapters/sheets/sheetMapping'
+export type {
+	GoogleSheetsColumnKey,
+	GoogleSheetsFieldMapping,
+	GoogleSheetsPieceTypeMapping
+} from './adapters/sheets/sheetMapping'
+export {
+	GOOGLE_SHEETS_RECOMMENDED_MAPPINGS,
+	GOOGLE_SHEETS_COLUMN_OPTIONS
+} from './adapters/sheets/sheetMapping'
 
 export interface Playlist {
 	/** Id of the playlist. */
