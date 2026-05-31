@@ -1,4 +1,15 @@
 import type { SetOptional } from 'type-fest'
+import type { GoogleSheetsPieceTypeMapping } from './adapters/sheets/sheetMapping'
+
+export type {
+	GoogleSheetsColumnKey,
+	GoogleSheetsFieldMapping,
+	GoogleSheetsPieceTypeMapping
+} from './adapters/sheets/sheetMapping'
+export {
+	GOOGLE_SHEETS_RECOMMENDED_MAPPINGS,
+	GOOGLE_SHEETS_COLUMN_OPTIONS
+} from './adapters/sheets/sheetMapping'
 
 export interface Playlist {
 	/** Id of the playlist. */
@@ -191,7 +202,7 @@ export interface PayloadManifest {
 export interface ApplicationSettings {
 	coreUrl?: string
 	corePort?: number
-	/** Google Sheets spreadsheet ID for NRCS export. */
+	/** Google Sheets spreadsheet ID for vMix automation export. */
 	googleSheetsSpreadsheetId?: string
 	/** Worksheet name (default Sheet1). */
 	googleSheetsSheetName?: string
@@ -201,8 +212,8 @@ export interface ApplicationSettings {
 	googleSheetsCredentialsEnvVar?: string
 	/** Server-local path to service-account JSON file (optional). */
 	googleSheetsCredentialsPath?: string
-	/** Use bundled NRCS sample JSON when no rundown-specific NRCS JSON is saved. */
-	googleSheetsUseBundledNrcsFallback?: boolean
+	/** Maps piece type IDs to Google Sheet columns for push/pull. */
+	googleSheetsPieceMappings?: GoogleSheetsPieceTypeMapping[]
 	/** IANA timezone for scheduling and list grouping (default Europe/Bratislava). */
 	timezone?: string
 	/** Weekday rundowns to keep scheduled ahead per enabled template (default 5). */
