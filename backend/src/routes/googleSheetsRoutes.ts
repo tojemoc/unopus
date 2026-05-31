@@ -1,9 +1,9 @@
 import type { Application, Request, Response } from 'express'
 import {
 	computeVolume,
-	mapNrcsToSheetRows,
 	mapRundownToSheetRows,
-	parseNrcsRundown,
+	pullRundownFromGoogleSheets,
+	readSheetRowsResolved,
 	recalculateTransitions,
 	sheetRowsToCoreColumns,
 	sheetRowsToCsv,
@@ -22,7 +22,7 @@ function sendJson(res: Response, status: number, body: unknown): void {
 }
 
 function parseErrorMessage(err: unknown): string {
-	return err instanceof Error ? err.message : 'Invalid NRCS payload'
+	return err instanceof Error ? err.message : 'Request failed'
 }
 
 function isRundownNotFoundError(err: unknown): boolean {
@@ -38,15 +38,7 @@ function finalizeSheetRows(rows: SheetRow[]) {
 	}))
 }
 
-function mapNrcsBody(body: unknown): ReturnType<typeof mapNrcsToSheetRows> {
-	if (body === null || body === undefined || typeof body !== 'object' || Array.isArray(body)) {
-		throw new Error('Request body must be a JSON object')
-	}
-	const input = parseNrcsRundown(body)
-	return finalizeSheetRows(mapNrcsToSheetRows(input))
-}
-
-export function registerNrcsSheetsRoutes(app: Application): void {
+export function registerGoogleSheetsRoutes(app: Application): void {
 	app.get('/api/google-sheets/status', async (_req: Request, res: Response) => {
 		const settings = await getApplicationSettingsForSheets()
 		const config = await resolveGoogleSheetsConfig()
@@ -80,70 +72,38 @@ export function registerNrcsSheetsRoutes(app: Application): void {
 	})
 
 	/**
-	 * POST /api/nrcs/map-to-rows
-	 * Body: NRCS rundown JSON. Returns ordered sheet rows (no Google API call).
+	 * GET /api/rundowns/:rundownId/google-sheets/preview
+	 * Maps the rundown to sheet rows without calling Google.
 	 */
-	app.post('/api/nrcs/map-to-rows', (req: Request, res: Response) => {
-		let rows
-		try {
-			rows = mapNrcsBody(req.body)
-		} catch (err) {
-			sendJson(res, 400, { error: parseErrorMessage(err) })
-			return
-		}
-		sendJson(res, 200, {
-			rows,
-			coreColumns: sheetRowsToCoreColumns(rows),
-			csv: sheetRowsToCsv(rows)
-		})
-	})
-
-	/**
-	 * POST /api/rundowns/:rundownId/google-sheets/sync
-	 * Body: NRCS rundown JSON. Maps rows and writes to Google Sheets.
-	 */
-	app.post('/api/rundowns/:rundownId/google-sheets/sync', async (req: Request, res: Response) => {
+	app.get('/api/rundowns/:rundownId/google-sheets/preview', async (req: Request, res: Response) => {
 		const rundownId = String(req.params.rundownId ?? '').trim()
 		if (!rundownId) {
 			sendJson(res, 400, { error: 'rundownId is required' })
 			return
 		}
 
-		let rows
-		try {
-			rows = mapNrcsBody(req.body)
-		} catch (err) {
-			sendJson(res, 400, { error: parseErrorMessage(err) })
-			return
-		}
-
 		const settings = await getApplicationSettingsForSheets()
-		const config = await resolveGoogleSheetsConfig()
-		const credentials = getGoogleSheetsCredentials(settings)
-		if (!config || !credentials) {
-			sendJson(res, 503, {
-				error: 'Google Sheets configuration or credentials are missing.',
-				rowCount: rows.length
-			})
+		let rows: SheetRow[]
+		try {
+			rows = finalizeSheetRows(
+				await mapRundownToSheetRows(rundownId, settings?.googleSheetsPieceMappings)
+			)
+		} catch (err) {
+			sendJson(res, isRundownNotFoundError(err) ? 404 : 400, { error: parseErrorMessage(err) })
 			return
 		}
 
-		try {
-			const writeResult = await writeSheetRowsResolved(rows, config, credentials)
-			sendJson(res, 200, {
-				ok: true,
-				rowCount: rows.length,
-				sheetWrite: writeResult
-			})
-		} catch (err) {
-			const message = err instanceof Error ? err.message : String(err)
-			sendJson(res, 502, { error: message, rowCount: rows.length })
-		}
+		sendJson(res, 200, {
+			rows,
+			rowCount: rows.length,
+			coreColumns: sheetRowsToCoreColumns(rows),
+			csv: sheetRowsToCsv(rows)
+		})
 	})
 
 	/**
 	 * POST /api/rundowns/:rundownId/google-sheets/sync-from-rundown
-	 * Maps Rundown Editor segments/parts/pieces and writes to Google Sheets.
+	 * Push Rundown Editor content to Google Sheets.
 	 */
 	app.post(
 		'/api/rundowns/:rundownId/google-sheets/sync-from-rundown',
@@ -154,16 +114,17 @@ export function registerNrcsSheetsRoutes(app: Application): void {
 				return
 			}
 
+			const settings = await getApplicationSettingsForSheets()
 			let rows: SheetRow[]
 			try {
-				rows = finalizeSheetRows(await mapRundownToSheetRows(rundownId))
+				rows = finalizeSheetRows(
+					await mapRundownToSheetRows(rundownId, settings?.googleSheetsPieceMappings)
+				)
 			} catch (err) {
-				const error = parseErrorMessage(err)
-				sendJson(res, isRundownNotFoundError(err) ? 404 : 400, { error })
+				sendJson(res, isRundownNotFoundError(err) ? 404 : 400, { error: parseErrorMessage(err) })
 				return
 			}
 
-			const settings = await getApplicationSettingsForSheets()
 			const config = await resolveGoogleSheetsConfig()
 			const credentials = getGoogleSheetsCredentials(settings)
 			if (!config || !credentials) {
@@ -187,4 +148,43 @@ export function registerNrcsSheetsRoutes(app: Application): void {
 			}
 		}
 	)
+
+	/**
+	 * POST /api/rundowns/:rundownId/google-sheets/pull
+	 * Pull mapped columns from Google Sheets into the rundown.
+	 */
+	app.post('/api/rundowns/:rundownId/google-sheets/pull', async (req: Request, res: Response) => {
+		const rundownId = String(req.params.rundownId ?? '').trim()
+		if (!rundownId) {
+			sendJson(res, 400, { error: 'rundownId is required' })
+			return
+		}
+
+		const settings = await getApplicationSettingsForSheets()
+		const config = await resolveGoogleSheetsConfig()
+		const credentials = getGoogleSheetsCredentials(settings)
+		if (!config || !credentials) {
+			sendJson(res, 503, {
+				error: 'Google Sheets configuration or credentials are missing.'
+			})
+			return
+		}
+
+		try {
+			const sheetRows = await readSheetRowsResolved(config, credentials)
+			const pullResult = await pullRundownFromGoogleSheets(
+				rundownId,
+				sheetRows,
+				settings ?? undefined
+			)
+			sendJson(res, 200, {
+				ok: true,
+				sheetRowCount: sheetRows.length,
+				...pullResult
+			})
+		} catch (err) {
+			const message = err instanceof Error ? err.message : String(err)
+			sendJson(res, isRundownNotFoundError(err) ? 404 : 502, { error: message })
+		}
+	})
 }

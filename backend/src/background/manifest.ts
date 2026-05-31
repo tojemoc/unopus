@@ -83,10 +83,16 @@ export const TYPE_MANIFESTS: TypeManifest[] = [
 		includeTypeInName: true,
 		payload: [
 			{
-				id: 'text',
-				label: 'Text',
+				id: 'title',
+				label: 'Title',
 				type: ManifestFieldType.String,
 				includeInName: true
+			},
+			{
+				id: 'subtitle',
+				label: 'Subtitle',
+				type: ManifestFieldType.String,
+				includeInName: false
 			}
 		],
 		entityType: TypeManifestEntity.Piece

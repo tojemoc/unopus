@@ -3,8 +3,14 @@ import { mutations as pieceMutations } from '../../api/pieces'
 import { mutations as rundownMutations } from '../../api/rundowns'
 import { mutations as segmentMutations } from '../../api/segments'
 import type { Part, Piece, Rundown, Segment } from '../../interfaces'
+import {
+	mappingForPieceType,
+	payloadToSheetRowFields,
+	resolveGoogleSheetsPieceMappings
+} from './sheetMapping'
 import { BLOCK, PLAYOUT, TRANSITION } from './types'
 import type { SheetRow } from './types'
+import type { GoogleSheetsPieceTypeMapping } from './sheetMapping'
 
 const HEADLINE_TRANSITIONS = [
 	TRANSITION.HEADLINE_1,
@@ -151,11 +157,20 @@ function presenterName(rundown: Rundown): string {
 	return payloadString(payload, 'presenterName')
 }
 
-function mapHeadlineRows(segments: Segment[], parts: Part[], pieces: Piece[]): SheetRow[] {
+function mapHeadlineRows(
+	segments: Segment[],
+	parts: Part[],
+	pieces: Piece[],
+	headMapping: GoogleSheetsPieceTypeMapping | undefined
+): SheetRow[] {
 	const segmentRank = new Map(segments.map((s) => [s.id, s.rank]))
+	const pieceTypeId = headMapping?.pieceTypeId ?? 'head'
+	const maxRows = headMapping?.maxRows ?? 3
 	const headlineParts = parts
 		.filter((part) =>
-			piecesForPart(pieces, part.id).some((piece) => normalizePieceType(piece.pieceType) === 'head')
+			piecesForPart(pieces, part.id).some(
+				(piece) => normalizePieceType(piece.pieceType) === normalizePieceType(pieceTypeId)
+			)
 		)
 		.sort((a, b) => {
 			const segDiff = (segmentRank.get(a.segmentId) ?? 0) - (segmentRank.get(b.segmentId) ?? 0)
@@ -163,22 +178,27 @@ function mapHeadlineRows(segments: Segment[], parts: Part[], pieces: Piece[]): S
 			return a.rank - b.rank
 		})
 
+	const fields = headMapping?.fields ?? []
 	const rows: SheetRow[] = []
-	for (const part of headlineParts.slice(0, 3)) {
+	for (const part of headlineParts.slice(0, maxRows)) {
 		const headPiece = piecesForPart(pieces, part.id).find(
-			(piece) => normalizePieceType(piece.pieceType) === 'head'
+			(piece) => normalizePieceType(piece.pieceType) === normalizePieceType(pieceTypeId)
 		)
 		if (!headPiece) continue
 
 		const payload = (headPiece.payload ?? {}) as PiecePayload
-		const partPayload = (part.payload ?? {}) as PiecePayload
 		const index = rows.length
+		const mapped = payloadToSheetRowFields(payload, fields, partScript(part))
 
 		rows.push(
 			emptyRow({
-				longText1: partScript(part),
-				headline1: payloadString(payload, 'text') || part.name,
-				headline2: payloadString(partPayload, 'subtitle'),
+				...mapped,
+				headline1:
+					mapped.headline1 ||
+					payloadString(payload, 'title', 'text') ||
+					part.name,
+				headline2: mapped.headline2 || payloadString(payload, 'subtitle'),
+				longText1: mapped.longText1 || partScript(part),
 				transition: HEADLINE_TRANSITIONS[index] ?? TRANSITION.HEADLINE_3,
 				playout: HEADLINE_PLAYOUTS[index] ?? PLAYOUT.HEADLINE_3
 			})
@@ -431,10 +451,14 @@ function mapGenericSegment(
  * Map Rundown Editor segments, parts, and pieces into ordered Google Sheet rows.
  * Show order: headlines → intro → segments (rank) with per-piece rules.
  */
-export async function mapRundownToSheetRows(rundownId: string): Promise<SheetRow[]> {
+export async function mapRundownToSheetRows(
+	rundownId: string,
+	pieceMappings = resolveGoogleSheetsPieceMappings(undefined)
+): Promise<SheetRow[]> {
 	const { rundown, segments, parts, pieces } = await loadRundownTree(rundownId)
 
-	const headlineRows = mapHeadlineRows(segments, parts, pieces)
+	const headMapping = mappingForPieceType('head', pieceMappings)
+	const headlineRows = mapHeadlineRows(segments, parts, pieces, headMapping)
 	const introRow = mapIntroRow(rundown, segments, parts)
 
 	const bodySegments = segments.filter((segment) => {

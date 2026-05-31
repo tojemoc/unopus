@@ -1,7 +1,7 @@
 import fs from 'fs'
 import { google, type sheets_v4 } from 'googleapis'
 import type { SheetRow } from './types'
-import { sheetRowsToSpreadsheetMatrix } from './rowFormat'
+import { sheetRowsToSpreadsheetMatrix, spreadsheetMatrixToSheetRows } from './rowFormat'
 import { recalculateTransitions } from './transitions'
 import { computeVolume } from './volume'
 
@@ -179,6 +179,39 @@ export async function writeSheetRowsResolved(
 	credentials: object
 ): Promise<GoogleSheetsWriteResult> {
 	return writeSheetRows(rows, config, credentials)
+}
+
+/** Read all data rows from startRow downward (columns A–K). */
+export async function readSheetRows(
+	config: GoogleSheetsWriterConfig,
+	credentials?: object
+): Promise<SheetRow[]> {
+	const creds = credentials ?? loadCredentialsFromEnv()
+	if (!creds) {
+		throw new Error(
+			'Google Sheets credentials missing. Set GOOGLE_SHEETS_CREDENTIALS_JSON or GOOGLE_SHEETS_CREDENTIALS_PATH.'
+		)
+	}
+	const sheets = await createSheetsClient(creds)
+	const startRow = config.startRow ?? 2
+	const readRange = buildRange(config.sheetName, startRow)
+	const response = await sheets.spreadsheets.values.get({
+		spreadsheetId: config.spreadsheetId,
+		range: readRange
+	})
+	const matrix = response.data.values ?? []
+	return spreadsheetMatrixToSheetRows(matrix).filter((row) =>
+		[row.block, row.longText1, row.headline1, row.headline2, row.transition, row.playout].some(
+			(v) => v.trim().length > 0
+		)
+	)
+}
+
+export async function readSheetRowsResolved(
+	config: GoogleSheetsWriterConfig,
+	credentials: object
+): Promise<SheetRow[]> {
+	return readSheetRows(config, credentials)
 }
 
 export async function writeSheetRowsFromEnv(rows: SheetRow[]): Promise<GoogleSheetsWriteResult> {

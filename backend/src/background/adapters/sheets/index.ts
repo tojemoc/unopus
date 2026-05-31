@@ -1,19 +1,17 @@
-export { parseNrcsRundown } from '../nrcs/parseNrcsRundown'
-export type {
-	NrcsRundownInput,
-	NrcsHeadline,
-	NrcsMainTopic,
-	NrcsQuote,
-	NrcsOneSentenceItem,
-	NrcsSportItem,
-	NrcsWeather,
-	NrcsRecommendation
-} from '../nrcs/types'
-export { mapNrcsToSheetRows } from './templateMapper'
 export { mapRundownToSheetRows } from './rundownMapper'
+export { pullRundownFromGoogleSheets } from './rundownPull'
+export {
+	DEFAULT_GOOGLE_SHEETS_PIECE_MAPPINGS,
+	GOOGLE_SHEETS_COLUMN_OPTIONS,
+	resolveGoogleSheetsPieceMappings,
+	type GoogleSheetsColumnKey,
+	type GoogleSheetsFieldMapping,
+	type GoogleSheetsPieceTypeMapping
+} from './sheetMapping'
 export {
 	sheetRowToSpreadsheetCells,
 	sheetRowsToSpreadsheetMatrix,
+	spreadsheetMatrixToSheetRows,
 	sheetRowsToCoreColumns,
 	sheetRowsToCsv
 } from './rowFormat'
@@ -22,6 +20,8 @@ export { recalculateTransitions, normalizeText } from './transitions'
 export {
 	writeSheetRows,
 	writeSheetRowsFromEnv,
+	readSheetRows,
+	readSheetRowsResolved,
 	getGoogleSheetsConfigFromEnv,
 	isGoogleSheetsConfigured,
 	loadCredentialsFromEnv,

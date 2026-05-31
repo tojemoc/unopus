@@ -1,15 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Alert, Button, Modal, Spinner } from 'react-bootstrap'
 import { Link } from '@tanstack/react-router'
 import { useToasts } from '~/components/toasts/useToasts'
-import { useAppSelector } from '~/store/app'
-import { defaultNrcsRundownText } from '~/lib/defaultNrcsRundown'
 import {
 	fetchGoogleSheetsStatus,
-	nrcsLocalStorageKey,
-	previewNrcsSheetRows,
+	previewRundownSheetRows,
+	pullRundownFromGoogleSheets,
 	syncRundownEditorToGoogleSheets,
-	syncRundownToGoogleSheets,
 	type GoogleSheetsStatus
 } from '~/lib/googleSheetsApi'
 
@@ -19,30 +16,16 @@ interface GoogleSheetsSyncModalProps {
 	onHide: () => void
 }
 
-function parseNrcsJson(text: string): unknown {
-	const parsed: unknown = JSON.parse(text)
-	if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
-		throw new Error('NRCS JSON must be an object')
-	}
-	return parsed
-}
-
 export function GoogleSheetsSyncModal({ rundownId, show, onHide }: GoogleSheetsSyncModalProps) {
 	const toasts = useToasts()
-	const settings = useAppSelector((state) => state.settings.settings)
 	const [status, setStatus] = useState<GoogleSheetsStatus | null>(null)
 	const [loadingStatus, setLoadingStatus] = useState(false)
-	const [nrcsText, setNrcsText] = useState('')
 	const [previewRowCount, setPreviewRowCount] = useState<number | null>(null)
 	const [previewError, setPreviewError] = useState<string | null>(null)
 	const [syncing, setSyncing] = useState(false)
-	const [syncingFromRundown, setSyncingFromRundown] = useState(false)
+	const [pulling, setPulling] = useState(false)
 	const [lastSyncMessage, setLastSyncMessage] = useState<string | null>(null)
 	const [lastSyncVariant, setLastSyncVariant] = useState<'success' | 'danger'>('success')
-	const [loadedFromFallback, setLoadedFromFallback] = useState(false)
-
-	const storageKey = useMemo(() => nrcsLocalStorageKey(rundownId), [rundownId])
-	const useBundledFallback = settings?.googleSheetsUseBundledNrcsFallback ?? false
 
 	const refreshStatus = useCallback(async () => {
 		setLoadingStatus(true)
@@ -58,26 +41,12 @@ export function GoogleSheetsSyncModal({ rundownId, show, onHide }: GoogleSheetsS
 	useEffect(() => {
 		if (!show) return
 		void refreshStatus()
-		try {
-			const saved = localStorage.getItem(storageKey)
-			if (saved && saved.trim().length > 0) {
-				setNrcsText(saved)
-				setLoadedFromFallback(false)
-			} else {
-				setNrcsText(useBundledFallback ? defaultNrcsRundownText : '')
-				setLoadedFromFallback(useBundledFallback)
-			}
-		} catch {
-			// ignore storage errors
-			setNrcsText(useBundledFallback ? defaultNrcsRundownText : '')
-			setLoadedFromFallback(useBundledFallback)
-		}
-	}, [show, refreshStatus, storageKey, useBundledFallback])
+	}, [show, refreshStatus])
 
 	const previewRequestId = useRef(0)
 
 	useEffect(() => {
-		if (!show || !nrcsText.trim()) {
+		if (!show) {
 			setPreviewRowCount(null)
 			setPreviewError(null)
 			return
@@ -85,35 +54,28 @@ export function GoogleSheetsSyncModal({ rundownId, show, onHide }: GoogleSheetsS
 
 		const handle = window.setTimeout(() => {
 			const requestId = ++previewRequestId.current
-			try {
-				const nrcs = parseNrcsJson(nrcsText)
-				void previewNrcsSheetRows(nrcs)
-					.then((result) => {
-						if (requestId !== previewRequestId.current) return
-						setPreviewRowCount(result.rows.length)
-						setPreviewError(null)
-					})
-					.catch((e) => {
-						if (requestId !== previewRequestId.current) return
-						setPreviewRowCount(null)
-						setPreviewError(e instanceof Error ? e.message : 'Preview failed')
-					})
-			} catch (e) {
-				if (requestId !== previewRequestId.current) return
-				setPreviewRowCount(null)
-				setPreviewError(e instanceof Error ? e.message : 'Invalid JSON')
-			}
-		}, 400)
+			void previewRundownSheetRows(rundownId)
+				.then((result) => {
+					if (requestId !== previewRequestId.current) return
+					setPreviewRowCount(result.rowCount)
+					setPreviewError(null)
+				})
+				.catch((e) => {
+					if (requestId !== previewRequestId.current) return
+					setPreviewRowCount(null)
+					setPreviewError(e instanceof Error ? e.message : 'Preview failed')
+				})
+		}, 300)
 
 		return () => {
 			window.clearTimeout(handle)
 			previewRequestId.current += 1
 		}
-	}, [nrcsText, show])
+	}, [rundownId, show])
 
-	const handleSyncResult = (result: Awaited<ReturnType<typeof syncRundownToGoogleSheets>>, source: string) => {
+	const handlePushResult = (result: Awaited<ReturnType<typeof syncRundownEditorToGoogleSheets>>) => {
 		if (!result.ok || result.error || !result.sheetWrite) {
-			const message = result.error ?? 'Sync did not complete — no rows were written to Google Sheets'
+			const message = result.error ?? 'Push did not complete — no rows were written to Google Sheets'
 			setLastSyncVariant('danger')
 			setLastSyncMessage(message)
 			toasts.show({
@@ -126,11 +88,8 @@ export function GoogleSheetsSyncModal({ rundownId, show, onHide }: GoogleSheetsS
 		const range = result.sheetWrite.updatedRange
 		setLastSyncVariant('success')
 		setLastSyncMessage(
-			`${source}: wrote ${result.rowCount} row${result.rowCount === 1 ? '' : 's'} to Google Sheets` +
-				(range ? ` (${range})` : '') +
-				(source === 'Push from NRCS JSON'
-					? '. Lower-third timing was merged from this rundown where parts matched.'
-					: '.')
+			`Pushed ${result.rowCount} row${result.rowCount === 1 ? '' : 's'} to Google Sheets` +
+				(range ? ` (${range})` : '')
 		)
 		toasts.show({
 			headerContent: 'Google Sheets',
@@ -139,14 +98,13 @@ export function GoogleSheetsSyncModal({ rundownId, show, onHide }: GoogleSheetsS
 		})
 	}
 
-	const runSync = async () => {
+	const runPush = async () => {
 		setSyncing(true)
 		setLastSyncMessage(null)
 		try {
-			const nrcs = parseNrcsJson(nrcsText)
-			handleSyncResult(await syncRundownToGoogleSheets(rundownId, nrcs), 'Push from NRCS JSON')
+			handlePushResult(await syncRundownEditorToGoogleSheets(rundownId))
 		} catch (e) {
-			const message = e instanceof Error ? e.message : 'Sync failed'
+			const message = e instanceof Error ? e.message : 'Push failed'
 			setLastSyncVariant('danger')
 			setLastSyncMessage(message)
 			toasts.show({
@@ -159,16 +117,32 @@ export function GoogleSheetsSyncModal({ rundownId, show, onHide }: GoogleSheetsS
 		}
 	}
 
-	const runSyncFromRundown = async () => {
-		setSyncingFromRundown(true)
+	const runPull = async () => {
+		setPulling(true)
 		setLastSyncMessage(null)
 		try {
-			handleSyncResult(
-				await syncRundownEditorToGoogleSheets(rundownId),
-				'Push from Rundown Editor'
-			)
+			const result = await pullRundownFromGoogleSheets(rundownId)
+			if (!result.ok) {
+				throw new Error(result.error ?? 'Pull failed')
+			}
+			const summary =
+				`Pulled from ${result.sheetRowCount} sheet row${result.sheetRowCount === 1 ? '' : 's'}: ` +
+				`${result.updatedPieces} piece${result.updatedPieces === 1 ? '' : 's'} updated` +
+				(result.createdPieces > 0
+					? `, ${result.createdPieces} piece${result.createdPieces === 1 ? '' : 's'} created`
+					: '') +
+				(result.updatedParts > 0
+					? `, ${result.updatedParts} part script${result.updatedParts === 1 ? '' : 's'} updated`
+					: '')
+			setLastSyncVariant('success')
+			setLastSyncMessage(summary)
+			toasts.show({
+				headerContent: 'Google Sheets',
+				bodyContent: summary,
+				color: 'success'
+			})
 		} catch (e) {
-			const message = e instanceof Error ? e.message : 'Sync failed'
+			const message = e instanceof Error ? e.message : 'Pull failed'
 			setLastSyncVariant('danger')
 			setLastSyncMessage(message)
 			toasts.show({
@@ -177,26 +151,24 @@ export function GoogleSheetsSyncModal({ rundownId, show, onHide }: GoogleSheetsS
 				color: 'danger'
 			})
 		} finally {
-			setSyncingFromRundown(false)
+			setPulling(false)
 		}
 	}
 
 	const configured = status?.configured ?? false
-	const hasSavedNrcs = nrcsText.trim().length > 0
 	const trimmedPreviewError = previewError?.trim() || null
-	const canSync = configured && nrcsText.trim().length > 0 && previewError === null && previewRowCount !== null
+	const busy = syncing || pulling
 
 	return (
 		<Modal show={show} onHide={onHide} size="lg" centered>
 			<Modal.Header closeButton>
-				<Modal.Title>Sync to Google Sheets</Modal.Title>
+				<Modal.Title>Google Sheets</Modal.Title>
 			</Modal.Header>
 			<Modal.Body>
 				<p className="text-muted small">
-					Push to your vMix automation spreadsheet. Use <strong>Push from Rundown Editor</strong> to
-					map segments, parts, and pieces already in this rundown, or <strong>Push from NRCS JSON</strong>{' '}
-					for the legacy NRCS import path (columns L/M merge lower-thirds when block and headline
-					match a part).
+					<strong>Push</strong> maps this rundown to your vMix automation sheet using piece-type
+					column mappings from Settings. <strong>Pull</strong> reads the sheet back into headline
+					pieces (and other mapped types), adding parts when the sheet has more rows than the rundown.
 				</p>
 
 				{loadingStatus ? (
@@ -218,31 +190,19 @@ export function GoogleSheetsSyncModal({ rundownId, show, onHide }: GoogleSheetsS
 							<>
 								Google Sheets is not configured.{' '}
 								<Link to="/settings/connection">Open connection settings</Link> to set the
-								spreadsheet ID and credentials.
+								spreadsheet ID, credentials, and column mappings.
 							</>
 						)}
 					</Alert>
 				)}
 
-				{loadedFromFallback && hasSavedNrcs && (
-					<Alert variant="info" className="py-2 small mt-3">
-						Using bundled NRCS fallback from Settings because this rundown has no saved NRCS JSON.
-					</Alert>
-				)}
-
-				{!hasSavedNrcs ? (
-					<Alert variant="info" className="py-2 small mt-3">
-						No NRCS JSON is saved for this rundown. <strong>Push from Rundown Editor</strong> works
-						without it; use <strong>Push from NRCS JSON</strong> only after you paste or import NRCS
-						data below.
-					</Alert>
-				) : trimmedPreviewError ? (
+				{trimmedPreviewError ? (
 					<Alert variant="danger" className="py-2 small mt-3">
 						{trimmedPreviewError}
 					</Alert>
 				) : previewRowCount !== null ? (
 					<Alert variant="info" className="py-2 small mt-3">
-						{previewRowCount} sheet row{previewRowCount === 1 ? '' : 's'} ready to push.
+						{previewRowCount} row{previewRowCount === 1 ? '' : 's'} will be pushed from this rundown.
 					</Alert>
 				) : null}
 
@@ -253,18 +213,18 @@ export function GoogleSheetsSyncModal({ rundownId, show, onHide }: GoogleSheetsS
 				)}
 			</Modal.Body>
 			<Modal.Footer>
-				<Button variant="secondary" onClick={onHide} disabled={syncing || syncingFromRundown}>
+				<Button variant="secondary" onClick={onHide} disabled={busy}>
 					Close
 				</Button>
 				<Button
-					variant="outline-primary"
-					disabled={!configured || syncing || syncingFromRundown}
-					onClick={() => void runSyncFromRundown()}
+					variant="outline-secondary"
+					disabled={!configured || busy}
+					onClick={() => void runPull()}
 				>
-					{syncingFromRundown ? 'Pushing…' : 'Push from Rundown Editor'}
+					{pulling ? 'Pulling…' : 'Pull from Google Sheets'}
 				</Button>
-				<Button variant="primary" disabled={!canSync || syncing || syncingFromRundown} onClick={() => void runSync()}>
-					{syncing ? 'Pushing…' : 'Push from NRCS JSON'}
+				<Button variant="primary" disabled={!configured || busy || previewError !== null} onClick={() => void runPush()}>
+					{syncing ? 'Pushing…' : 'Push to Google Sheets'}
 				</Button>
 			</Modal.Footer>
 		</Modal>

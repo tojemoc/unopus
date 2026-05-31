@@ -43,6 +43,28 @@ function escapeCsvField(value: string): string {
 	return value
 }
 
+/** Parse A–K rows returned by the Google Sheets API into SheetRow objects. */
+export function spreadsheetMatrixToSheetRows(matrix: string[][]): SheetRow[] {
+	return matrix.map((cells) => {
+		const get = (index: number) => (cells[index] ?? '').trim()
+		const volumeRaw = get(SHEET_COLUMN_INDEX.K)
+		let volume: SheetRow['volume'] = ''
+		if (volumeRaw !== '') {
+			const parsed = Number(volumeRaw)
+			volume = Number.isFinite(parsed) ? parsed : ''
+		}
+		return {
+			block: get(SHEET_COLUMN_INDEX.C),
+			longText1: get(SHEET_COLUMN_INDEX.D),
+			headline1: get(SHEET_COLUMN_INDEX.E),
+			headline2: get(SHEET_COLUMN_INDEX.F),
+			transition: get(SHEET_COLUMN_INDEX.I),
+			playout: get(SHEET_COLUMN_INDEX.J),
+			volume
+		}
+	})
+}
+
 /** CSV with columns A–K so column letters align when imported into Google Sheets. */
 export function sheetRowsToCsv(rows: SheetRow[]): string {
 	const lines = sheetRowsToSpreadsheetMatrix(rows).map((cells) =>

@@ -27,20 +27,28 @@ export interface GoogleSheetsWriteInfo {
 	rowCount: number
 }
 
-export interface NrcsMapToRowsResult {
+export interface RundownSheetPreviewResult {
 	rows: unknown[]
-	columns: string[]
+	rowCount: number
 }
 
 export interface GoogleSheetsSyncResult {
 	ok: boolean
-	sheetsConfigured: boolean
+	sheetsConfigured?: boolean
 	rowCount: number
 	sheetWrite?: GoogleSheetsWriteInfo
 	error?: string
 }
 
-export const nrcsLocalStorageKey = (rundownId: string) => `sofie.googleSheets.nrcs.${rundownId}`
+export interface GoogleSheetsPullResult {
+	ok: boolean
+	sheetRowCount: number
+	updatedParts: number
+	updatedPieces: number
+	createdParts: number
+	createdPieces: number
+	error?: string
+}
 
 export async function fetchGoogleSheetsStatus(): Promise<GoogleSheetsStatus> {
 	return request<GoogleSheetsStatus>('/api/google-sheets/status')
@@ -62,21 +70,10 @@ export async function testGoogleSheetsConnection(): Promise<{
 	}
 }
 
-export async function previewNrcsSheetRows(nrcs: unknown): Promise<NrcsMapToRowsResult> {
-	return request<NrcsMapToRowsResult>('/api/nrcs/map-to-rows', {
-		method: 'POST',
-		body: JSON.stringify(nrcs)
-	})
-}
-
-export async function syncRundownToGoogleSheets(
-	rundownId: string,
-	nrcs: unknown
-): Promise<GoogleSheetsSyncResult> {
-	return request<GoogleSheetsSyncResult>(`/api/rundowns/${encodeURIComponent(rundownId)}/google-sheets/sync`, {
-		method: 'POST',
-		body: JSON.stringify(nrcs)
-	})
+export async function previewRundownSheetRows(rundownId: string): Promise<RundownSheetPreviewResult> {
+	return request<RundownSheetPreviewResult>(
+		`/api/rundowns/${encodeURIComponent(rundownId)}/google-sheets/preview`
+	)
 }
 
 export async function syncRundownEditorToGoogleSheets(
@@ -84,6 +81,18 @@ export async function syncRundownEditorToGoogleSheets(
 ): Promise<GoogleSheetsSyncResult> {
 	return request<GoogleSheetsSyncResult>(
 		`/api/rundowns/${encodeURIComponent(rundownId)}/google-sheets/sync-from-rundown`,
+		{
+			method: 'POST',
+			body: '{}'
+		}
+	)
+}
+
+export async function pullRundownFromGoogleSheets(
+	rundownId: string
+): Promise<GoogleSheetsPullResult> {
+	return request<GoogleSheetsPullResult>(
+		`/api/rundowns/${encodeURIComponent(rundownId)}/google-sheets/pull`,
 		{
 			method: 'POST',
 			body: '{}'
