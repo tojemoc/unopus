@@ -177,7 +177,8 @@ export async function writeSheetRows(
 	try {
 		const existing = await readSheetRows(config, creds)
 		existingRowCount = existing.length
-	} catch {
+	} catch (err) {
+		console.error('readSheetRows failed while sizing sheet clear range:', err)
 		existingRowCount = 0
 	}
 

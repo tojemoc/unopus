@@ -29,7 +29,25 @@ function sortByRank<T extends { rank: number }>(items: T[]): T[] {
 
 function asArray<T>(value: T | T[] | undefined): T[] {
 	if (!value) return []
-	return Array.isArray(value) ? value : []
+	return Array.isArray(value) ? value : [value]
+}
+
+async function shiftPartRanksFrom(
+	segmentId: string,
+	fromRank: number,
+	delta: number
+): Promise<void> {
+	if (delta === 0) return
+	const { result } = await partMutations.read({ segmentId })
+	if (!result || !Array.isArray(result)) return
+
+	const toShift = result.filter((p) => p.rank >= fromRank).sort((a, b) => b.rank - a.rank)
+	for (const part of toShift) {
+		await partMutations.update({
+			...part,
+			rank: part.rank + delta
+		})
+	}
 }
 
 async function loadRundownPieces(rundownId: string): Promise<{
@@ -124,8 +142,8 @@ async function applyMappingPull(
 		})
 		if (!pieceError) updatedPieces++
 
-		const script = partScriptFromRow(mapping.fields, row)
-		if (script !== undefined) {
+		if (mapping.fields.some((f) => f.sourceField === 'part.script')) {
+			const script = partScriptFromRow(mapping.fields, row) ?? ''
 			const { error: partError } = await partMutations.update({
 				...part,
 				script
@@ -150,6 +168,13 @@ async function applyMappingPull(
 		anchorPart !== undefined
 			? anchorPart.rank + 1
 			: (segmentParts[segmentParts.length - 1]?.rank ?? -1) + 1
+
+	await shiftPartRanksFrom(segmentId, insertRank, extraRows.length)
+	for (const part of parts) {
+		if (part.segmentId === segmentId && part.rank >= insertRank) {
+			part.rank += extraRows.length
+		}
+	}
 
 	for (let i = 0; i < extraRows.length; i++) {
 		const row = extraRows[i]

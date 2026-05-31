@@ -172,11 +172,7 @@ export function registerGoogleSheetsRoutes(app: Application): void {
 
 		try {
 			const sheetRows = await readSheetRowsResolved(config, credentials)
-			const pullResult = await pullRundownFromGoogleSheets(
-				rundownId,
-				sheetRows,
-				settings ?? undefined
-			)
+			const pullResult = await pullRundownFromGoogleSheets(rundownId, sheetRows, settings)
 			sendJson(res, 200, {
 				ok: true,
 				sheetRowCount: sheetRows.length,

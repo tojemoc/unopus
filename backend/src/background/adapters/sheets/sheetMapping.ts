@@ -88,16 +88,14 @@ export function applyFieldMappingsToPayload(
 ): void {
 	for (const field of fields) {
 		if (field.sourceField.startsWith('part.')) continue
-		const value = sheetColumnValue(row, field.sheetColumn)
-		if (value) payload[field.sourceField] = value
+		payload[field.sourceField] = sheetColumnValue(row, field.sheetColumn)
 	}
 }
 
 export function partScriptFromRow(fields: GoogleSheetsFieldMapping[], row: SheetRow): string | undefined {
 	const scriptMapping = fields.find((f) => f.sourceField === 'part.script')
 	if (!scriptMapping) return undefined
-	const value = sheetColumnValue(row, scriptMapping.sheetColumn)
-	return value || undefined
+	return sheetColumnValue(row, scriptMapping.sheetColumn)
 }
 
 export function payloadToSheetRowFields(

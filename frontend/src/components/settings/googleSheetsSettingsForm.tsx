@@ -17,14 +17,51 @@ import { updateSettings } from '~/store/settings'
 import { useToasts } from '../toasts/useToasts'
 import { GoogleSheetsSheetReference } from './googleSheetsSheetReference'
 
-function cloneMappings(mappings: GoogleSheetsPieceTypeMapping[]): GoogleSheetsPieceTypeMapping[] {
-	return mappings.map((m) => ({ ...m, fields: m.fields.map((f) => ({ ...f })) }))
+type FieldMappingRow = GoogleSheetsFieldMapping & { _key: string }
+type PieceMappingRow = Omit<GoogleSheetsPieceTypeMapping, 'fields'> & {
+	_key: string
+	fields: FieldMappingRow[]
 }
 
-function initialMappings(settings: ApplicationSettings): GoogleSheetsPieceTypeMapping[] {
+function newFieldKey(): string {
+	return `field-${crypto.randomUUID()}`
+}
+
+function newMappingKey(): string {
+	return `mapping-${crypto.randomUUID()}`
+}
+
+function toFieldRows(fields: GoogleSheetsFieldMapping[]): FieldMappingRow[] {
+	return fields.map((f) => ({ ...f, _key: newFieldKey() }))
+}
+
+function toPieceMappingRows(mappings: GoogleSheetsPieceTypeMapping[]): PieceMappingRow[] {
+	return mappings.map((m) => ({
+		...m,
+		_key: newMappingKey(),
+		fields: toFieldRows(m.fields)
+	}))
+}
+
+function stripFieldRow(field: FieldMappingRow): GoogleSheetsFieldMapping {
+	const { _key: _unused, ...rest } = field
+	void _unused
+	return rest
+}
+
+function stripPieceRow(mapping: PieceMappingRow): GoogleSheetsPieceTypeMapping {
+	const { _key: _unused, fields, ...rest } = mapping
+	void _unused
+	return {
+		...rest,
+		fields: fields.map(stripFieldRow)
+	}
+}
+
+function initialMappings(settings: ApplicationSettings): PieceMappingRow[] {
 	const saved = settings.googleSheetsPieceMappings
-	if (saved && saved.length > 0) return cloneMappings(saved)
-	return cloneMappings(GOOGLE_SHEETS_RECOMMENDED_MAPPINGS)
+	if (saved && saved.length > 0) return toPieceMappingRows(saved)
+	return toPieceMappingRows(GOOGLE_SHEETS_RECOMMENDED_MAPPINGS)
 }
 
 export function GoogleSheetsSettingsForm({ settings }: { settings: ApplicationSettings }) {
@@ -48,10 +85,9 @@ export function GoogleSheetsSettingsForm({ settings }: { settings: ApplicationSe
 	const [credentialsPath, setCredentialsPath] = useState(
 		settings.googleSheetsCredentialsPath ?? ''
 	)
-	const [pieceMappings, setPieceMappings] = useState<GoogleSheetsPieceTypeMapping[]>(() =>
+	const [pieceMappings, setPieceMappings] = useState<PieceMappingRow[]>(() =>
 		initialMappings(settings)
 	)
-
 	const refreshStatus = useCallback(async () => {
 		setLoadingStatus(true)
 		try {
@@ -67,7 +103,7 @@ export function GoogleSheetsSettingsForm({ settings }: { settings: ApplicationSe
 		void refreshStatus()
 	}, [refreshStatus])
 
-	const updateMapping = (index: number, patch: Partial<GoogleSheetsPieceTypeMapping>) => {
+	const updateMapping = (index: number, patch: Partial<PieceMappingRow>) => {
 		setPieceMappings((prev) =>
 			prev.map((m, i) => (i === index ? { ...m, ...patch } : m))
 		)
@@ -81,7 +117,9 @@ export function GoogleSheetsSettingsForm({ settings }: { settings: ApplicationSe
 		setPieceMappings((prev) =>
 			prev.map((m, i) => {
 				if (i !== mappingIndex) return m
-				const fields = m.fields.map((f, fi) => (fi === fieldIndex ? { ...f, ...patch } : f))
+				const fields = m.fields.map((f, fi) =>
+					fi === fieldIndex ? { ...f, ...patch, _key: f._key } : f
+				)
 				return { ...m, fields }
 			})
 		)
@@ -93,7 +131,10 @@ export function GoogleSheetsSettingsForm({ settings }: { settings: ApplicationSe
 				i === mappingIndex
 					? {
 							...m,
-							fields: [...m.fields, { sourceField: '', sheetColumn: 'headline1' }]
+							fields: [
+								...m.fields,
+								{ sourceField: '', sheetColumn: 'headline1', _key: newFieldKey() }
+							]
 						}
 					: m
 			)
@@ -114,10 +155,11 @@ export function GoogleSheetsSettingsForm({ settings }: { settings: ApplicationSe
 		setPieceMappings((prev) => [
 			...prev,
 			{
+				_key: newMappingKey(),
 				pieceTypeId: '',
 				maxRows: undefined,
 				transitionContains: '',
-				fields: [{ sourceField: '', sheetColumn: 'headline1' }]
+				fields: [{ sourceField: '', sheetColumn: 'headline1', _key: newFieldKey() }]
 			}
 		])
 	}
@@ -126,7 +168,8 @@ export function GoogleSheetsSettingsForm({ settings }: { settings: ApplicationSe
 		setSaving(true)
 		try {
 			const row = Math.max(Number(dataStartRow) || 2, 1)
-			const cleanedMappings = pieceMappings
+			const cleanedMappings: GoogleSheetsPieceTypeMapping[] = pieceMappings
+				.map(stripPieceRow)
 				.map((m) => ({
 					...m,
 					pieceTypeId: m.pieceTypeId.trim(),
@@ -203,7 +246,7 @@ export function GoogleSheetsSettingsForm({ settings }: { settings: ApplicationSe
 	const configured = status?.configured ?? false
 
 	const restoreRecommendedMappings = () => {
-		setPieceMappings(cloneMappings(GOOGLE_SHEETS_RECOMMENDED_MAPPINGS))
+		setPieceMappings(toPieceMappingRows(GOOGLE_SHEETS_RECOMMENDED_MAPPINGS))
 	}
 
 	return (
@@ -295,7 +338,7 @@ export function GoogleSheetsSettingsForm({ settings }: { settings: ApplicationSe
 			</div>
 
 			{pieceMappings.map((mapping, mappingIndex) => (
-				<div key={mappingIndex} className="border border-secondary rounded p-3 mb-3">
+				<div key={mapping._key} className="border border-secondary rounded p-3 mb-3">
 					<div className="row g-2 mb-2">
 						<div className="col-md-3">
 							<Form.Label className="small mb-0">Display name</Form.Label>
@@ -363,7 +406,7 @@ export function GoogleSheetsSettingsForm({ settings }: { settings: ApplicationSe
 						</thead>
 						<tbody>
 							{mapping.fields.map((field, fieldIndex) => (
-								<tr key={fieldIndex}>
+								<tr key={field._key}>
 									<td>
 										<Form.Control
 											size="sm"
