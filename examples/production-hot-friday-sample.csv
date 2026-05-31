@@ -1,0 +1,15 @@
+# Trimmed excerpt from a completed Friday "production hot" sheet (columns A–K).
+# Full sheet has many more columns (weather, deck codes, …) — push/pull only use C–K automation band.
+,,Blok,LongText1,Headline1,Headline2,READING TOTAL,Feedback,Transition DO riadka,Playout,Hlasitost v %
+GUIDE k spravam,,Heading1,Normal rext,Title,Subtitle,5147,,BLANK,Heading2,0
+Spravy Gdrive,,,"V Rumunsku zranil ruský dron dvoch ľudí…",Ruský dron,v Rumunsku,102,,Headline 1,HEADLINE1,40
+pridat riadok kde si kliknuty,,,Matúš Šutaj Eštok musí definitívne zaplatiť…,K Šutajovi Eštokovi,príde exekútor,117,,Headline 2,HEADLINE2,40
+,,,Zdražovanie nehnuteľností…,Ceny bývania,rýchlo rástli,94,,Headline 3,HEADLINE3,40
+,,INTRO,,Gabriela Kajtárová,,,,Intro,Intro,0
+Odstranit riadok kde si kliknuty,,Dron v Rumunsku,Ruský dron opäť zasiahol územie NATO…,Ruský dron v Rumunsku,,204,OK,Double Box,ILU RUMUNSKO,50
+,,Dron v Rumunsku,"""Celá zodpovednosť…""",Nicusor Dan,rumunský prezident,144,OK,ILU TO SYN,SYN RUMUN,100
+,,SPRÁVY JEDNOU VETOU,"Na pumpách opäť zdražela nafta…","Benzín za 1,80€",,121,OK,Spravy JV,ILU PALIVO,50
+,,ŠPORT,"Hokejové majstrovstvá sveta…",Semifinále MS v hokeji,,122,OK,Sport,ILU HOKEJ,50
+,,POČASIE,"Zajtra sa oteplí…",,,197,NOT OK,Pocasie,POCASIE,
+,,ZÁVER + AVIZO,"A na záver ešte jeden tip…",Sledujte na www.360tka.sk,,338,OK,Zaver,ILU AVIZO,50
+https://docs.google.com/…,,,,,,,,OUTRO,,50

@@ -23,6 +23,24 @@ export function sheetRowsToSpreadsheetMatrix(rows: SheetRow[]): string[][] {
 	return rows.map(sheetRowToSpreadsheetCells)
 }
 
+/** Columns C–F (Blok, LongText1, Headline1, Headline2) for production-hot writes. */
+export function sheetRowToAutomationCdfCells(row: SheetRow): string[] {
+	return [row.block, row.longText1, row.headline1, row.headline2]
+}
+
+/** Columns I–K (Transition, Playout, Hlasitost) for production-hot writes. */
+export function sheetRowToAutomationIjkCells(row: SheetRow): string[] {
+	return [row.transition, row.playout, volumeToCell(row.volume)]
+}
+
+export function sheetRowsToAutomationCdfMatrix(rows: SheetRow[]): string[][] {
+	return rows.map(sheetRowToAutomationCdfCells)
+}
+
+export function sheetRowsToAutomationIjkMatrix(rows: SheetRow[]): string[][] {
+	return rows.map(sheetRowToAutomationIjkCells)
+}
+
 /** C–K core fields (block through volume; G–H omitted as unused in sheet layout). */
 export function sheetRowsToCoreColumns(rows: SheetRow[]): string[][] {
 	return rows.map((row) => [

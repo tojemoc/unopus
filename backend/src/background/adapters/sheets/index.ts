@@ -2,6 +2,7 @@ export { mapRundownToSheetRows } from './rundownMapper'
 export { pullRundownFromGoogleSheets } from './rundownPull'
 export {
 	VMIX_AUTOMATION_SHEET_COLUMNS,
+	PRODUCTION_HOT_SHEET_EXAMPLES,
 	VMIX_SHEET_PULL_AUTOMATION,
 	VMIX_SHEET_PUSH_AUTOMATION,
 	type VmixSheetColumnSpec

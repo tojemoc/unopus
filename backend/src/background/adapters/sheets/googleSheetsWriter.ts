@@ -1,7 +1,11 @@
 import fs from 'fs'
 import { google, type sheets_v4 } from 'googleapis'
 import type { SheetRow } from './types'
-import { sheetRowsToSpreadsheetMatrix, spreadsheetMatrixToSheetRows } from './rowFormat'
+import {
+	sheetRowsToAutomationCdfMatrix,
+	sheetRowsToAutomationIjkMatrix,
+	spreadsheetMatrixToSheetRows
+} from './rowFormat'
 import { recalculateTransitions } from './transitions'
 import { computeVolume } from './volume'
 
@@ -28,10 +32,31 @@ function columnLetter(index: number): string {
 	return result
 }
 
-function buildRange(sheetName: string | undefined, startRow: number, rowCount?: number): string {
+function buildRange(
+	sheetName: string | undefined,
+	startRow: number,
+	endColumn: string,
+	rowCount?: number,
+	startColumn = 'A'
+): string {
 	const range =
-		rowCount === undefined ? `A${startRow}:K` : `A${startRow}:K${startRow + rowCount - 1}`
+		rowCount === undefined
+			? `${startColumn}${startRow}:${endColumn}`
+			: `${startColumn}${startRow}:${endColumn}${startRow + rowCount - 1}`
 	return sheetName ? `'${sheetName.replace(/'/g, "''")}'!${range}` : range
+}
+
+/** Production-hot layout: only automation columns (skips A–B notes and G–H formulas). */
+function buildAutomationClearRanges(
+	sheetName: string | undefined,
+	startRow: number,
+	rowCount: number
+): string[] {
+	if (rowCount <= 0) return []
+	return [
+		buildRange(sheetName, startRow, 'F', rowCount, 'C'),
+		buildRange(sheetName, startRow, 'K', rowCount, 'I')
+	]
 }
 
 export function loadCredentialsFromEnv(): object | null {
@@ -90,7 +115,7 @@ export async function testGoogleSheetsConnection(
 		config.sheetName ??
 		meta.data.sheets?.[0]?.properties?.title ??
 		undefined
-	const readRange = buildRange(config.sheetName, config.startRow ?? 2, 1)
+	const readRange = buildRange(config.sheetName, config.startRow ?? 2, 'K', 1, 'A')
 	await sheets.spreadsheets.values.get({
 		spreadsheetId: config.spreadsheetId,
 		range: readRange
@@ -129,7 +154,10 @@ function prepareRowsForSheet(rows: SheetRow[]): SheetRow[] {
 	}))
 }
 
-/** Clears existing data rows from startRow downward (columns A–K), then writes new rows. */
+/**
+ * Clears automation columns from startRow downward, then writes new rows.
+ * Preserves columns A–B (editor notes) and G–H (READING TOTAL, Feedback) on production-hot sheets.
+ */
 export async function writeSheetRows(
 	rows: SheetRow[],
 	config: GoogleSheetsWriterConfig,
@@ -143,33 +171,58 @@ export async function writeSheetRows(
 	}
 	const sheets = await createSheetsClient(creds)
 	const startRow = config.startRow ?? 2
-	const matrix = sheetRowsToSpreadsheetMatrix(prepareRowsForSheet(rows))
-	const clearRange = buildRange(config.sheetName, startRow)
+	const prepared = prepareRowsForSheet(rows)
 
-	await sheets.spreadsheets.values.clear({
-		spreadsheetId: config.spreadsheetId,
-		range: clearRange
-	})
-
-	if (matrix.length === 0) {
-		return { updatedRange: clearRange, rowCount: 0 }
+	let existingRowCount = 0
+	try {
+		const existing = await readSheetRows(config, creds)
+		existingRowCount = existing.length
+	} catch {
+		existingRowCount = 0
 	}
 
-	const updateRange = buildRange(config.sheetName, startRow, matrix.length)
-	const response = await sheets.spreadsheets.values.update({
+	const writeRowCount = prepared.length
+	const clearRowCount = Math.max(existingRowCount, writeRowCount)
+
+	for (const clearRange of buildAutomationClearRanges(
+		config.sheetName,
+		startRow,
+		clearRowCount
+	)) {
+		await sheets.spreadsheets.values.clear({
+			spreadsheetId: config.spreadsheetId,
+			range: clearRange
+		})
+	}
+
+	if (writeRowCount === 0) {
+		const cleared = buildRange(config.sheetName, startRow, 'K', clearRowCount || undefined, 'C')
+		return { updatedRange: cleared, rowCount: 0 }
+	}
+
+	const cdfMatrix = sheetRowsToAutomationCdfMatrix(prepared)
+	const ijkMatrix = sheetRowsToAutomationIjkMatrix(prepared)
+	const cdfRange = buildRange(config.sheetName, startRow, 'F', writeRowCount, 'C')
+	const ijkRange = buildRange(config.sheetName, startRow, 'K', writeRowCount, 'I')
+
+	const response = await sheets.spreadsheets.values.batchUpdate({
 		spreadsheetId: config.spreadsheetId,
-		range: updateRange,
-		valueInputOption: 'USER_ENTERED',
-		requestBody: { values: matrix }
+		requestBody: {
+			valueInputOption: 'USER_ENTERED',
+			data: [
+				{ range: cdfRange, values: cdfMatrix },
+				{ range: ijkRange, values: ijkMatrix }
+			]
+		}
 	})
 
 	const updatedRange =
-		response.data.updatedRange ??
-		`${columnLetter(0)}${startRow}:${columnLetter(10)}${startRow + matrix.length - 1}`
+		response.data.responses?.[0]?.updatedRange ??
+		`C${startRow}:K${startRow + writeRowCount - 1}`
 
 	return {
 		updatedRange,
-		rowCount: matrix.length
+		rowCount: writeRowCount
 	}
 }
 
@@ -194,7 +247,7 @@ export async function readSheetRows(
 	}
 	const sheets = await createSheetsClient(creds)
 	const startRow = config.startRow ?? 2
-	const readRange = buildRange(config.sheetName, startRow)
+	const readRange = buildRange(config.sheetName, startRow, 'K', undefined, 'A')
 	const response = await sheets.spreadsheets.values.get({
 		spreadsheetId: config.spreadsheetId,
 		range: readRange
