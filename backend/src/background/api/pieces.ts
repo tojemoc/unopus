@@ -59,6 +59,13 @@ export const mutations = {
 		if (!payload.rundownId || !payload.partId)
 			return { error: new Error('Missing rundown id or part id') }
 
+		if (document.payload !== undefined) {
+			document.payload = prepareHeadPiecePayloadForSave(
+				document.pieceType,
+				document.payload as Record<string, PayloadValue>
+			)
+		}
+
 		try {
 			const stmt = db.prepare(`
 				INSERT INTO pieces (id,playlistId,rundownId,segmentId,partId,document)

@@ -1,6 +1,7 @@
 import type { Piece, PayloadValue } from './interfaces'
 
-function isHeadPiece(pieceType: string): boolean {
+function isHeadPiece(pieceType: unknown): boolean {
+	if (typeof pieceType !== 'string') return false
 	return pieceType.trim().toLowerCase() === 'head'
 }
 
@@ -22,7 +23,7 @@ export function normalizeHeadPiecePayload(piece: Piece): Piece {
 
 /** Write-time compat: persist title and drop obsolete text on head pieces. */
 export function prepareHeadPiecePayloadForSave(
-	pieceType: string,
+	pieceType: unknown,
 	payload: Record<string, PayloadValue> | undefined
 ): Record<string, PayloadValue> {
 	if (!isHeadPiece(pieceType)) return payload ?? {}

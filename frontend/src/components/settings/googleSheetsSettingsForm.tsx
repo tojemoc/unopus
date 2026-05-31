@@ -164,6 +164,10 @@ export function GoogleSheetsSettingsForm({ settings }: { settings: ApplicationSe
 		])
 	}
 
+	const removePieceMapping = (key: string) => {
+		setPieceMappings((prev) => prev.filter((m) => m._key !== key))
+	}
+
 	const saveSheetsSettings = async (): Promise<boolean> => {
 		setSaving(true)
 		try {
@@ -450,13 +454,22 @@ export function GoogleSheetsSettingsForm({ settings }: { settings: ApplicationSe
 							))}
 						</tbody>
 					</Table>
-					<Button
-						variant="outline-secondary"
-						size="sm"
-						onClick={() => addFieldMapping(mappingIndex)}
-					>
-						Add field mapping
-					</Button>
+					<div className="d-flex flex-wrap gap-2">
+						<Button
+							variant="outline-secondary"
+							size="sm"
+							onClick={() => addFieldMapping(mappingIndex)}
+						>
+							Add field mapping
+						</Button>
+						<Button
+							variant="outline-danger"
+							size="sm"
+							onClick={() => removePieceMapping(mapping._key)}
+						>
+							Remove mapping
+						</Button>
+					</div>
 				</div>
 			))}
 
