@@ -5,6 +5,8 @@ import { CustomDateTimePicker, FieldInfo } from '../form'
 import { updateRundown } from '~/store/rundowns'
 import { useAppDispatch, useAppSelector, useAppStore } from '~/store/app'
 import { ipcAPI } from '~/lib/IPC'
+import { saveTextToFile } from '~/lib/files'
+import { sanitizeRundownFilename, serializedRundownToCsv } from '~/util/rundownToCsv'
 import { DeleteRundownButton } from './deleteRundownButton'
 import { useToasts } from '../toasts/useToasts'
 
@@ -27,10 +29,7 @@ export function RundownPropertiesForm({ rundown }: { rundown: Rundown }) {
 		}
 	})
 
-	const exportRundown = (e: React.MouseEvent) => {
-		e.preventDefault()
-		e.stopPropagation()
-
+	const buildSerializedRundown = (): SerializedRundown | null => {
 		const state = store.getState()
 
 		const serializedRundown: SerializedRundown = {
@@ -40,8 +39,17 @@ export function RundownPropertiesForm({ rundown }: { rundown: Rundown }) {
 			pieces: state.pieces.pieces.filter((piece) => piece.rundownId === rundown.id)
 		}
 
-		// Should never happen, but just in case
-		if (!serializedRundown.rundown) return
+		if (!serializedRundown.rundown) return null
+
+		return serializedRundown
+	}
+
+	const exportRundown = (e: React.MouseEvent) => {
+		e.preventDefault()
+		e.stopPropagation()
+
+		const serializedRundown = buildSerializedRundown()
+		if (!serializedRundown) return
 
 		ipcAPI
 			.saveToFile({
@@ -55,6 +63,31 @@ export function RundownPropertiesForm({ rundown }: { rundown: Rundown }) {
 					bodyContent: 'Encountered an unexpected error'
 				})
 			})
+	}
+
+	const exportRundownCsv = (e: React.MouseEvent) => {
+		e.preventDefault()
+		e.stopPropagation()
+
+		const serializedRundown = buildSerializedRundown()
+		if (!serializedRundown) return
+
+		try {
+			const csv = serializedRundownToCsv(serializedRundown)
+			const filename = sanitizeRundownFilename(serializedRundown.rundown.name)
+
+			void saveTextToFile({
+				title: filename,
+				contents: csv,
+				extension: 'csv'
+			})
+		} catch (e) {
+			console.error(e)
+			toasts.show({
+				headerContent: 'Exporting rundown CSV',
+				bodyContent: 'Encountered an unexpected error'
+			})
+		}
 	}
 
 	return (
@@ -204,8 +237,11 @@ export function RundownPropertiesForm({ rundown }: { rundown: Rundown }) {
 							/>
 
 							<div>
-								<Button onClick={exportRundown} variant="secondary" className="me-4">
-									Export
+								<Button onClick={exportRundown} variant="secondary" className="me-2">
+									Export JSON
+								</Button>
+								<Button onClick={exportRundownCsv} variant="secondary" className="me-4">
+									Export CSV
 								</Button>
 
 								<ButtonGroup>
