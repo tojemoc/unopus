@@ -1,9 +1,23 @@
 .rundown-main-content {
 	flex-grow: 1;
-	overflow: hidden;
-	.rundown-main-content-properties {
+	min-height: 0;
+	overflow-x: hidden;
+	overflow-y: auto;
+
+	&.h-100 {
 		height: 100%;
+		overflow: hidden;
+	}
+
+	.rundown-main-content-scroll,
+	.rundown-main-content-properties {
+		flex: 1 1 auto;
+		min-height: 0;
+		overflow-x: hidden;
 		overflow-y: auto;
+	}
+
+	.rundown-main-content-properties {
 		> .hstack {
 			min-height: 100%;
 		}
@@ -40,9 +54,20 @@
 
 	.item-duration {
 		font-size: 0.7em;
-		padding-left: 0.5em;
-		top: 1.9em;
+		padding-left: 0.25em;
 		font-family: monospace;
+		opacity: 0.7;
+		white-space: nowrap;
+		flex-shrink: 0;
+	}
+
+	.sidebar-item-header {
+		width: 100%;
+		padding: 0.35em 0.3em;
+	}
+
+	.sidebar-item-header-meta {
+		min-height: 1.25em;
 	}
 
 	.floated {
@@ -66,8 +91,8 @@
 
 	.item-title {
 		flex: 1;
-		position: relative;
-		top: -0.4em;
+		line-height: 1.25;
+		word-break: break-word;
 	}
 
 	.copy-item {
@@ -90,7 +115,7 @@
 		display: flex;
 		justify-content: space-evenly;
 		font-size: 1em;
-		margin: 2em 0;
+		margin: 0;
 	}
 
 	.segment-button.add-button {
@@ -112,13 +137,7 @@
 	.sidebar-segment {
 		border-bottom: 1px solid #4a4b4c;
 		padding: 0.5em 0 0.78em;
-
-		.item-duration {
-			font-size: 0.7em;
-			padding-left: 0.5em;
-			top: 2.7em;
-			font-family: monospace;
-		}
+		position: relative;
 
 		&.closed {
 			.segment-toggle {
@@ -143,28 +162,50 @@
 			opacity: 1;
 		}
 
-		.segment-content div :last-child .add-button-container {
-			height: 1.5em;
-		}
 		.segment-content > div:last-child {
-			margin-bottom: 0.75em;
+			margin-bottom: 0.5em;
 		}
 		.add-button-container {
-			padding-right: 1rem;
+			padding: 0.35em 1rem 0.5em 0;
 			width: 100%;
-			height: 0.25em;
-			top: 2.7em;
-			z-index: 5;
 			.add-button {
 				all: unset;
-				z-index: 6;
 				cursor: pointer;
 				text-align: center;
 				font-size: 0.8em;
 				border-radius: 2em;
-				padding-right: 0.7em;
-				padding-left: 0.2em;
-				transition: opacity 0.5s ease-out;
+				padding: 0.15em 0.7em 0.15em 0.2em;
+				color: #777;
+				&:hover {
+					color: #bbb;
+				}
+			}
+		}
+
+		.segment-footer {
+			display: flex;
+			flex-direction: column;
+			align-items: stretch;
+			gap: 0.35em;
+			padding: 0.35em 0.75em 0.5em;
+			min-height: 2.5em;
+		}
+
+		.segment-footer-button {
+			all: unset;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			gap: 0.25em;
+			align-self: center;
+			cursor: pointer;
+			font-size: 0.8em;
+			color: #777;
+			padding: 0.2em 0.7em;
+			border-radius: 2em;
+			background: #141619;
+			&:hover {
+				color: #bbb;
 			}
 		}
 		.sidebar-part-wrapper {
@@ -180,10 +221,6 @@
 			.part-edit-hint {
 				font-size: 0.65em;
 				font-weight: normal;
-			}
-
-			.item-duration {
-				top: 1.7em;
 			}
 
 			.add-button-container {
@@ -217,13 +254,12 @@
 			}
 		}
 		.segment-buttons {
-			position: absolute;
-			bottom: -2.6em;
-			z-index: 6;
+			position: static;
 			display: flex;
 			justify-content: space-evenly;
 			width: 100%;
 			font-size: 0.9em;
+			margin: 0;
 
 			.segment-button {
 				font-size: 0.8em;
@@ -231,7 +267,6 @@
 				border-radius: 2em;
 				padding-right: 0.7em;
 				transition: opacity 0.5s ease-out;
-
 				cursor: pointer;
 				opacity: 0;
 			}

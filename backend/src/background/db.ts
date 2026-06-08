@@ -269,6 +269,15 @@ try {
 		throw new Error('Migration incomplete: payload.type still exists')
 	}
 
+	db.exec(`
+		CREATE TABLE IF NOT EXISTS story_templates (
+			id TEXT PRIMARY KEY,
+			name TEXT NOT NULL,
+			pattern TEXT NOT NULL,
+			createdAt INTEGER NOT NULL
+		);
+	`)
+
 	initAuthTables()
 } catch (error) {
 	console.error(

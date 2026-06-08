@@ -10,13 +10,19 @@ import { db } from '../db'
 import { defaultRundownManifest, TYPE_MANIFESTS } from '../manifest'
 import { mutations as typeManifestMutations } from './typeManifests'
 import { Server, Socket } from 'socket.io'
+import { onApplicationSettingsUpdated } from '../rundownSchedule'
+import { validateApplicationSettingsFields } from '../settingsValidation'
 
 export const mutations = {
 	async create(
 		payload: MutationApplicationSettingsCreate
 	): Promise<{ result?: ApplicationSettings; error?: Error }> {
+		const validated = validateApplicationSettingsFields(payload)
+		if (!validated.ok) {
+			return { error: new Error(validated.error) }
+		}
 		const document = {
-			...payload
+			...validated.sanitized
 		}
 
 		try {
@@ -62,8 +68,12 @@ export const mutations = {
 	async update(
 		payload: MutationApplicationSettingsUpdate
 	): Promise<{ result?: ApplicationSettings; error?: Error }> {
+		const validated = validateApplicationSettingsFields(payload)
+		if (!validated.ok) {
+			return { error: new Error(validated.error) }
+		}
 		const update = {
-			...payload
+			...validated.sanitized
 		}
 
 		try {
@@ -108,6 +118,11 @@ export function registerSettingsHandlers(socket: Socket, _io: Server) {
 			case IpcOperationType.Update:
 				{
 					const { result, error } = await mutations.update(payload)
+					if (result) {
+						void onApplicationSettingsUpdated(result).catch((err) => {
+							console.error('onApplicationSettingsUpdated failed after settings save', err)
+						})
+					}
 					callback(result || error)
 				}
 				break
@@ -125,7 +140,12 @@ export function registerSettingsHandlers(socket: Socket, _io: Server) {
 
 const DEFAULT_SETTINGS: ApplicationSettings = {
 	coreUrl: '127.0.0.1',
-	corePort: 3000
+	corePort: 3000,
+	timezone: 'Europe/Bratislava',
+	scheduleAheadCount: 5,
+	scheduleStartTime: '18:00',
+	rundownListPastVisible: 2,
+	rundownListFutureVisible: 4
 }
 
 export async function initializeDefaults() {

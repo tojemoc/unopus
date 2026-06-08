@@ -8,9 +8,17 @@ import { faClose } from '@fortawesome/free-solid-svg-icons'
 import './navbar.scss'
 import { toTime, toTimeDiff } from '~/util/lib'
 import { useAppSelector } from '~/store/app'
-import { Stack } from 'react-bootstrap'
+import { Button, Stack } from 'react-bootstrap'
+import { BsArchive } from 'react-icons/bs'
+import { useState } from 'react'
+import { useAppDispatch } from '~/store/app'
+import { toggleStoryLibrary } from '~/store/storyLibrary'
+import { GoogleSheetsSyncModal } from './googleSheetsSyncModal'
+import { BsTable } from 'react-icons/bs'
 
 export function RundownNavbar({ rundown }: { rundown: Rundown }) {
+	const dispatch = useAppDispatch()
+	const [showSheetsSync, setShowSheetsSync] = useState(false)
 	const parts = useAppSelector((state) =>
 		state.parts.parts.filter((p) => p.rundownId === rundown.id)
 	)
@@ -36,7 +44,7 @@ export function RundownNavbar({ rundown }: { rundown: Rundown }) {
 	}
 
 	return (
-		<Navbar expand="lg" className="rundown-navbar">
+		<Navbar className="rundown-navbar py-1">
 			<Container fluid className="d-flex justify-content-between">
 				<Stack className="timing" direction="horizontal" gap={3}>
 					<Stack>
@@ -57,12 +65,35 @@ export function RundownNavbar({ rundown }: { rundown: Rundown }) {
 					{rundown.name}
 				</Nav.Link>
 
-				<Nav className="">
+				<Nav className="align-items-center gap-2">
+					<Button
+						variant="outline-light"
+						size="sm"
+						className="d-inline-flex align-items-center gap-1"
+						onClick={() => setShowSheetsSync(true)}
+					>
+						<BsTable aria-hidden />
+						Sheets
+					</Button>
+					<Button
+						variant="outline-light"
+						size="sm"
+						className="d-inline-flex align-items-center gap-1"
+						onClick={() => dispatch(toggleStoryLibrary())}
+					>
+						<BsArchive aria-hidden />
+						Library
+					</Button>
 					<Nav.Link as={Link} to="/">
 						<FontAwesomeIcon icon={faClose} size="xl" />
 					</Nav.Link>
 				</Nav>
 			</Container>
+			<GoogleSheetsSyncModal
+				rundownId={rundown.id}
+				show={showSheetsSync}
+				onHide={() => setShowSheetsSync(false)}
+			/>
 		</Navbar>
 	)
 }

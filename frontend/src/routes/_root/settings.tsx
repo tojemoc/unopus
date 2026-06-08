@@ -19,7 +19,7 @@ function RouteComponent() {
 	const selectTab = (path: string | null) => {
 		if (!path) return
 
-		if (path === 'connection' || path === 'rundown' || path === 'users') {
+		if (path === 'connection' || path === 'rundown' || path === 'schedule' || path === 'users') {
 			navigate({ to: `/settings/${path}` })
 		} else {
 			navigate({ to: `/settings/type/${path}` })
@@ -33,6 +33,7 @@ function RouteComponent() {
 				<Tab eventKey="part" title="Part Types" />
 				<Tab eventKey="segment" title="Segment Types" />
 				<Tab eventKey="rundown" title="Rundown Metadata" />
+				<Tab eventKey="schedule" title="Scheduling" />
 				{isAdmin && <Tab eventKey="users" title="Users" />}
 			</Tabs>
 

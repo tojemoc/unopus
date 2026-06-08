@@ -9,6 +9,15 @@ import {
 	PeripheralDevicePubSubCollectionsNames,
 	stringifyError
 } from '@sofie-automation/server-core-integration'
+import type { MediaObject } from '@sofie-automation/shared-lib/dist/core/model/MediaObjects'
+import { unprotectString } from '@sofie-automation/shared-lib/dist/lib/protectedString'
+import {
+	CoreMediaPubSubCollections,
+	CoreMediaPubSubTypes,
+	MEDIA_OBJECTS_COLLECTION,
+	MEDIA_OBJECTS_PUBLICATION
+} from './coreMediaPubSub'
+import type { MediaClipSummary } from './mediaClipsHistory'
 import process from 'node:process'
 import * as P from '@sofie-automation/shared-lib/dist/peripheralDevice/peripheralDeviceAPI'
 import { StatusCode } from '@sofie-automation/shared-lib/dist/lib/status'
@@ -26,7 +35,7 @@ export interface DeviceConfig {
 }
 
 export class CoreHandler {
-	public core: CoreConnection
+	public core: CoreConnection<CoreMediaPubSubTypes, CoreMediaPubSubCollections>
 	public get connectionInfo(): Readonly<CoreConnectionInfo> {
 		return Object.freeze({ ...this._connectionInfo })
 	}
@@ -127,10 +136,37 @@ export class CoreHandler {
 		console.info('Core: Setting up subscriptions for ' + this.core.deviceId + '..')
 		await Promise.all([
 			this.core.autoSubscribe(PeripheralDevicePubSub.peripheralDeviceForDevice, this.core.deviceId),
-			this.core.autoSubscribe(PeripheralDevicePubSub.peripheralDeviceCommands, this.core.deviceId)
+			this.core.autoSubscribe(PeripheralDevicePubSub.peripheralDeviceCommands, this.core.deviceId),
+			this.core.autoSubscribe(MEDIA_OBJECTS_PUBLICATION, this.core.deviceId).catch((err) => {
+				console.warn(
+					'Core: mediaObjects subscription unavailable:',
+					err instanceof Error ? err.message : err
+				)
+			})
 		])
 
 		this.setupObserverForPeripheralDeviceCommands()
+	}
+
+	/**
+	 * Media clips from Sofie Core when connected and the mediaObjects collection is available.
+	 * Returns null when Core is disconnected or media is not subscribed.
+	 */
+	getMediaObjects(): MediaClipSummary[] | null {
+		if (this._connectionInfo.status !== CoreConnectionStatus.CONNECTED) {
+			return null
+		}
+
+		try {
+			const collection = this.core.getCollection(MEDIA_OBJECTS_COLLECTION)
+			const docs = collection.find({}) as MediaObject[]
+			return docs
+				.map((doc) => mediaObjectToClipSummary(doc))
+				.filter((clip): clip is MediaClipSummary => clip !== null)
+				.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
+		} catch {
+			return null
+		}
 	}
 
 	getCoreConnectionOptions(deviceOptions: DeviceConfig, name: string): CoreOptions {
@@ -305,6 +341,18 @@ export class CoreHandler {
 
 		return versions
 	}
+}
+
+function mediaObjectToClipSummary(doc: MediaObject): MediaClipSummary | null {
+	const name = (doc.mediaId || doc.mediainfo?.name || '').trim()
+	if (!name) {
+		return null
+	}
+
+	const id = doc._id ? unprotectString(doc._id) : name
+	const path = doc.mediaPath?.trim()
+
+	return path ? { id, name, path } : { id, name }
 }
 
 export const coreHandler = new CoreHandler()

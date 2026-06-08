@@ -2,12 +2,13 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useCallback, useState } from 'react'
 import { Button, Dropdown, SplitButton, Stack, Tab, Tabs } from 'react-bootstrap'
 import { BsBoxArrowInUp, BsPlus } from 'react-icons/bs'
-import { RundownListGrouped } from '~/components/rundownList/rundownListGrouped'
+import { RundownHomeList } from '~/components/rundownList/rundownHomeList'
+import { TemplateList } from '~/components/rundownList/templateList'
 import { useToasts } from '~/components/toasts/useToasts'
 import { ipcAPI } from '~/lib/IPC'
 import { useAppDispatch, useAppSelector } from '~/store/app'
 import { addNewRundown, copyRundown, importRundown } from '~/store/rundowns'
-import { verifyImportIsRundown } from '~/util/verifyImport'
+import { extractOriginalRundownId } from '~/util/normalizeImport'
 import type { Rundown } from '~backend/background/interfaces'
 
 export const Route = createFileRoute('/_root/')({
@@ -20,13 +21,28 @@ function Index() {
 	const navigate = useNavigate()
 	const rundowns = useAppSelector((state) => state.rundowns)
 	const toasts = useToasts()
+	const isTemplatesTab = activeTab === 'templates'
 
 	const createNewRundown = useCallback(
 		(isTemplate: boolean) => {
-			dispatch(addNewRundown({ playlistId: null, isTemplate })).unwrap()
+			dispatch(addNewRundown({ playlistId: null, isTemplate }))
+				.unwrap()
+				.then((created) =>
+					navigate({
+						to: `/rundown/${created.id}`
+					})
+				)
+				.catch((e) => {
+					console.error(e)
+					toasts.show({
+						headerContent: isTemplate ? 'New template' : 'New rundown',
+						bodyContent: 'Could not create'
+					})
+				})
 		},
-		[dispatch]
+		[dispatch, navigate, toasts]
 	)
+
 	const handleCopyRundown = (sourceRundown: Rundown, preserveTemplate: boolean = false) => {
 		dispatch(
 			copyRundown({
@@ -51,49 +67,46 @@ function Index() {
 
 	const selectImportRundown = (isTemplate: boolean) => {
 		ipcAPI
-			.openFromFile({ title: 'Import rundown' })
-			.then(async (serializedRundown) => {
-				console.log('opening rundown', serializedRundown)
-
-				if (verifyImportIsRundown(serializedRundown)) {
-					const existing = rundowns.find((rd) => rd.id === serializedRundown.rundown.id)
+			.openFromFile({ title: isTemplate ? 'Import template' : 'Import rundown' })
+			.then(async (fileData) => {
+				try {
+					const originalId = extractOriginalRundownId(fileData)
+					const existing =
+						originalId && rundowns.find((rd) => rd.id === originalId)
 					if (existing) {
 						toasts.show({
-							headerContent: 'Importing rundown',
-							bodyContent: 'Rundown already exists'
+							headerContent: 'Import',
+							bodyContent: 'A rundown with this id already exists'
 						})
 					} else {
-						try {
-							await dispatch(importRundown({ ...serializedRundown, isTemplate })).unwrap()
-
-							await navigate({
-								to: `/rundown/${serializedRundown.rundown.id}`
-							})
-						} catch (e: unknown) {
-							console.error(e)
-							toasts.show({
-								headerContent: 'Importing rundown',
-								bodyContent: 'Encountered an unexpected error'
-							})
-						}
+						const created = await dispatch(
+							importRundown({ data: fileData, isTemplate })
+						).unwrap()
+						await navigate({
+							to: `/rundown/${created.id}`
+						})
 					}
-				} else {
+				} catch (e: unknown) {
+					console.error(e)
 					toasts.show({
-						headerContent: 'Importing rundown',
-						bodyContent: 'Imported file is not a valid rundown'
+						headerContent: 'Import',
+						bodyContent:
+							e instanceof Error ? e.message : 'Imported file is not a valid rundown or template'
 					})
 				}
 			})
 			.catch((e) => {
 				console.error(e)
 				toasts.show({
-					headerContent: 'Importing rundown',
+					headerContent: 'Import',
 					bodyContent: 'Encountered an unexpected error'
 				})
 			})
 	}
+
 	const templateRundowns = rundowns.filter((r) => r.isTemplate)
 	const normalRundowns = rundowns.filter((r) => !r.isTemplate)
+
 	return (
 		<div className="p-2">
 			<Stack direction="horizontal" className="mb-3 align-items-center">
@@ -110,32 +123,47 @@ function Index() {
 					<SplitButton
 						title={
 							<span className="d-inline-flex align-items-center gap-2">
-								<BsPlus className="bttn-icon icon-lg" aria-hidden />
-								New Rundown
+								<BsPlus aria-hidden />
+								{isTemplatesTab ? 'New Template' : 'New Rundown'}
 							</span>
 						}
-						onClick={() => createNewRundown(activeTab === 'templates')}
+						onClick={() => createNewRundown(isTemplatesTab)}
 						variant="primary"
-						size="lg"
 					>
-						{templateRundowns.map((templateRundown) => (
-							<Dropdown.Item
-								key={templateRundown.id}
-								onClick={() => handleCopyRundown(templateRundown, activeTab === 'templates')}
-							>
-								{templateRundown.name}
+						{templateRundowns.length === 0 ? (
+							<Dropdown.Item disabled>
+								No templates yet — create one on the Templates tab
 							</Dropdown.Item>
-						))}
+						) : (
+							templateRundowns.map((templateRundown) => (
+								<Dropdown.Item
+									key={templateRundown.id}
+									onClick={() => handleCopyRundown(templateRundown, isTemplatesTab)}
+								>
+									From {templateRundown.name}
+								</Dropdown.Item>
+							))
+						)}
 					</SplitButton>
-					<Button onClick={() => selectImportRundown(activeTab === 'templates')} variant="outline-primary" size="lg">
-						<BsBoxArrowInUp className="bttn-icon icon-md me-2" aria-hidden />
-						Import
-					</Button>
+					{!isTemplatesTab && (
+						<Button
+							onClick={() => selectImportRundown(false)}
+							variant="outline-primary"
+							className="d-inline-flex align-items-center gap-2"
+						>
+							<BsBoxArrowInUp aria-hidden />
+							Import
+						</Button>
+					)}
 				</Stack>
 			</Stack>
-			{activeTab === 'rundowns' && <RundownListGrouped rundowns={normalRundowns} />}
-
-			{activeTab === 'templates' && <RundownListGrouped rundowns={templateRundowns} />}
+			{activeTab === 'rundowns' && <RundownHomeList rundowns={normalRundowns} />}
+			{activeTab === 'templates' && (
+				<TemplateList
+					templates={templateRundowns}
+					onImportTemplate={() => selectImportRundown(true)}
+				/>
+			)}
 		</div>
 	)
 }

@@ -4,6 +4,7 @@ import { Stack } from 'react-bootstrap'
 import { DuopusNavbar } from '~/components/navbar/duopusNavbar'
 import { RundownNavbar } from '~/components/rundown/navbar'
 import { RundownSidebar } from '~/components/rundown/sidebar'
+import { StoryLibraryDrawer } from '~/components/rundown/storyLibrary/storyLibraryDrawer'
 import { useAppDispatch, useAppSelector } from '~/store/app'
 import { loadParts } from '~/store/parts'
 import { loadPieces } from '~/store/pieces'
@@ -61,30 +62,54 @@ function RouteComponent() {
 	}
 
 	return (
-		<div style={rootStyle}>
-			<DuopusNavbar rundownName={rundown.name} />
-			<RundownNavbar rundown={rundown} />
+		<>
+			<div style={rootStyle}>
+				<div style={headerStyle}>
+					<DuopusNavbar rundownName={rundown.name} />
+					<RundownNavbar rundown={rundown} />
+				</div>
 
-			<Stack
-				direction="horizontal"
-				style={{
-					height: '100%',
-					overflowX: 'hidden'
-				}}
-			>
-				<RundownSidebar rundownId={rundown.id} playlistId={rundown.playlistId} />
+				<Stack
+					direction="horizontal"
+					className="rundown-editor-panes"
+					style={{
+						flex: 1,
+						minHeight: 0,
+						overflow: 'hidden'
+					}}
+				>
+					<RundownSidebar rundownId={rundown.id} playlistId={rundown.playlistId} />
 
-				<MyErrorBoundary>
-					<Outlet />
-				</MyErrorBoundary>
-			</Stack>
-		</div>
+					<MyErrorBoundary>
+						<div
+							className="rundown-main-content flex-grow-1"
+							style={{
+								minWidth: 0,
+								minHeight: 0,
+								display: 'flex',
+								flexDirection: 'column',
+								overflow: 'hidden'
+							}}
+						>
+							<Outlet />
+						</div>
+					</MyErrorBoundary>
+				</Stack>
+			</div>
+			<StoryLibraryDrawer rundownId={rundown.id} />
+		</>
 	)
 }
 
 const rootStyle: React.CSSProperties = {
 	display: 'grid',
 	height: '100%',
-	gridTemplateRows: 'auto 1fr auto',
+	gridTemplateRows: 'auto 1fr',
 	overflowX: 'hidden'
+}
+
+const headerStyle: React.CSSProperties = {
+	display: 'flex',
+	flexDirection: 'column',
+	flexShrink: 0
 }

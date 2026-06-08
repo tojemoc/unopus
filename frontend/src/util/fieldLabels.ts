@@ -5,6 +5,7 @@ const LABELS: Record<string, string> = {
 	partType: 'Story type',
 	pieceType: 'Element type',
 	sync: 'Sync to Sofie',
+	syncGeneratedRundowns: 'Sync rundowns created from this template',
 	script: 'Script / voiceover',
 	duration: 'Duration (seconds)',
 	start: 'Start offset (seconds)',

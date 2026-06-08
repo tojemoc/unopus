@@ -1,8 +1,14 @@
-import { Card, Col, Row } from 'react-bootstrap'
-import { Link } from '@tanstack/react-router'
+import { useState } from 'react'
+import { Button, Card, Col, Row } from 'react-bootstrap'
+import { Link, useNavigate } from '@tanstack/react-router'
+import { BsCalendarPlus } from 'react-icons/bs'
 import type { Rundown } from '~backend/background/interfaces'
-import { useAppSelector } from '~/store/app'
+import { useAppDispatch, useAppSelector } from '~/store/app'
 import { CoreConnectionStatus } from '~backend/background/interfaces'
+import { CustomDateTimePicker } from '~/components/form'
+import { ipcAPI } from '~/lib/IPC'
+import { pushRundown } from '~/store/rundowns'
+import { useToasts } from '~/components/toasts/useToasts'
 import './rundownListGrouped.scss'
 
 function startOfDay(date: Date): number {
@@ -52,11 +58,17 @@ function syncClass(rundown: Rundown, coreStatus: CoreConnectionStatus): string {
 
 interface RundownListGroupedProps {
 	rundowns: Rundown[]
+	showGenerateForDate?: boolean
 }
 
-export function RundownListGrouped({ rundowns }: RundownListGroupedProps) {
+export function RundownListGrouped({ rundowns, showGenerateForDate }: RundownListGroupedProps) {
+	const dispatch = useAppDispatch()
+	const navigate = useNavigate()
+	const toasts = useToasts()
 	const parts = useAppSelector((s) => s.parts.parts)
 	const coreStatus = useAppSelector((s) => s.coreConnectionStatus.status)
+	const [generatingId, setGeneratingId] = useState<string | null>(null)
+	const [scheduledDates, setScheduledDates] = useState<Record<string, number | null>>({})
 
 	if (rundowns.length === 0) {
 		return (
@@ -133,13 +145,94 @@ export function RundownListGrouped({ rundowns }: RundownListGroupedProps) {
 													{syncLabel(rundown, coreStatus)}
 												</span>
 											</div>
-											<Link
-												to="/rundown/$rundownId"
-												params={{ rundownId: rundown.id }}
-												className="btn btn-primary mt-auto align-self-start"
-											>
-												Open
-											</Link>
+											<div className="d-flex flex-wrap gap-2 mt-auto">
+												<Link
+													to="/rundown/$rundownId"
+													params={{ rundownId: rundown.id }}
+													className="btn btn-primary align-self-start"
+												>
+													Open
+												</Link>
+												{showGenerateForDate && (
+													<>
+														{generatingId === rundown.id ? (
+															<div className="d-flex flex-wrap align-items-center gap-2">
+																<CustomDateTimePicker
+																	selected={
+																		scheduledDates[rundown.id]
+																			? new Date(scheduledDates[rundown.id]!)
+																			: new Date()
+																	}
+																	onChange={(date) =>
+																		setScheduledDates((prev) => ({
+																			...prev,
+																			[rundown.id]: date?.getTime() ?? null
+																		}))
+																	}
+																	showTimeSelect={false}
+																	dateFormat="yyyy-MM-dd"
+																	className="form-control-sm"
+																/>
+																<Button
+																	size="sm"
+																	variant="success"
+																	disabled={!scheduledDates[rundown.id]}
+																	onClick={async () => {
+																		const scheduledDate = scheduledDates[rundown.id]
+																		if (!scheduledDate) return
+																		try {
+																			const newRundown =
+																				await ipcAPI.generateRundownFromTemplate({
+																					templateRundownId: rundown.id,
+																					scheduledDate
+																				})
+																			dispatch(pushRundown(newRundown))
+																			setGeneratingId(null)
+																			await navigate({
+																				to: `/rundown/${newRundown.id}`
+																			})
+																		} catch (e) {
+																			console.error(e)
+																			toasts.show({
+																				headerContent: 'Generate rundown',
+																				bodyContent:
+																					e instanceof Error
+																						? e.message
+																						: 'Generation failed'
+																			})
+																		}
+																	}}
+																>
+																	Confirm
+																</Button>
+																<Button
+																	size="sm"
+																	variant="secondary"
+																	onClick={() => setGeneratingId(null)}
+																>
+																	Cancel
+																</Button>
+															</div>
+														) : (
+															<Button
+																size="sm"
+																variant="outline-primary"
+																className="d-inline-flex align-items-center gap-1"
+																onClick={() => {
+																	setGeneratingId(rundown.id)
+																	setScheduledDates((prev) => ({
+																		...prev,
+																		[rundown.id]: startOfDay(new Date())
+																	}))
+																}}
+															>
+																<BsCalendarPlus aria-hidden />
+																Generate for date
+															</Button>
+														)}
+													</>
+												)}
+											</div>
 										</Card.Body>
 									</Card>
 								</Col>

@@ -9,10 +9,12 @@ import piecesReducer from './pieces.js'
 import typeManifestReducer from './typeManifest.js'
 import settingsReducer from './settings.js'
 import { authReducer } from './auth.js'
+import storyLibraryReducer from './storyLibrary.js'
 
 export const store = configureStore({
 	reducer: {
 		auth: authReducer,
+		storyLibrary: storyLibraryReducer,
 		playlists: playlistsReducer,
 		rundowns: rundownsReducer,
 		segments: segmentsReducer,

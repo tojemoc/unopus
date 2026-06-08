@@ -1,0 +1,26 @@
+.story-library-drawer {
+	position: fixed;
+	top: 0;
+	right: 0;
+	width: min(420px, 100vw);
+	height: 100vh;
+	z-index: 1050;
+	box-shadow: -4px 0 24px rgba(0, 0, 0, 0.45);
+}
+
+.story-library-item {
+	background: rgba(255, 255, 255, 0.04);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.story-library-script {
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+	white-space: pre-wrap;
+}
+
+.story-library-recall-popover {
+	min-width: 220px;
+}

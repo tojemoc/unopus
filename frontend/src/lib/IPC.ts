@@ -25,6 +25,12 @@ import type {
 } from '../../../backend/src/background/interfaces.js'
 import { openFromFile, saveToFile } from './files.js'
 import { getSocket } from './socket.js'
+import {
+	generateRundownFromTemplate as generateRundownFromTemplateApi,
+	quickAddStory as quickAddStoryApi,
+	recallStory as recallStoryApi,
+	searchStoryLibrary as searchStoryLibraryApi
+} from './storyApi.js'
 
 export const ipcAPI: BackendApi = {
 	openFromFile: (args: OpenFromFileArgs) => {
@@ -162,7 +168,12 @@ export const ipcAPI: BackendApi = {
 	},
 	onSegmentsUpdate: (callback) => {
 		return getSocket().on('segments:update', callback)
-	}
+	},
+
+	quickAddStory: (segmentId, payload) => quickAddStoryApi(segmentId, payload),
+	searchStoryLibrary: (q, limit, offset) => searchStoryLibraryApi(q, limit, offset),
+	recallStory: (partId, payload) => recallStoryApi(partId, payload),
+	generateRundownFromTemplate: (payload) => generateRundownFromTemplateApi(payload)
 }
 
 export type { ipcAPI as electronApi }

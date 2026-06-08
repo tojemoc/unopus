@@ -9,7 +9,9 @@ import { DraggableContainer } from '~/components/drag-and-drop/DraggableContaine
 import { SidebarPart } from './part'
 import { SidebarElementHeader } from './sidebarElementHeader'
 import { useToasts } from '~/components/toasts/useToasts'
-import { BsCaretDownFill, BsFillTrashFill, BsPlus, BsTrash } from 'react-icons/bs'
+import { BsCaretDownFill, BsFillTrashFill, BsLightningCharge, BsPlus, BsTrash } from 'react-icons/bs'
+import { useState } from 'react'
+import { QuickStoryModal } from '../quickStoryModal'
 import { Stack, type ButtonProps } from 'react-bootstrap'
 import { HoverIconButton } from '~/components/rundownList/hoverIconButton'
 import { SegmentButtons } from './segmentButtons'
@@ -42,6 +44,8 @@ export function SidebarSegment({
 	const dispatch = useAppDispatch()
 	const navigate = useNavigate()
 	const toasts = useToasts()
+	const [showQuickStory, setShowQuickStory] = useState(false)
+	const [quickStoryRank, setQuickStoryRank] = useState<number | undefined>()
 
 	const parts = useAppSelector((s) => selectPartsBySegmentId(s, segment.id))
 	const sortedParts = [...parts].sort((a, b) => a.rank - b.rank)
@@ -72,6 +76,17 @@ export function SidebarSegment({
 					bodyContent: 'Encountered an unexpected error'
 				})
 			)
+
+	const openQuickStory = (rank?: number) => {
+		setQuickStoryRank(rank)
+		setShowQuickStory(true)
+	}
+
+	const handleQuickStoryCreated = (partId: string) => {
+		navigate({
+			to: `/rundown/${segment.rundownId}/segment/${segment.id}/part/${partId}`
+		})
+	}
 
 	const handleReorderPart = (
 		targetPart: Part,
@@ -192,19 +207,45 @@ export function SidebarSegment({
 						)}
 					/>
 				) : (
-					<Stack className="add-button-container">
+					<Stack className="add-button-container gap-1">
 						<button className="add-button" onClick={() => handleAddPart(0)}>
 							<BsPlus className="icon-lg" aria-hidden />
 							Add Part
 						</button>
+						<button className="add-button" onClick={() => openQuickStory(0)}>
+							<BsLightningCharge className="icon-lg" aria-hidden />
+							Quick Story
+						</button>
 					</Stack>
 				)}
 			</div>
-			<SegmentButtons
-				rundownId={segment.rundownId}
-				playlistId={segment.playlistId}
-				rank={insertRank}
-				setShowImportModal={setShowImportModal}
+			<div className="segment-footer">
+				{sortedParts.length > 0 && (
+					<button
+						type="button"
+						className="segment-footer-button"
+						onClick={() => {
+							const nextRank = Math.max(...sortedParts.map((p) => p.rank ?? -1)) + 1
+							openQuickStory(nextRank)
+						}}
+					>
+						<BsLightningCharge className="icon-lg" aria-hidden />
+						Quick Story
+					</button>
+				)}
+				<SegmentButtons
+					rundownId={segment.rundownId}
+					playlistId={segment.playlistId}
+					rank={insertRank}
+					setShowImportModal={setShowImportModal}
+				/>
+			</div>
+			<QuickStoryModal
+				show={showQuickStory}
+				onClose={() => setShowQuickStory(false)}
+				segment={segment}
+				insertRank={quickStoryRank}
+				onCreated={handleQuickStoryCreated}
 			/>
 		</div>
 	)

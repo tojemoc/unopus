@@ -8,6 +8,7 @@ import {
 	MutationPieceDelete,
 	MutationPieceRead,
 	MutationPieceUpdate,
+	PayloadValue,
 	Piece,
 	TypeManifestEntity
 } from '../interfaces'
@@ -17,6 +18,11 @@ import { sendPartUpdateToCore } from './parts'
 import { mutations as partsMutations } from './parts'
 import { Server, Socket } from 'socket.io'
 import { mutations as typeManifestMutations } from './typeManifests'
+import { notifyRundownTreeMutationSafe } from '../notifyRundownTreeMutationSafe'
+import {
+	normalizeHeadPiecePayload,
+	prepareHeadPiecePayloadForSave
+} from '../piecePayloadCompat'
 
 export const mutations = {
 	async create(payload: MutationPieceCreate): Promise<{ result?: Piece; error?: Error }> {
@@ -52,6 +58,13 @@ export const mutations = {
 
 		if (!payload.rundownId || !payload.partId)
 			return { error: new Error('Missing rundown id or part id') }
+
+		if (document.payload !== undefined) {
+			document.payload = prepareHeadPiecePayloadForSave(
+				document.pieceType,
+				document.payload as Record<string, PayloadValue>
+			)
+		}
 
 		try {
 			const stmt = db.prepare(`
@@ -152,16 +165,16 @@ export const mutations = {
 				return { error: new Error(`Piece with id ${id} not found`) }
 			}
 
-			return {
-				result: {
-					...JSON.parse(document.document),
-					id: document.id,
-					playlistId: document.playlistId,
-					rundownId: document.rundownId,
-					segmentId: document.segmentId,
-					partId: document.partId
-				}
-			}
+			const piece = normalizeHeadPiecePayload({
+				...JSON.parse(document.document),
+				id: document.id,
+				playlistId: document.playlistId,
+				rundownId: document.rundownId,
+				segmentId: document.segmentId,
+				partId: document.partId
+			})
+
+			return { result: piece }
 		} catch (e) {
 			console.error(e)
 			return { error: e as Error }
@@ -202,14 +215,16 @@ export const mutations = {
 			const documents = stmt.all(...args) as unknown as DBPiece[]
 
 			return {
-				result: documents.map((d) => ({
-					...JSON.parse(d.document),
-					id: d.id,
-					playlistId: d.playlistId,
-					rundownId: d.rundownId,
-					segmentId: d.segmentId,
-					partId: d.partId
-				}))
+				result: documents.map((d) =>
+					normalizeHeadPiecePayload({
+						...JSON.parse(d.document),
+						id: d.id,
+						playlistId: d.playlistId,
+						rundownId: d.rundownId,
+						segmentId: d.segmentId,
+						partId: d.partId
+					})
+				)
 			}
 		} catch (e) {
 			console.error(e)
@@ -224,6 +239,12 @@ export const mutations = {
 			rundownId: null,
 			segmentId: null,
 			partId: null
+		}
+		if (payload.payload !== undefined) {
+			update.payload = prepareHeadPiecePayloadForSave(
+				payload.pieceType,
+				payload.payload as Record<string, PayloadValue>
+			)
 		}
 
 		try {
@@ -362,6 +383,7 @@ async function handleCreatePiece(payload: MutationPieceCreate) {
 				console.error(error)
 				returnedError = error
 			}
+			await notifyRundownTreeMutationSafe(result.rundownId)
 		}
 
 		return { result, error: returnedError }
@@ -402,6 +424,7 @@ async function handleUpdatePiece(payload: MutationPieceUpdate) {
 				console.error(error)
 				returnedError = error
 			}
+			await notifyRundownTreeMutationSafe(result.rundownId)
 		}
 
 		return { result, error: returnedError }
@@ -424,6 +447,7 @@ async function handleDeletePiece(payload: MutationPieceDelete) {
 				console.error(error)
 				returnedError = error
 			}
+			await notifyRundownTreeMutationSafe(document.rundownId)
 		}
 
 		return { result: returnedError === undefined ? true : undefined, error: returnedError }

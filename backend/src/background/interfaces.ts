@@ -1,4 +1,15 @@
 import type { SetOptional } from 'type-fest'
+import type { GoogleSheetsPieceTypeMapping } from './adapters/sheets/sheetMapping'
+
+export type {
+	GoogleSheetsColumnKey,
+	GoogleSheetsFieldMapping,
+	GoogleSheetsPieceTypeMapping
+} from './adapters/sheets/sheetMapping'
+export {
+	GOOGLE_SHEETS_RECOMMENDED_MAPPINGS,
+	GOOGLE_SHEETS_COLUMN_OPTIONS
+} from './adapters/sheets/sheetMapping'
 
 export interface Playlist {
 	/** Id of the playlist. */
@@ -30,15 +41,38 @@ export interface Rundown extends IHasPayload {
 	playlistId: string | null
 	/** Name of the rundown */
 	name: string
-	/** Whether to sync the rundown to Sofie */
+	/**
+	 * For normal rundowns: sync this rundown to Sofie.
+	 * For templates: when true, rundowns generated from this template are created with sync enabled.
+	 */
 	sync: boolean
-	/** Flags the rundown as template. Template rundowns cannot sync to Sofie. */
+	/** Flags the rundown as template. The template itself is never synced to Sofie. */
 	isTemplate: boolean
 
 	/** Date of when the rundown is supposed to start */
 	expectedStartTime?: number
 	/** Date of when the rundown is supposed to end */
 	expectedEndTime?: number
+
+	/** When true, auto-create weekday rundowns from this template (per-template override). */
+	scheduleEnabled?: boolean
+	/** Override global count of weekday rundowns to keep scheduled ahead. */
+	scheduleAheadCount?: number
+	/** Override global default start time; HH:mm in 24-hour notation (e.g. 18:00). */
+	scheduleStartTime?: string
+	/** Bumped when template content changes; generated rundowns store the revision they were built from. */
+	templateRevision?: number
+
+	/** Rundown was generated from a template (not a manual copy). */
+	sourceTemplateId?: string
+	/** Template revision at generation time. */
+	sourceTemplateRevision?: number
+	/** Calendar date key in the configured timezone; YYYY-MM-DD (e.g. 2026-05-18). */
+	scheduleDateKey?: string
+	/** User edited segment/part/piece content after generation. */
+	modifiedAfterGeneration?: boolean
+	/** Template was saved after this rundown was generated. */
+	templateOutdated?: boolean
 }
 export interface Segment extends IHasPayload {
 	/** Id of the segment as reported by the ingest gateway. Must be unique for each segment in the rundown */
@@ -168,6 +202,28 @@ export interface PayloadManifest {
 export interface ApplicationSettings {
 	coreUrl?: string
 	corePort?: number
+	/** Google Sheets spreadsheet ID for vMix automation export. */
+	googleSheetsSpreadsheetId?: string
+	/** Worksheet name (default Sheet1). */
+	googleSheetsSheetName?: string
+	/** 1-based row where data starts (default 2). */
+	googleSheetsDataStartRow?: number
+	/** Env var name whose value is service-account JSON (never store the JSON in settings). */
+	googleSheetsCredentialsEnvVar?: string
+	/** Server-local path to service-account JSON file (optional). */
+	googleSheetsCredentialsPath?: string
+	/** Maps piece type IDs to Google Sheet columns for push/pull. */
+	googleSheetsPieceMappings?: GoogleSheetsPieceTypeMapping[]
+	/** IANA timezone for scheduling and list grouping (default Europe/Bratislava). */
+	timezone?: string
+	/** Weekday rundowns to keep scheduled ahead per enabled template (default 5). */
+	scheduleAheadCount?: number
+	/** Default expected start time for generated rundowns; HH:mm in 24-hour notation (e.g. 18:00). */
+	scheduleStartTime?: string
+	/** Rundown list: expanded past weekdays (default 2). */
+	rundownListPastVisible?: number
+	/** Rundown list: expanded future weekdays after today (default 4). */
+	rundownListFutureVisible?: number
 }
 export interface DBSettings {
 	id: string
@@ -386,4 +442,71 @@ export interface PartsUpdateEvent {
 }
 export interface SegmentsUpdateEvent {
 	segments?: Segment[]
+}
+
+export interface StoryTemplate {
+	id: string
+	name: string
+	pattern: string[]
+	createdAt: number
+}
+
+export type MutationStoryTemplateCreate = SetOptional<
+	Pick<StoryTemplate, 'name' | 'pattern'>,
+	'pattern'
+>
+
+export type MutationStoryTemplateUpdate = Pick<StoryTemplate, 'id'> &
+	Partial<Pick<StoryTemplate, 'name' | 'pattern'>>
+
+export interface QuickAddStoryRequest {
+	/** @deprecated Use templateRundownId — story_templates table is legacy. */
+	storyTemplateId?: string
+	/** Template rundown (isTemplate) whose primary segment is cloned into the target segment. */
+	templateRundownId?: string
+	rank?: number
+}
+
+export interface QuickAddStoryResult {
+	parts: Part[]
+	pieces: Piece[]
+}
+
+export interface StoryLibraryEntry {
+	id: string
+	name: string
+	script?: string
+	partType: string
+	rundownName: string
+	rundownId: string
+	segmentName: string
+	segmentId: string
+	rundownDate?: number
+	editedAt: number
+}
+
+export interface StoryLibraryRecallRequest {
+	targetSegmentId: string
+	targetRank?: number
+}
+
+export interface GenerateRundownFromTemplateRequest {
+	templateRundownId: string
+	scheduledDate: number
+	/** When set, links the generated rundown to the template schedule. */
+	scheduleDateKey?: string
+	sourceTemplateRevision?: number
+}
+
+export interface RegenerateFromTemplateRequest {
+	templateRundownId: string
+	/** When true, replace generated rundowns even if marked outdated (still skips modified). */
+	force?: boolean
+}
+
+export interface RegenerateFromTemplateResult {
+	created: number
+	updated: number
+	skippedModified: number
+	skippedPast: number
 }
