@@ -65,7 +65,7 @@ export function RundownPropertiesForm({ rundown }: { rundown: Rundown }) {
 			})
 	}
 
-	const exportRundownCsv = (e: React.MouseEvent) => {
+	const exportRundownCsv = async (e: React.MouseEvent) => {
 		e.preventDefault()
 		e.stopPropagation()
 
@@ -76,7 +76,7 @@ export function RundownPropertiesForm({ rundown }: { rundown: Rundown }) {
 			const csv = serializedRundownToCsv(serializedRundown)
 			const filename = sanitizeRundownFilename(serializedRundown.rundown.name)
 
-			void saveTextToFile({
+			await saveTextToFile({
 				title: filename,
 				contents: csv,
 				extension: 'csv'

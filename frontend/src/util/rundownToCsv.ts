@@ -58,10 +58,14 @@ function formatCellValue(value: unknown): string {
 }
 
 function escapeCsvCell(value: string): string {
-	if (/[",\r\n]/.test(value)) {
-		return `"${value.replace(/"/g, '""')}"`
+	let escaped = value
+	if (/^[=+\-@]/.test(escaped)) {
+		escaped = `'${escaped}`
 	}
-	return value
+	if (/[",\r\n]/.test(escaped)) {
+		return `"${escaped.replace(/"/g, '""')}"`
+	}
+	return escaped
 }
 
 function collectPayloadColumns(
@@ -140,6 +144,13 @@ function sortByRank<T extends { rank?: number; name: string }>(items: T[]): T[] 
 	})
 }
 
+function sortPieces(pieces: Piece[]): Piece[] {
+	return [...pieces].sort((a, b) => {
+		const startDiff = (a.start ?? 0) - (b.start ?? 0)
+		return startDiff !== 0 ? startDiff : a.id.localeCompare(b.id)
+	})
+}
+
 export function serializedRundownToCsvRows(data: SerializedRundown): CsvRow[] {
 	const { rundown, segments, parts, pieces } = data
 
@@ -162,7 +173,7 @@ export function serializedRundownToCsvRows(data: SerializedRundown): CsvRow[] {
 		}
 
 		for (const part of segmentParts) {
-			const partPieces = pieces.filter((piece) => piece.partId === part.id)
+			const partPieces = sortPieces(pieces.filter((piece) => piece.partId === part.id))
 
 			if (partPieces.length === 0) {
 				rows.push(buildBaseRow('part', rundown, segment, part, undefined, payloadColumns))
