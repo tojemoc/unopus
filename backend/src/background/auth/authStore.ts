@@ -179,14 +179,28 @@ export function parseSessionCookie(cookieHeader: string | undefined): string | u
 	return undefined
 }
 
+function shouldUseSecureSessionCookie(): boolean {
+	const override = process.env.SESSION_COOKIE_SECURE?.trim().toLowerCase()
+	if (override === 'false' || override === '0') {
+		return false
+	}
+	if (override === 'true' || override === '1') {
+		return true
+	}
+	return process.env.NODE_ENV === 'production'
+}
+
+function sessionCookieSecureAttribute(): string {
+	return shouldUseSecureSessionCookie() ? '; Secure' : ''
+}
+
 export function buildSessionCookie(sessionId: string, expiresAt: number): string {
 	const maxAge = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000))
-	const secure = process.env.NODE_ENV === 'production' ? '; Secure' : ''
-	return `${SESSION_COOKIE}=${encodeURIComponent(sessionId)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${secure}`
+	return `${SESSION_COOKIE}=${encodeURIComponent(sessionId)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${sessionCookieSecureAttribute()}`
 }
 
 export function buildClearSessionCookie(): string {
-	return `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0`
+	return `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0${sessionCookieSecureAttribute()}`
 }
 
 export function listUsers(): AuthUser[] {

@@ -11,6 +11,8 @@ services:
       - PORT=3010
       - DATA_DIR=/app/data
       - NODE_ENV=production
+      # Required for HTTP-only deployments; omit or set true when behind HTTPS.
+      - SESSION_COOKIE_SECURE=false
     ports:
       - '3010:3010'
     volumes:
