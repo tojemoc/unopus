@@ -26,7 +26,7 @@ import { mutations as partMutations } from './parts'
 import { mutations as pieceMutations } from './pieces'
 import { spliceReorder } from '../util'
 import { Server, Socket } from 'socket.io'
-import { mutations as typeManifestMutations } from './typeManifests'
+import { mutations as typeManifestMutations, resolveManifestId } from './typeManifests'
 
 async function mutateSegment(segment: Segment): Promise<MutatedSegment> {
 	return {
@@ -71,21 +71,27 @@ export const mutations = {
 			entityType: TypeManifestEntity.Segment
 		})
 
-		const defaultSegmentType =
-			Array.isArray(segmentTypeManifests) && segmentTypeManifests.length > 0
-				? segmentTypeManifests[0].id
-				: undefined
+		const segmentTypeManifestList = Array.isArray(segmentTypeManifests)
+			? segmentTypeManifests
+			: []
+
+		const defaultSegmentType = segmentTypeManifestList[0]?.id
 		if (!defaultSegmentType) {
 			return { error: new Error('No segment type manifests exist') }
 		}
 
 		const payloadHasType = payload.segmentType && payload.segmentType !== ''
 
+		let resolvedSegmentType = defaultSegmentType
 		if (payloadHasType) {
-			const { result } = await typeManifestMutations.readOne(String(payload.segmentType))
-			if (!result || result.entityType !== TypeManifestEntity.Segment) {
-				return { error: new Error(`Invalid segment type: ${payload.payload.type}`) }
+			const matchedSegmentType = resolveManifestId(
+				String(payload.segmentType),
+				segmentTypeManifestList
+			)
+			if (!matchedSegmentType) {
+				return { error: new Error(`Invalid segment type: ${payload.segmentType}`) }
 			}
+			resolvedSegmentType = matchedSegmentType
 		}
 		const rundownSegments: Segment | Segment[] | undefined = (
 			await mutations.read({ rundownId: payload.rundownId })
@@ -100,7 +106,7 @@ export const mutations = {
 		const document: Partial<MutationSegmentCreate> = {
 			isTemplate: false,
 			...payload,
-			segmentType: payloadHasType ? payload.segmentType : defaultSegmentType,
+			segmentType: payloadHasType ? resolvedSegmentType : defaultSegmentType,
 			rank: payload.rank ?? segmentsLength
 		}
 		delete document.playlistId

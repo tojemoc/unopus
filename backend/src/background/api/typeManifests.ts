@@ -10,6 +10,17 @@ import { db } from '../db'
 import { v4 as uuid } from 'uuid'
 import { Server, Socket } from 'socket.io'
 
+export function resolveManifestId(
+	requestedId: string,
+	manifests: TypeManifest[]
+): string | undefined {
+	const exact = manifests.find((m) => m.id === requestedId)
+	if (exact) return exact.id
+
+	const normalized = requestedId.toLowerCase()
+	return manifests.find((m) => m.id.toLowerCase() === normalized)?.id
+}
+
 export const mutations = {
 	async create(
 		payload: MutationTypeManifestCreate

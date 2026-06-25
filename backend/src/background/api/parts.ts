@@ -15,7 +15,7 @@ import {
 	MutationPartCloneFromSegmentToSegment,
 	TypeManifestEntity
 } from '../interfaces'
-import { mutations as typeManifestMutations } from './typeManifests'
+import { mutations as typeManifestMutations, resolveManifestId } from './typeManifests'
 import { db } from '../db'
 import { v4 as uuid } from 'uuid'
 import { coreHandler } from '../coreHandler'
@@ -82,20 +82,21 @@ export const mutations = {
 			entityType: TypeManifestEntity.Part
 		})
 
-		const defaultPartType =
-			Array.isArray(partTypeManifests) && partTypeManifests.length > 0
-				? partTypeManifests[0].id
-				: undefined
+		const partTypeManifestList = Array.isArray(partTypeManifests) ? partTypeManifests : []
+
+		const defaultPartType = partTypeManifestList[0]?.id
 		if (!defaultPartType) {
 			return { error: new Error('No part type manifests exist') }
 		}
 		const payloadHasType = payload.partType && payload.partType !== ''
 
+		let resolvedPartType = defaultPartType
 		if (payloadHasType) {
-			const { result } = await typeManifestMutations.readOne(String(payload.partType))
-			if (!result || result.entityType !== TypeManifestEntity.Part) {
+			const matchedPartType = resolveManifestId(String(payload.partType), partTypeManifestList)
+			if (!matchedPartType) {
 				return { error: new Error(`Invalid part type: ${payload.partType}`) }
 			}
+			resolvedPartType = matchedPartType
 		}
 
 		const segmentParts: Part | Part[] | undefined = (
@@ -111,7 +112,7 @@ export const mutations = {
 		const id = payload.id || uuid()
 		const document: Partial<MutationPartCreate> = {
 			...payload,
-			partType: payloadHasType ? payload.partType : defaultPartType,
+			partType: payloadHasType ? resolvedPartType : defaultPartType,
 			payload: {
 				...payload.payload
 			},
