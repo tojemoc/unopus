@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Headline Preview</title>
+		<style>
+			* {
+				box-sizing: border-box;
+				margin: 0;
+				padding: 0;
+			}
+			body {
+				background: #111;
+				color: #fff;
+				font-family: Arial, Helvetica, sans-serif;
+				min-height: 100vh;
+				display: flex;
+				align-items: flex-end;
+				padding: 24px;
+			}
+			.headline {
+				display: flex;
+				align-items: center;
+				gap: 16px;
+				background: linear-gradient(90deg, #c41e3a 0%, #8b0000 100%);
+				padding: 16px 20px;
+				border-radius: 4px;
+				max-width: 100%;
+			}
+			.headline img {
+				width: 120px;
+				height: 68px;
+				object-fit: cover;
+				border-radius: 2px;
+				background: #333;
+				flex-shrink: 0;
+			}
+			.headline-text {
+				font-size: 28px;
+				font-weight: bold;
+				line-height: 1.2;
+				word-break: break-word;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="headline">
+			<img id="ilu" alt="" />
+			<div class="headline-text" id="text"></div>
+		</div>
+		<script>
+			const params = new URLSearchParams(window.location.search)
+			const text = params.get('text') || params.get('headline') || 'Headline'
+			document.getElementById('text').textContent = text
+
+			const iluFile = params.get('iluFile')
+			const ilu = document.getElementById('ilu')
+			if (iluFile) {
+				ilu.src = iluFile
+				ilu.style.display = 'block'
+			} else {
+				ilu.style.display = 'none'
+			}
+		</script>
+	</body>
+</html>

@@ -39,4 +39,5 @@ pnpm-debug.log*
 # TSC output
 /backend/dist
 
-.env
+.envingest/
+ingest/

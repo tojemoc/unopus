@@ -17,7 +17,7 @@
 		"build": "run -T rimraf dist && run build:main",
 		"build:main": "run -T tsc -p tsconfig.json",
 		"watch-types": "run build:main --watch --noEmit",
-		"start": "node ./dist/main.js",
+		"start": "dotenv -e .env -- node ./dist/main.js",
 		"lint": "run -T eslint ."
 	},
 	"main": "dist/main.js",
