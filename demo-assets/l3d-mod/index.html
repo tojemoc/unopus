@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>L3D Moderátor Preview</title>
+		<style>
+			* {
+				box-sizing: border-box;
+				margin: 0;
+				padding: 0;
+			}
+			body {
+				background: #111;
+				color: #fff;
+				font-family: Arial, Helvetica, sans-serif;
+				min-height: 100vh;
+				display: flex;
+				align-items: flex-end;
+				padding: 24px;
+			}
+			.l3d {
+				background: rgba(0, 0, 0, 0.75);
+				border-left: 6px solid #1e90ff;
+				padding: 12px 20px;
+				max-width: 100%;
+			}
+			.name {
+				font-size: 26px;
+				font-weight: bold;
+				line-height: 1.2;
+			}
+			.title {
+				font-size: 18px;
+				color: #ccc;
+				margin-top: 4px;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="l3d">
+			<div class="name" id="name"></div>
+			<div class="title" id="title"></div>
+		</div>
+		<script>
+			const params = new URLSearchParams(window.location.search)
+			document.getElementById('name').textContent = params.get('name') || 'Name'
+			const title = params.get('title') || ''
+			const titleEl = document.getElementById('title')
+			titleEl.textContent = title
+			titleEl.style.display = title ? 'block' : 'none'
+		</script>
+	</body>
+</html>

@@ -23,7 +23,8 @@ export const TYPE_MANIFESTS: TypeManifest[] = [
 			{
 				id: 'fileName',
 				label: 'File Name',
-				type: ManifestFieldType.String,
+				type: ManifestFieldType.MediaPick,
+				subdir: 'clips',
 				includeInName: true
 			},
 			{
@@ -81,6 +82,7 @@ export const TYPE_MANIFESTS: TypeManifest[] = [
 		shortName: 'HEAD',
 		colour: '#9467bd',
 		includeTypeInName: true,
+		previewTemplate: 'headline',
 		payload: [
 			{
 				id: 'text',
@@ -92,11 +94,35 @@ export const TYPE_MANIFESTS: TypeManifest[] = [
 		entityType: TypeManifestEntity.Piece
 	},
 	{
+		id: 'headline',
+		name: 'Headline (Správy)',
+		shortName: 'HEAD',
+		colour: '#9467bd',
+		includeTypeInName: true,
+		previewTemplate: 'headline',
+		payload: [
+			{
+				id: 'text',
+				label: 'Headline',
+				type: ManifestFieldType.String,
+				includeInName: true
+			},
+			{
+				id: 'iluFile',
+				label: 'Illustration',
+				type: ManifestFieldType.MediaPick,
+				subdir: 'clips'
+			}
+		],
+		entityType: TypeManifestEntity.Piece
+	},
+	{
 		id: 'l3d',
 		name: 'Lower Third',
 		shortName: 'L3D',
 		colour: '#8c564b',
 		includeTypeInName: true,
+		previewTemplate: 'l3d-tema',
 		payload: [
 			{
 				id: 'name',
@@ -109,6 +135,50 @@ export const TYPE_MANIFESTS: TypeManifest[] = [
 				label: 'Title',
 				type: ManifestFieldType.String,
 				includeInName: true
+			}
+		],
+		entityType: TypeManifestEntity.Piece
+	},
+	{
+		id: 'l3d-tema',
+		name: 'L3D Téma',
+		shortName: 'L3DT',
+		colour: '#8c564b',
+		includeTypeInName: true,
+		previewTemplate: 'l3d-tema',
+		payload: [
+			{
+				id: 'headline',
+				label: 'Headline',
+				type: ManifestFieldType.String,
+				includeInName: true
+			},
+			{
+				id: 'subline',
+				label: 'Subline',
+				type: ManifestFieldType.String
+			}
+		],
+		entityType: TypeManifestEntity.Piece
+	},
+	{
+		id: 'l3d-mod',
+		name: 'L3D Moderátor',
+		shortName: 'L3DM',
+		colour: '#a0522d',
+		includeTypeInName: true,
+		previewTemplate: 'l3d-mod',
+		payload: [
+			{
+				id: 'name',
+				label: 'Name',
+				type: ManifestFieldType.String,
+				includeInName: true
+			},
+			{
+				id: 'title',
+				label: 'Title',
+				type: ManifestFieldType.String
 			}
 		],
 		entityType: TypeManifestEntity.Piece

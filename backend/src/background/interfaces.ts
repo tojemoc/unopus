@@ -133,7 +133,8 @@ export interface DBPiece {
 export enum ManifestFieldType {
 	String = 'string',
 	Number = 'number',
-	Boolean = 'boolean'
+	Boolean = 'boolean',
+	MediaPick = 'mediaPick'
 }
 export enum TypeManifestEntity {
 	Rundown = 'rundown',
@@ -149,6 +150,8 @@ export interface TypeManifest {
 	shortName: string
 	colour: string
 	includeTypeInName?: boolean
+	/** HTML template folder name for GFX preview iframe (e.g. l3d-tema) */
+	previewTemplate?: string
 
 	payload: PayloadManifest[]
 }
@@ -163,6 +166,15 @@ export interface PayloadManifest {
 	label: string
 	type: ManifestFieldType
 	includeInName?: boolean
+	/** Subfolder under spravy/<rundownId>/ for mediaPick fields (default: clips) */
+	subdir?: string
+}
+
+export interface MediaFileEntry {
+	name: string
+	path: string
+	size?: number
+	mtime?: number
 }
 
 export interface ApplicationSettings {

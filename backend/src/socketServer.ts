@@ -15,8 +15,11 @@ import { attachSocketAuth, type AuthenticatedSocket } from './background/auth/so
 import { getUserFromSession, parseSessionCookie } from './background/auth/authStore'
 import { registerAuthRoutes } from './routes/auth'
 import { registerEditsRoutes } from './routes/edits'
+import { registerMediaRoutes } from './routes/media'
+import { registerConfigRoutes } from './routes/config'
 
 const frontendPath = path.resolve(__dirname, '../../frontend/dist')
+const demoAssetsPath = path.resolve(__dirname, '../../demo-assets')
 
 const PUBLIC_API_PREFIXES = ['/api/auth/login']
 
@@ -69,6 +72,8 @@ export async function initSocketServer(port: number = 3010) {
 
 	registerAuthRoutes(app)
 	registerEditsRoutes(app)
+	registerMediaRoutes(app)
+	registerConfigRoutes(app)
 
 	if (io) {
 		type SocketIOHandler = (socket: Socket, io: Server) => void
@@ -102,6 +107,7 @@ export async function initSocketServer(port: number = 3010) {
 		})
 
 		app.use(express.static(frontendPath))
+		app.use('/demo-assets', express.static(demoAssetsPath))
 
 		app.get('/favicon.png', (_, res) => {
 			res.sendFile(path.join(frontendPath, '../../build/icon.png'))
