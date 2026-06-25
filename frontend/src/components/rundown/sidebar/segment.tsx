@@ -200,12 +200,14 @@ export function SidebarSegment({
 					</Stack>
 				)}
 			</div>
-			<SegmentButtons
-				rundownId={segment.rundownId}
-				playlistId={segment.playlistId}
-				rank={insertRank}
-				setShowImportModal={setShowImportModal}
-			/>
+			<div className="segment-footer">
+				<SegmentButtons
+					rundownId={segment.rundownId}
+					playlistId={segment.playlistId}
+					rank={insertRank}
+					setShowImportModal={setShowImportModal}
+				/>
+			</div>
 		</div>
 	)
 }
