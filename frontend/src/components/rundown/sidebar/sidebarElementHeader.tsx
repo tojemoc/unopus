@@ -30,40 +30,37 @@ export function SidebarElementHeader({
 	return (
 		<Link to={linkTo} params={linkParams}>
 			<Stack
-				direction="horizontal"
-				className={classNames(buttonClassName, 'align-items-baseline', {
+				className={classNames(buttonClassName, 'sidebar-item-header', {
 					floated
 				})}
+				gap={1}
 			>
 				<div className="segment-header-content">
 					<span className="item-title">{label}</span>
 				</div>
-				<Stack
-					direction="horizontal"
-					className="ms-auto item-duration"
-					gap={1}
-					style={{ opacity: 0.7, position: 'absolute' }}
-				>
-					{<span>{duration ? displayTime(duration) : '--:--'}</span>}
-				</Stack>
-				<Stack className="ms-auto justify-items-center" direction="horizontal" gap={1}>
-					{deleteButton}
+				<Stack direction="horizontal" className="sidebar-item-header-meta align-items-center">
+					<span className="item-duration">
+						{duration ? displayTime(duration) : '--:--'}
+					</span>
+					<Stack className="ms-auto" direction="horizontal" gap={1}>
+						{deleteButton}
 
-					<HoverIconButton
-						className="sync-plus-wrapper ms-auto"
-						defaultIcon={
-							<BsCopy
-								className="icon-md text-primary"
-								style={{ fontSize: '1em', opacity: '75%' }}
-							/>
-						}
-						hoverIcon={<BsCopy className="icon-md text-primary" style={{ fontSize: '1em' }} />}
-						onClick={(e) => {
-							e.preventDefault()
-							e.stopPropagation()
-							handleCopy()
-						}}
-					/>
+						<HoverIconButton
+							className="sync-plus-wrapper"
+							defaultIcon={
+								<BsCopy
+									className="icon-md text-primary"
+									style={{ fontSize: '1em', opacity: '75%' }}
+								/>
+							}
+							hoverIcon={<BsCopy className="icon-md text-primary" style={{ fontSize: '1em' }} />}
+							onClick={(e) => {
+								e.preventDefault()
+								e.stopPropagation()
+								handleCopy()
+							}}
+						/>
+					</Stack>
 				</Stack>
 			</Stack>
 		</Link>
