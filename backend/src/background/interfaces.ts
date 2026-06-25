@@ -78,6 +78,8 @@ export interface Part extends IHasPayload {
 	script?: string
 	duration?: number
 	partType: string
+	/** True when the part was created from a part-type preset button */
+	fromPreset?: boolean
 }
 export interface Piece extends IHasPayload {
 	/** Id of the adlib as reported by the ingest source. Must be unique for each adlib */
@@ -143,6 +145,23 @@ export enum TypeManifestEntity {
 	Piece = 'piece'
 }
 
+export interface DefaultPieceTemplate {
+	pieceType: string
+	name?: string
+	payload?: Record<string, PayloadValue>
+	/** When true, piece is not auto-created — user can add via piece buttons */
+	optional?: boolean
+}
+
+export interface DefaultPartTemplate {
+	partType: string
+	name?: string
+	duration?: number
+	script?: string
+	/** Override the part type manifest defaultPieces for this instance */
+	defaultPieces?: DefaultPieceTemplate[]
+}
+
 export interface TypeManifest {
 	id: string
 	entityType: TypeManifestEntity
@@ -152,6 +171,16 @@ export interface TypeManifest {
 	includeTypeInName?: boolean
 	/** HTML template folder name for GFX preview iframe (e.g. l3d-tema) */
 	previewTemplate?: string
+	/** Label shown on creation toolbar buttons */
+	buttonLabel?: string
+	/** Editorial type string sent to Sofie ingest (part types) */
+	ingestType?: string
+	/** Show this type on segment/part creation toolbars */
+	showInToolbar?: boolean
+	/** Part types: pieces created automatically when adding this part type */
+	defaultPieces?: DefaultPieceTemplate[]
+	/** Segment types: parts created automatically when adding this segment type */
+	defaultParts?: DefaultPartTemplate[]
 
 	payload: PayloadManifest[]
 }
@@ -277,7 +306,10 @@ export interface MutatedPiece {
 	position: number | undefined
 }
 
-export type MutationPartCreate = SetOptional<Part, 'id' | 'rank'>
+export type MutationPartCreate = SetOptional<Part, 'id' | 'rank'> & {
+	/** Override defaultPieces from the part type manifest for this create only */
+	presetPieces?: DefaultPieceTemplate[]
+}
 
 export type MutationPartCopy = SetOptional<
 	Pick<Part, 'id' | 'rundownId' | 'segmentId'>,
@@ -346,7 +378,10 @@ export type MutationRundownDelete = Pick<Rundown, 'id'>
 
 export type MutationSegmentsRead = { rundownId: string } | { isTemplate: boolean }
 
-export type MutationSegmentCreate = SetOptional<Segment, 'id' | 'rank' | 'isTemplate'>
+export type MutationSegmentCreate = SetOptional<Segment, 'id' | 'rank' | 'isTemplate'> & {
+	/** When true, create default parts/pieces from the segment type manifest */
+	materializePreset?: boolean
+}
 
 export type MutationSegmentRead = Pick<Segment, 'id' | 'rundownId'>
 

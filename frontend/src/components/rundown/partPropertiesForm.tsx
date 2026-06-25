@@ -4,6 +4,7 @@ import type { Part } from '~backend/background/interfaces'
 import { FieldInfo } from '../form'
 import { useEffect, useState } from 'react'
 import { friendlyLabel } from '~/util/fieldLabels'
+import { findTypeManifest } from '~/util/typeManifest'
 import { fetchEntityEdit } from '~/lib/authApi'
 import { useNavigate } from '@tanstack/react-router'
 import { useAppDispatch, useAppSelector } from '~/store/app'
@@ -114,25 +115,37 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 					)}
 				/>
 
-				<form.Field
-					name="partType"
-					children={(field) => (
-						<>
-							<Form.Group className="mb-3">
-								<Form.Label htmlFor={field.name}>{friendlyLabel('partType')}</Form.Label>
-								<Form.Select
-									name={field.name}
-									value={field.state.value}
-									onBlur={field.handleBlur}
-									onChange={(e) => field.handleChange(e.target.value)}
-								>
-									<PartTypeOptions />
-								</Form.Select>
-							</Form.Group>
-							<FieldInfo field={field} />
-						</>
-					)}
-				/>
+				{!part.fromPreset && (
+					<form.Field
+						name="partType"
+						children={(field) => (
+							<>
+								<Form.Group className="mb-3">
+									<Form.Label htmlFor={field.name}>{friendlyLabel('partType')}</Form.Label>
+									<Form.Select
+										name={field.name}
+										value={field.state.value}
+										onBlur={field.handleBlur}
+										onChange={(e) => field.handleChange(e.target.value)}
+									>
+										<PartTypeOptions />
+									</Form.Select>
+								</Form.Group>
+								<FieldInfo field={field} />
+							</>
+						)}
+					/>
+				)}
+				{part.fromPreset && (
+					<Form.Group className="mb-3">
+						<Form.Text>
+							Part type:{' '}
+							{findTypeManifest(manifests, part.partType)?.buttonLabel ??
+								findTypeManifest(manifests, part.partType)?.name ??
+								part.partType}
+						</Form.Text>
+					</Form.Group>
+				)}
 				<form.Field
 					name="duration"
 					children={(field) => (
@@ -173,7 +186,7 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 
 				<form.Subscribe selector={(state) => state.values.partType}>
 					{(partType) => {
-						const manifest = manifests?.find((m) => m.id === partType)
+						const manifest = findTypeManifest(manifests, partType)
 
 						if (!manifest) {
 							return (

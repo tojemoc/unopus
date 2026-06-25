@@ -1,6 +1,5 @@
 import { useNavigate } from '@tanstack/react-router'
-import { useEffect, useMemo, useState } from 'react'
-import { Button, Form, Modal } from 'react-bootstrap'
+import { useMemo } from 'react'
 import { useAppDispatch, useAppSelector } from '~/store/app'
 import './piecesList.scss'
 import { addNewPiece, copyPiece } from '~/store/pieces'
@@ -9,6 +8,7 @@ import { toTime } from '~/util/lib'
 import { createSelector } from '@reduxjs/toolkit'
 import { IconButton } from '../iconButton'
 import { useToasts } from '../toasts/useToasts'
+import { findTypeManifest } from '~/util/typeManifest'
 
 const selectPiecesByPart = createSelector(
 	[
@@ -39,12 +39,7 @@ export function PiecesList({ part }: { part: Part }) {
 
 				<tr>
 					<td colSpan={4}>
-						<NewPieceButton
-							playlistId={part.playlistId}
-							rundownId={part.rundownId}
-							segmentId={part.segmentId}
-							partId={part.id}
-						/>
+						<NewPieceButtons part={part} existingPieces={pieces} />
 					</td>
 				</tr>
 			</tbody>
@@ -58,7 +53,7 @@ function PieceRow({ piece }: { piece: Piece }) {
 	const toasts = useToasts()
 
 	const manifest = useAppSelector((state) =>
-		state.typeManifests.manifests?.find((p) => p.id === piece.pieceType)
+		findTypeManifest(state.typeManifests.manifests, piece.pieceType)
 	)
 
 	const pieceRowClick = () => {
@@ -74,7 +69,6 @@ function PieceRow({ piece }: { piece: Piece }) {
 	}
 
 	const performCopyPiece = () => {
-		// perform operation
 		dispatch(
 			copyPiece({
 				id: piece.id
@@ -82,7 +76,6 @@ function PieceRow({ piece }: { piece: Piece }) {
 		)
 			.unwrap()
 			.then(async (newPiece) => {
-				// Navigate user to the new piece
 				await navigate({
 					to: '/rundown/$rundownId/segment/$segmentId/part/$partId/piece/$pieceId',
 					params: {
@@ -119,58 +112,66 @@ function PieceRow({ piece }: { piece: Piece }) {
 	)
 }
 
-function NewPieceButton({
-	playlistId,
-	rundownId,
-	segmentId,
-	partId
-}: {
-	playlistId: string | null
-	rundownId: string
-	segmentId: string
-	partId: string
-}) {
+function NewPieceButtons({ part, existingPieces }: { part: Part; existingPieces: Piece[] }) {
 	const navigate = useNavigate({})
 	const dispatch = useAppDispatch()
 	const toasts = useToasts()
 
-	const typeManifest = useAppSelector((state) =>
-		state.typeManifests.manifests?.filter((m) => m.entityType === 'piece')
-	)
+	const typeManifests = useAppSelector((state) => state.typeManifests.manifests)
+	const pieceManifests = typeManifests?.filter((m) => m.entityType === 'piece') ?? []
+	const partManifest = findTypeManifest(typeManifests, part.partType)
 
-	const [show, setShow] = useState(false)
-	const handleDeleteClose = () => setShow(false)
+	const existingPieceTypes = new Set(existingPieces.map((p) => p.pieceType))
 
-	const newPiece = (e: React.MouseEvent) => {
-		e.preventDefault()
-		e.stopPropagation()
+	const addablePieceTypes = useMemo(() => {
+		if (part.fromPreset && partManifest?.defaultPieces?.length) {
+			const presetTypes = new Set(
+				partManifest.defaultPieces.filter((t) => !t.optional).map((t) => t.pieceType)
+			)
+			const optionalTypes = partManifest.defaultPieces
+				.filter((t) => t.optional && !existingPieceTypes.has(t.pieceType))
+				.map((t) => t.pieceType)
 
-		setShow(true)
-	}
-	const performCreatePiece = () => {
-		if (!selectedPieceType) return
+			const extras = pieceManifests
+				.filter((m) => !presetTypes.has(m.id) && !existingPieceTypes.has(m.id))
+				.map((m) => m.id)
 
-		const manifest = typeManifest?.find((piece) => piece.id === selectedPieceType)
+			return [...new Set([...optionalTypes, ...extras])]
+		}
 
-		setShow(false)
+		return pieceManifests
+			.filter((m) => !existingPieceTypes.has(m.id))
+			.map((m) => m.id)
+	}, [part.fromPreset, partManifest, pieceManifests, existingPieceTypes])
 
-		// perform operation
+	if (!addablePieceTypes.length) return null
+
+	const performCreatePiece = (pieceType: string) => {
+		const manifest = pieceManifests.find((m) => m.id === pieceType)
+		const defaultPayload =
+			partManifest?.defaultPieces?.find((t) => t.pieceType === pieceType)?.payload ?? {}
+
 		dispatch(
 			addNewPiece({
-				playlistId,
-				rundownId,
-				segmentId,
-				partId,
+				playlistId: part.playlistId,
+				rundownId: part.rundownId,
+				segmentId: part.segmentId,
+				partId: part.id,
 				name: manifest && manifest.includeTypeInName ? manifest.name : 'New piece',
-				pieceType: selectedPieceType
+				pieceType,
+				payload: defaultPayload
 			})
 		)
 			.unwrap()
 			.then(async (piece) => {
-				// Navigate user to the new piece
 				await navigate({
 					to: '/rundown/$rundownId/segment/$segmentId/part/$partId/piece/$pieceId',
-					params: { rundownId, segmentId, partId, pieceId: piece.id }
+					params: {
+						rundownId: part.rundownId,
+						segmentId: part.segmentId,
+						partId: part.id,
+						pieceId: piece.id
+					}
 				})
 			})
 			.catch((e) => {
@@ -182,52 +183,22 @@ function NewPieceButton({
 			})
 	}
 
-	const firstPieceType = typeManifest?.[0]?.id
-	const [selectedPieceType, setSelectedPieceType] = useState(firstPieceType)
-	useEffect(() => {
-		setSelectedPieceType((oldType) => {
-			if (oldType) return oldType
-			return firstPieceType
-		})
-	}, [firstPieceType])
-
 	return (
-		<>
-			<button className="add-piece-button mb-1" onClick={newPiece}>
-				+ Add Piece
-			</button>
-
-			<Modal show={show} onHide={handleDeleteClose}>
-				<Modal.Header closeButton>
-					<Modal.Title>New piece</Modal.Title>
-				</Modal.Header>
-				<Modal.Body>
-					<Form.Group className="mb-3">
-						<Form.Label htmlFor="pieceType">Piece type:</Form.Label>
-						<Form.Select
-							name="pieceType"
-							value={selectedPieceType}
-							onChange={(e) => setSelectedPieceType(e.target.value)}
-						>
-							{typeManifest
-								?.filter((type) => type.entityType === 'piece')
-								.map((piece) => (
-									<option key={`pieceManifest_${piece.id}`} value={piece.id}>
-										{piece.name}
-									</option>
-								))}
-						</Form.Select>
-					</Form.Group>
-				</Modal.Body>
-				<Modal.Footer>
-					<Button variant="secondary" onClick={handleDeleteClose}>
-						Cancel
-					</Button>
-					<Button variant="primary" onClick={performCreatePiece}>
-						Create
-					</Button>
-				</Modal.Footer>
-			</Modal>
-		</>
+		<div className="piece-add-buttons">
+			{addablePieceTypes.map((pieceType) => {
+				const manifest = pieceManifests.find((m) => m.id === pieceType)
+				return (
+					<button
+						key={pieceType}
+						className="add-piece-button mb-1 me-1"
+						type="button"
+						style={{ borderColor: manifest?.colour }}
+						onClick={() => performCreatePiece(pieceType)}
+					>
+						+ {manifest?.shortName ?? manifest?.name ?? pieceType}
+					</button>
+				)
+			})}
+		</div>
 	)
 }

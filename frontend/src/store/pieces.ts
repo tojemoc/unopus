@@ -1,6 +1,7 @@
 import type {
 	MutationPieceCloneFromParToPart,
 	MutationPieceCopy,
+	PayloadValue,
 	Piece
 } from '~backend/background/interfaces.js'
 import { createSlice } from '@reduxjs/toolkit'
@@ -19,6 +20,7 @@ export interface NewPiecePayload {
 
 	name: string
 	pieceType: string
+	payload?: Record<string, PayloadValue>
 }
 export interface UpdatePiecePayload {
 	piece: Piece
@@ -37,7 +39,7 @@ export const addNewPiece = createAppAsyncThunk(
 			segmentId: payload.segmentId,
 			partId: payload.partId,
 			pieceType: payload.pieceType,
-			payload: {}
+			payload: payload.payload ?? {}
 		})
 	}
 )
