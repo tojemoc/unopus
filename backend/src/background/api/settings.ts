@@ -82,10 +82,8 @@ export const mutations = {
 		}
 	},
 	async reset(): Promise<{ result?: ApplicationSettings; error?: Error }> {
-		// Reset to defaults from manifest
-		await initializeDefaults()
+		await resetTypeManifestsToDefaults()
 
-		// Return the current settings
 		return await this.read()
 	}
 }
@@ -128,32 +126,42 @@ const DEFAULT_SETTINGS: ApplicationSettings = {
 	corePort: 3000
 }
 
-export async function initializeDefaults() {
-	mutations.read().then(({ result }) => {
-		if (!result) {
-			mutations.create(DEFAULT_SETTINGS)
-		}
-	})
+async function deleteAllTypeManifests(): Promise<void> {
+	const { result } = await typeManifestMutations.read({})
+	if (!Array.isArray(result)) return
 
-	// Reset type manifests using the typeManifests module
-	// First, get all existing manifests
-	const existingManifests = await typeManifestMutations.read({})
-
-	if (existingManifests && Array.isArray(existingManifests)) {
-		// Delete them all
-		for (const manifest of existingManifests) {
-			await typeManifestMutations.delete({ id: manifest.id })
-		}
+	for (const manifest of result) {
+		await typeManifestMutations.delete({ id: manifest.id })
 	}
-	// Insert the defaults
+}
+
+async function seedDefaultTypeManifests(): Promise<void> {
 	await typeManifestMutations.create({
 		id: 'rundown',
 		entityType: TypeManifestEntity.Rundown,
-		// Only store the payload array for now; keep other fields in settings
 		payload: defaultRundownManifest.payload
 	})
 
 	for (const typeManifest of TYPE_MANIFESTS) {
 		await typeManifestMutations.create(typeManifest)
 	}
+}
+
+async function resetTypeManifestsToDefaults(): Promise<void> {
+	await deleteAllTypeManifests()
+	await seedDefaultTypeManifests()
+}
+
+export async function initializeDefaults() {
+	const { result: settings } = await mutations.read()
+	if (!settings) {
+		await mutations.create(DEFAULT_SETTINGS)
+	}
+
+	const { result: existingManifests } = await typeManifestMutations.read({})
+	if (Array.isArray(existingManifests) && existingManifests.length > 0) {
+		return
+	}
+
+	await seedDefaultTypeManifests()
 }
