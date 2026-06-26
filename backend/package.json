@@ -14,9 +14,10 @@
 	},
 	"scripts": {
 		"dev": "cross-env NODE_ENV=development dotenv -e .env -- nodemon",
-		"build": "run -T rimraf dist && run build:main",
+		"build": "run -T rimraf dist && run build:main && run copy:assets",
 		"build:main": "run -T tsc -p tsconfig.json",
-		"watch-types": "run build:main --watch --noEmit",
+		"copy:assets": "cp -r ../assets dist/assets",
+		"watch-types": "run -T tsc -p tsconfig.json --watch --noEmit",
 		"start": "dotenv -e .env -- node ./dist/main.js",
 		"lint": "run -T eslint ."
 	},

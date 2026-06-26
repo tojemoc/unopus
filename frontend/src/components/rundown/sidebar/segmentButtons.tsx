@@ -1,34 +1,44 @@
 import { useNavigate } from '@tanstack/react-router'
 import { type Dispatch, type SetStateAction } from 'react'
 import { Stack } from 'react-bootstrap'
-import { BsPlus, BsBoxArrowInUp } from 'react-icons/bs'
+import { BsBoxArrowInUp } from 'react-icons/bs'
 import { useToasts } from '~/components/toasts/useToasts'
-import { useAppDispatch } from '~/store/app'
+import { useAppDispatch, useAppSelector } from '~/store/app'
 import { addNewSegment } from '~/store/segments'
+import { toolbarManifests } from '~/util/typeManifest'
+import { TypeManifestEntity } from '~backend/background/interfaces'
 
 export function SegmentButtons({
 	rundownId,
 	playlistId,
 	rank,
-	setShowImportModal
+	setShowImportModal,
+	showImport = true
 }: {
 	rundownId: string
 	playlistId: string | null
 	rank: number
 	setShowImportModal: Dispatch<SetStateAction<number | undefined>>
+	showImport?: boolean
 }) {
 	const dispatch = useAppDispatch()
 	const navigate = useNavigate()
 	const toasts = useToasts()
 
-	const handleAddSegment = () => {
+	const segmentTypeManifests = useAppSelector((state) =>
+		toolbarManifests(state.typeManifests.manifests, TypeManifestEntity.Segment)
+	)
+
+	const handleAddSegment = (segmentType: string, name: string) => {
 		dispatch(
 			addNewSegment({
 				rundownId,
 				playlistId,
 				rank,
-				segmentType: undefined,
-				payload: {}
+				segmentType,
+				name,
+				materializePreset: true,
+				payload: { type: segmentType, name }
 			})
 		)
 			.unwrap()
@@ -45,17 +55,28 @@ export function SegmentButtons({
 	}
 
 	return (
-		<>
-			<Stack className="segment-buttons" direction="horizontal">
-				<button className="segment-button add-button" onClick={handleAddSegment}>
-					<BsPlus className="icon-lg" aria-hidden />
-					New Segment
+		<Stack className="segment-buttons preset-buttons" direction="horizontal" gap={1}>
+			{segmentTypeManifests.map((manifest) => (
+				<button
+					key={manifest.id}
+					className="segment-button preset-button"
+					type="button"
+					style={{ borderColor: manifest.colour }}
+					onClick={() => handleAddSegment(manifest.id, manifest.buttonLabel ?? manifest.name)}
+				>
+					{manifest.buttonLabel ?? manifest.name}
 				</button>
-				<button className="segment-button add-button" onClick={() => setShowImportModal(rank)}>
+			))}
+			{showImport && (
+				<button
+					className="segment-button add-button import-button"
+					type="button"
+					onClick={() => setShowImportModal(rank)}
+				>
 					<BsBoxArrowInUp aria-hidden style={{ marginRight: '.2em' }} />
-					Import Segments
+					Import
 				</button>
-			</Stack>
-		</>
+			)}
+		</Stack>
 	)
 }

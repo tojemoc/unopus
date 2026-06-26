@@ -21,6 +21,8 @@ export interface NewSegmentPayload {
 	rundownId: string
 	rank: number
 	segmentType: string | undefined
+	name?: string
+	materializePreset?: boolean
 	payload: Record<string, PayloadValue>
 }
 export interface UpdateSegmentPayload {
@@ -32,17 +34,25 @@ export interface RemoveSegmentPayload {
 
 export const addNewSegment = createAppAsyncThunk(
 	'segments/addNewSegment',
-	async (payload: NewSegmentPayload) => {
-		return ipcAPI.addNewSegment({
-			name: `Segment ${payload.rank + 1}`,
+	async (payload: NewSegmentPayload, { dispatch }) => {
+		const segment = await ipcAPI.addNewSegment({
+			name: payload.name ?? `Segment ${payload.rank + 1}`,
 			playlistId: payload.playlistId,
 			rundownId: payload.rundownId,
 			rank: payload.rank,
 			float: false,
 			isTemplate: false,
 			segmentType: payload.segmentType ?? '',
+			materializePreset: payload.materializePreset,
 			payload: payload.payload
 		})
+
+		if (payload.materializePreset) {
+			await dispatch(loadParts({ rundownId: payload.rundownId }))
+			await dispatch(loadPieces({ rundownId: payload.rundownId }))
+		}
+
+		return segment
 	}
 )
 export const copySegment = createAppAsyncThunk(

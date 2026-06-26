@@ -1,7 +1,7 @@
 import { useNavigate } from '@tanstack/react-router'
 import { createSelector } from '@reduxjs/toolkit'
 import { useAppDispatch, useAppSelector, type RootState } from '~/store/app'
-import { addNewPart, movePart, reorderParts } from '~/store/parts'
+import { movePart, reorderParts } from '~/store/parts'
 import { copySegment } from '~/store/segments'
 import type { Part, Segment } from '~backend/background/interfaces'
 import { DragTypes } from '~/components/drag-and-drop/DragTypes'
@@ -9,12 +9,11 @@ import { DraggableContainer } from '~/components/drag-and-drop/DraggableContaine
 import { SidebarPart } from './part'
 import { SidebarElementHeader } from './sidebarElementHeader'
 import { useToasts } from '~/components/toasts/useToasts'
-import { BsCaretDownFill, BsFillTrashFill, BsPlus, BsTrash } from 'react-icons/bs'
+import { BsCaretDownFill, BsFillTrashFill, BsTrash } from 'react-icons/bs'
 import { Stack, type ButtonProps } from 'react-bootstrap'
 import { HoverIconButton } from '~/components/rundownList/hoverIconButton'
-import { SegmentButtons } from './segmentButtons'
+import { PartTypeButtons } from './partTypeButtons'
 import { DeleteSegmentButton } from '../deleteSegmentButton'
-import type { Dispatch, SetStateAction } from 'react'
 import { computeInsertRank } from '~/util/lib'
 
 const selectAllParts = (state: RootState) => state.parts.parts
@@ -28,15 +27,11 @@ export function SidebarSegment({
 	segment,
 	isOpen,
 	onToggleOpen,
-	setShowImportModal,
-	insertRank,
 	partEdits
 }: {
 	segment: Segment
 	isOpen: boolean
 	onToggleOpen: () => void
-	setShowImportModal: Dispatch<SetStateAction<number | undefined>>
-	insertRank: number
 	partEdits: Record<string, { displayName: string; editedAt: number }>
 }) {
 	const dispatch = useAppDispatch()
@@ -50,28 +45,6 @@ export function SidebarSegment({
 	)
 
 	const segmentDuration = sortedParts.reduce((acc, part) => acc + (part.duration ?? 0), 0)
-
-	const handleAddPart = (rank: number) =>
-		dispatch(
-			addNewPart({
-				rundownId: segment.rundownId,
-				playlistId: segment.playlistId,
-				segmentId: segment.id,
-				rank
-			})
-		)
-			.unwrap()
-			.then((part) =>
-				navigate({
-					to: `/rundown/${segment.rundownId}/segment/${segment.id}/part/${part.id}`
-				})
-			)
-			.catch(() =>
-				toasts.show({
-					headerContent: 'Adding part',
-					bodyContent: 'Encountered an unexpected error'
-				})
-			)
 
 	const handleReorderPart = (
 		targetPart: Part,
@@ -185,7 +158,6 @@ export function SidebarSegment({
 							<SidebarPart
 								part={data}
 								segment={segment}
-								handleAddPart={handleAddPart}
 								insertRank={partInsertRankById[data.id]}
 								lastEdit={partEdits[data.id]}
 							/>
@@ -193,20 +165,9 @@ export function SidebarSegment({
 					/>
 				) : (
 					<Stack className="add-button-container">
-						<button className="add-button" onClick={() => handleAddPart(0)}>
-							<BsPlus className="icon-lg" aria-hidden />
-							Add Part
-						</button>
+						<PartTypeButtons segment={segment} rank={0} />
 					</Stack>
 				)}
-			</div>
-			<div className="segment-footer">
-				<SegmentButtons
-					rundownId={segment.rundownId}
-					playlistId={segment.playlistId}
-					rank={insertRank}
-					setShowImportModal={setShowImportModal}
-				/>
 			</div>
 		</div>
 	)

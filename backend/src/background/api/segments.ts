@@ -27,6 +27,10 @@ import { mutations as pieceMutations } from './pieces'
 import { spliceReorder } from '../util'
 import { Server, Socket } from 'socket.io'
 import { mutations as typeManifestMutations, resolveManifestId } from './typeManifests'
+import {
+	findTypeManifest,
+	getPartIngestType
+} from '../manifestMaterialize'
 
 async function mutateSegment(segment: Segment): Promise<MutatedSegment> {
 	return {
@@ -107,7 +111,12 @@ export const mutations = {
 			isTemplate: false,
 			...payload,
 			segmentType: payloadHasType ? resolvedSegmentType : defaultSegmentType,
-			rank: payload.rank ?? segmentsLength
+			rank: payload.rank ?? segmentsLength,
+			payload: {
+				...payload.payload,
+				type: payloadHasType ? resolvedSegmentType : defaultSegmentType,
+				name: payload.name
+			}
 		}
 		delete document.playlistId
 		delete document.rundownId
@@ -131,7 +140,46 @@ export const mutations = {
 			)
 			if (result.changes === 0) throw new Error('No rows were inserted')
 
-			return this.readOne(id)
+			const { result: segment, error: readError } = await this.readOne(id)
+			if (readError || !segment) return { error: readError ?? new Error('Failed to read segment') }
+
+			if (payload.materializePreset) {
+				const segmentManifest = findTypeManifest(segmentTypeManifestList, segment.segmentType)
+				const defaultParts = segmentManifest?.defaultParts ?? []
+
+				for (let index = 0; index < defaultParts.length; index++) {
+					const template = defaultParts[index]
+					const { result: partTypeManifests } = await typeManifestMutations.read({
+						entityType: TypeManifestEntity.Part
+					})
+					const partTypeManifestList = Array.isArray(partTypeManifests) ? partTypeManifests : []
+					const resolvedPartType =
+						resolveManifestId(template.partType, partTypeManifestList) ?? template.partType
+					const partManifest = findTypeManifest(partTypeManifestList, resolvedPartType)
+
+					const { result: createdPart, error: partError } = await partMutations.create({
+						playlistId: segment.playlistId,
+						rundownId: segment.rundownId,
+						segmentId: segment.id,
+						rank: index,
+						name: template.name ?? partManifest?.buttonLabel ?? partManifest?.name ?? template.partType,
+						partType: resolvedPartType,
+						fromPreset: true,
+						float: false,
+						duration: template.duration,
+						script: template.script,
+						payload: {},
+						presetPieces: template.defaultPieces
+					})
+					if (partError || !createdPart) {
+						return {
+							error: partError ?? new Error(`Failed to materialize preset part: ${template.partType}`)
+						}
+					}
+				}
+			}
+
+			return { result: segment }
 		} catch (e) {
 			console.error(e)
 			return { error: e as Error }
@@ -532,7 +580,19 @@ export function registerSegmentsHandlers(socket: Socket, io: Server) {
 		switch (action) {
 			case IpcOperationType.Create:
 				{
-					const { result, error } = await handleCreateSegment(payload)
+					const { result, error, materialized } = await handleCreateSegment(payload)
+					if (materialized && result) {
+						const partsResult = await partMutations.read({ rundownId: result.rundownId })
+						const piecesResult = await pieceMutations.read({ rundownId: result.rundownId })
+						io.emit('parts:update', {
+							action: 'update',
+							parts: partsResult.result
+						})
+						io.emit('pieces:update', {
+							action: 'update',
+							pieces: piecesResult.result
+						})
+					}
 					callback(result || error)
 				}
 				break
@@ -623,7 +683,7 @@ async function handleCreateSegment(payload: MutationSegmentCreate) {
 			}
 		}
 
-		return { result, error: returnedError }
+		return { result, error: returnedError, materialized: payload.materializePreset === true }
 	}
 }
 async function handleCopySegment(payload: MutationSegmentCopy) {
