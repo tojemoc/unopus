@@ -19,10 +19,16 @@
 
 	.rundown-main-content-properties {
 		> .hstack {
-			min-height: 100%;
+			min-height: 0;
+			height: 100%;
 		}
 		> .hstack > div {
 			align-items: stretch;
+			min-height: 0;
+		}
+
+		&.rundown-main-content-properties-split {
+			overflow: hidden;
 		}
 	}
 }
