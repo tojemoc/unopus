@@ -255,18 +255,21 @@ try {
 		json_extract(document, '$.payload.type') IS NOT NULL
 		AND json_extract(document, '$.partType') IS NULL;
 `)
+	// payload.type is still persisted as ingestType when partType is set (Sofie sync).
+	// Only fail when legacy rows still have payload.type but no top-level partType.
 	const parTypeMigrationLeftovers = db
 		.prepare(
 			`
 	SELECT id
 	FROM parts
 	WHERE json_extract(document, '$.payload.type') IS NOT NULL
+		AND json_extract(document, '$.partType') IS NULL
 `
 		)
 		.all()
 
 	if (parTypeMigrationLeftovers.length > 0) {
-		throw new Error('Migration incomplete: payload.type still exists')
+		throw new Error('Migration incomplete: payload.type still exists without partType')
 	}
 
 	initAuthTables()
