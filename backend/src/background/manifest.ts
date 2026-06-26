@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { ManifestFieldType, TypeManifest, TypeManifestEntity } from './interfaces'
 
@@ -11,8 +11,21 @@ export const defaultRundownManifest: TypeManifest = {
 	payload: []
 }
 
+function resolveManifestPath(filename: string): string {
+	const candidates = [
+		join(__dirname, '../assets', filename),
+		join(__dirname, '../../../assets', filename)
+	]
+
+	for (const filePath of candidates) {
+		if (existsSync(filePath)) return filePath
+	}
+
+	throw new Error(`Manifest file not found: ${filename}`)
+}
+
 function loadManifestJson(filename: string): TypeManifest[] {
-	const filePath = join(__dirname, '../../../assets', filename)
+	const filePath = resolveManifestPath(filename)
 	const raw = readFileSync(filePath, 'utf-8')
 	const parsed = JSON.parse(raw) as TypeManifest[]
 	return parsed.map((manifest) => ({

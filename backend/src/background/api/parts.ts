@@ -133,8 +133,8 @@ export const mutations = {
 			...payload,
 			partType: payloadHasType ? resolvedPartType : defaultPartType,
 			payload: {
-				type: ingestType,
-				...payload.payload
+				...payload.payload,
+				type: ingestType
 			},
 			rank: payload.rank ?? partsLength
 		}
@@ -165,10 +165,9 @@ export const mutations = {
 			if (readError || !part) return { error: readError ?? new Error('Failed to read part') }
 
 			if (payload.fromPreset) {
-				const pieceTemplates: DefaultPieceTemplate[] | undefined = payload.presetPieces
 				const templates =
-					pieceTemplates?.length ?
-						pieceTemplates
+					payload.presetPieces !== undefined ?
+						payload.presetPieces
 					:	findTypeManifest(partTypeManifestList, part.partType)?.defaultPieces
 
 				if (templates?.length) {
@@ -183,7 +182,7 @@ export const mutations = {
 						const pieceManifest = findTypeManifest(pieceManifestList, template.pieceType)
 						const resolvedPieceType = pieceManifest?.id ?? template.pieceType
 
-						await piecesMutations.create({
+						const { result: createdPiece, error: pieceError } = await piecesMutations.create({
 							playlistId: part.playlistId,
 							rundownId: part.rundownId,
 							segmentId: part.segmentId,
@@ -192,6 +191,11 @@ export const mutations = {
 							pieceType: resolvedPieceType,
 							payload: template.payload ?? {}
 						})
+						if (pieceError || !createdPiece) {
+							return {
+								error: pieceError ?? new Error(`Failed to materialize preset piece: ${template.pieceType}`)
+							}
+						}
 					}
 				}
 			}

@@ -1,4 +1,4 @@
-import type { TypeManifest } from '~backend/background/interfaces'
+import type { TypeManifest, TypeManifestEntity } from '~backend/background/interfaces'
 
 export function findTypeManifest(
 	manifests: TypeManifest[] | null | undefined,
@@ -18,9 +18,17 @@ export function findTypeManifest(
 	)
 }
 
+/** Resolve a piece/part type id to the canonical manifest id for comparisons */
+export function normalizeTypeId(
+	manifests: TypeManifest[] | null | undefined,
+	typeId: string
+): string {
+	return findTypeManifest(manifests, typeId)?.id ?? typeId.toLowerCase()
+}
+
 export function toolbarManifests(
 	manifests: TypeManifest[] | null | undefined,
-	entityType: TypeManifest['entityType']
+	entityType: TypeManifestEntity
 ): TypeManifest[] {
 	return (
 		manifests

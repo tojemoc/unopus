@@ -113,9 +113,9 @@ export const mutations = {
 			segmentType: payloadHasType ? resolvedSegmentType : defaultSegmentType,
 			rank: payload.rank ?? segmentsLength,
 			payload: {
+				...payload.payload,
 				type: payloadHasType ? resolvedSegmentType : defaultSegmentType,
-				name: payload.name,
-				...payload.payload
+				name: payload.name
 			}
 		}
 		delete document.playlistId
@@ -157,7 +157,7 @@ export const mutations = {
 						resolveManifestId(template.partType, partTypeManifestList) ?? template.partType
 					const partManifest = findTypeManifest(partTypeManifestList, resolvedPartType)
 
-					await partMutations.create({
+					const { result: createdPart, error: partError } = await partMutations.create({
 						playlistId: segment.playlistId,
 						rundownId: segment.rundownId,
 						segmentId: segment.id,
@@ -166,9 +166,16 @@ export const mutations = {
 						partType: resolvedPartType,
 						fromPreset: true,
 						float: false,
+						duration: template.duration,
+						script: template.script,
 						payload: {},
 						presetPieces: template.defaultPieces
 					})
+					if (partError || !createdPart) {
+						return {
+							error: partError ?? new Error(`Failed to materialize preset part: ${template.partType}`)
+						}
+					}
 				}
 			}
 
