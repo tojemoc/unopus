@@ -206,6 +206,39 @@ export interface MediaFileEntry {
 	mtime?: number
 }
 
+/** Single media field readiness (MOS-style clip status). */
+export interface MediaRequirement {
+	fieldId: string
+	path: string
+	ready: boolean
+	reason?: string
+	/** ILU / template video needs a WebM sibling for Caspar CEF playback. */
+	requiresCefWebm?: boolean
+}
+
+export interface PieceReadiness {
+	pieceId: string
+	partId: string
+	ready: boolean
+	requirements: MediaRequirement[]
+}
+
+export interface RundownReadiness {
+	pieces: Record<string, PieceReadiness>
+	parts: Record<
+		string,
+		{
+			ready: boolean
+			mediaPieceCount: number
+			readyMediaPieceCount: number
+		}
+	>
+	summary: {
+		totalMediaPieces: number
+		readyMediaPieces: number
+	}
+}
+
 export interface ApplicationSettings {
 	coreUrl?: string
 	corePort?: number

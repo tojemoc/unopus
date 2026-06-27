@@ -1,0 +1,208 @@
+:root {
+	--octo-bg: #121722;
+	--octo-panel: #1a2130;
+	--octo-panel-alt: #222b3d;
+	--octo-border: #2f3a4f;
+	--octo-border-strong: #3d4a63;
+	--octo-text: #e6edf7;
+	--octo-text-muted: #9aa7bd;
+	--octo-accent: #4c8dff;
+	--octo-accent-soft: #2a4166;
+	--octo-row-hover: #263149;
+	--octo-row-active: #2f3f5c;
+	--octo-toolbar: #171d2a;
+}
+
+body {
+	background: var(--octo-bg);
+	color: var(--octo-text);
+}
+
+.duopus-navbar {
+	background: var(--octo-toolbar) !important;
+	border-bottom: 1px solid var(--octo-border) !important;
+}
+
+.rundown-navbar {
+	background: var(--octo-panel) !important;
+	border-bottom: 1px solid var(--octo-border) !important;
+	color: var(--octo-text) !important;
+}
+
+.rundown-sidebar {
+	background: var(--octo-panel);
+	border-right: 1px solid var(--octo-border);
+	width: 42%;
+	min-width: 22rem;
+	max-width: 36rem;
+	padding: 0;
+}
+
+.rundown-main-content {
+	background: var(--octo-bg);
+}
+
+.rundown-properties-form,
+.part-properties-form,
+.piece-properties-form {
+	background: var(--octo-panel-alt);
+	color: var(--octo-text);
+}
+
+.octo-breadcrumb {
+	display: flex;
+	align-items: center;
+	gap: 0.35rem;
+	font-size: 0.85rem;
+	color: var(--octo-text-muted);
+
+	.octo-breadcrumb__sep {
+		opacity: 0.5;
+	}
+
+	.octo-breadcrumb__current {
+		color: var(--octo-text);
+		font-weight: 600;
+	}
+}
+
+.rundown-sidebar-toolbar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+	padding: 0.55rem 0.75rem;
+	background: var(--octo-toolbar);
+	border-bottom: 1px solid var(--octo-border);
+	position: sticky;
+	top: 0;
+	z-index: 2;
+
+	.rundown-sidebar-toolbar__title {
+		font-size: 0.72rem;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--octo-text-muted);
+	}
+
+	.rundown-sidebar-toolbar__summary {
+		font-size: 0.75rem;
+		color: var(--octo-text-muted);
+	}
+
+	.rundown-sidebar-toolbar__refresh {
+		all: unset;
+		cursor: pointer;
+		font-size: 0.72rem;
+		font-weight: 600;
+		color: var(--octo-accent);
+		padding: 0.2rem 0.55rem;
+		border: 1px solid var(--octo-accent-soft);
+		border-radius: 3px;
+
+		&:hover {
+			background: var(--octo-accent-soft);
+		}
+	}
+}
+
+.story-table {
+	width: 100%;
+
+	.story-table-header,
+	.story-row {
+		display: grid;
+		grid-template-columns: 5.5rem 3.5rem 1fr 3.5rem;
+		align-items: center;
+		gap: 0.25rem;
+	}
+
+	.story-table-header {
+		position: sticky;
+		top: 2.4rem;
+		z-index: 1;
+		background: var(--octo-toolbar);
+		color: var(--octo-text-muted);
+		font-size: 0.62rem;
+		font-weight: 700;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		padding: 0.35rem 0.45rem;
+		border-bottom: 1px solid var(--octo-border);
+	}
+
+	.story-row {
+		cursor: pointer;
+		padding: 0.35rem 0.45rem;
+		border-bottom: 1px solid rgba(47, 58, 79, 0.65);
+		border-left: 4px solid transparent;
+
+		&:hover {
+			background: var(--octo-row-hover);
+		}
+
+		&.active {
+			background: var(--octo-row-active);
+			box-shadow: inset 3px 0 0 var(--octo-accent);
+		}
+	}
+
+	.col-title {
+		font-size: 0.82rem;
+		color: var(--octo-text);
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.col-duration {
+		text-align: right;
+		font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+		font-size: 0.72rem;
+		color: var(--octo-text-muted);
+	}
+
+	.story-type-chip {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 2.4rem;
+		padding: 0.1rem 0.35rem;
+		border-radius: 2px;
+		font-size: 0.62rem;
+		font-weight: 700;
+		color: #fff;
+	}
+}
+
+.pieces-table {
+	width: 100%;
+	border-collapse: collapse;
+
+	thead th {
+		background: var(--octo-toolbar);
+		color: var(--octo-text-muted);
+		font-size: 0.62rem;
+		font-weight: 700;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		padding: 0.45rem 0.55rem;
+		border-bottom: 1px solid var(--octo-border);
+		text-align: left;
+	}
+
+	tbody tr {
+		border-bottom: 1px solid rgba(47, 58, 79, 0.65);
+		cursor: pointer;
+
+		&:hover {
+			background: var(--octo-row-hover);
+		}
+	}
+
+	td {
+		padding: 0.4rem 0.55rem;
+		vertical-align: middle;
+	}
+}

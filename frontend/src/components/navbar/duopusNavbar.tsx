@@ -29,12 +29,16 @@ export function DuopusNavbar({ rundownName }: DuopusNavbarProps) {
 		<Navbar expand="lg" className="duopus-navbar">
 			<Container fluid>
 				<Navbar.Brand as={Link} to="/" className="brand-text">
-					Duopus
+					Unopus
 				</Navbar.Brand>
 				{rundownName && (
-					<Navbar.Text className="ms-2 text-light">
-						<span className="text-muted">/</span> {rundownName}
-					</Navbar.Text>
+					<div className="octo-breadcrumb ms-2">
+						<Link to="/" className="text-decoration-none text-muted">
+							Rundowns
+						</Link>
+						<span className="octo-breadcrumb__sep">›</span>
+						<span className="octo-breadcrumb__current">{rundownName}</span>
+					</div>
 				)}
 				<Navbar.Toggle aria-controls="duopus-navbar" />
 				<Navbar.Collapse id="duopus-navbar">
