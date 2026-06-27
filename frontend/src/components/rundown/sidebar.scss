@@ -16,10 +16,9 @@
 	overflow-x: hidden;
 	overflow-y: auto;
 
-	&.h-100 {
+	&.rundown-main-content-fill {
 		flex: 1 1 auto;
 		min-height: 0;
-		height: auto;
 		overflow: hidden;
 	}
 

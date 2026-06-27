@@ -27,7 +27,7 @@ function RouteComponent() {
 	}
 
 	return (
-		<Stack className="rundown-main-content h-100">
+		<Stack className="rundown-main-content rundown-main-content-fill">
 			<RundownBreadcrumbs rundownId={rundownId} />
 			<div className="rundown-main-content-properties">
 				<Stack

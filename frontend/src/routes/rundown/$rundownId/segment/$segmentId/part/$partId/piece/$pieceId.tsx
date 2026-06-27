@@ -38,10 +38,10 @@ function RouteComponent() {
 	}
 
 	return (
-		<Stack className="rundown-main-content h-100">
+		<Stack className="rundown-main-content rundown-main-content-fill">
 			<RundownBreadcrumbs rundownId={rundownId} />
 			<div className="rundown-main-content-properties rundown-main-content-properties-split">
-				<Stack direction="horizontal" key={`form_${partId}`} className="align-items-stretch h-100">
+				<Stack direction="horizontal" key={`form_${partId}`} className="align-items-stretch">
 					<div
 						style={{ backgroundColor: '#000000', flex: '1 1 0' }}
 						className="p-4 rundown-split-pane"
