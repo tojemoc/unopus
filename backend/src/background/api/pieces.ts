@@ -44,7 +44,8 @@ export const mutations = {
 		const id = payload.id || uuid()
 		const document: Partial<MutationPieceCreate> = {
 			...payload,
-			pieceType: payloadHasType ? resolvedPieceType : defaultPieceType
+			pieceType: payloadHasType ? resolvedPieceType : defaultPieceType,
+			start: payload.start ?? 0
 		}
 		delete document.playlistId
 		delete document.rundownId
@@ -452,23 +453,29 @@ export async function handleCloneSetPiece(payload: MutationPieceCloneFromParToPa
 	}
 }
 
+export function mutatePieceForExport(piece: Piece): MutatedPiece {
+	const objectTime = piece.start ?? 0
+
+	return {
+		id: piece.id,
+		name: piece.name,
+		objectType: piece.pieceType,
+		objectTime,
+		duration: piece.duration,
+		clipName: undefined,
+		attributes: {
+			...piece.payload,
+			adlib: false
+		},
+		position: undefined
+	}
+}
+
 export async function getMutatedPiecesFromPart(partId: string): Promise<MutatedPiece[]> {
 	const { result: pieces } = await mutations.read({ partId: partId })
 
 	if (pieces && Array.isArray(pieces)) {
-		return pieces.map((piece) => ({
-			id: piece.id,
-			name: piece.name,
-			objectType: piece.pieceType,
-			objectTime: piece.start,
-			duration: piece.duration,
-			clipName: undefined,
-			attributes: {
-				...piece.payload,
-				adlib: piece.start === undefined || piece.start === null
-			},
-			position: undefined
-		}))
+		return pieces.map((piece) => mutatePieceForExport(piece))
 	}
 
 	return []

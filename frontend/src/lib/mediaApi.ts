@@ -31,6 +31,10 @@ export async function fetchRundownMedia(
 
 let previewBaseUrlCache: string | null = null
 
+export function clearPreviewBaseUrlCache(): void {
+	previewBaseUrlCache = null
+}
+
 export async function fetchPreviewBaseUrl(): Promise<string> {
 	if (previewBaseUrlCache) {
 		return previewBaseUrlCache
@@ -38,4 +42,15 @@ export async function fetchPreviewBaseUrl(): Promise<string> {
 	const data = await request<{ previewBaseUrl: string }>('/api/config')
 	previewBaseUrlCache = data.previewBaseUrl.replace(/\/$/, '')
 	return previewBaseUrlCache
+}
+
+export async function fetchAppConfig(): Promise<{
+	previewBaseUrl: string
+	ingestMediaRoot: string
+}> {
+	const data = await request<{ previewBaseUrl: string; ingestMediaRoot: string }>('/api/config')
+	return {
+		previewBaseUrl: data.previewBaseUrl.replace(/\/$/, ''),
+		ingestMediaRoot: data.ingestMediaRoot
+	}
 }

@@ -189,7 +189,8 @@ export const mutations = {
 							partId: part.id,
 							name: template.name ?? pieceNameFromManifest(pieceManifest, 'New piece'),
 							pieceType: resolvedPieceType,
-							payload: template.payload ?? {}
+							payload: template.payload ?? {},
+							start: 0
 						})
 						if (pieceError || !createdPiece) {
 							return {
