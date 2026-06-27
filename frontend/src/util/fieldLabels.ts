@@ -12,6 +12,8 @@ const LABELS: Record<string, string> = {
 	segmentType: 'Block type',
 	coreUrl: 'Sofie Core address',
 	corePort: 'Sofie Core port',
+	ingestMediaRoot: 'Ingest media root folder',
+	previewBaseUrl: 'GFX preview base URL',
 	expectedStartTime: 'Planned start',
 	expectedEndTime: 'Planned end',
 	isTemplate: 'Save as template'

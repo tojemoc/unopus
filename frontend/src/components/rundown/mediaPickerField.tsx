@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Form } from 'react-bootstrap'
-import { fetchRundownMedia } from '~/lib/mediaApi'
+import { fetchAppConfig, fetchRundownMedia } from '~/lib/mediaApi'
 import type { MediaFileEntry } from '~backend/background/interfaces'
 
 export function MediaPickerField({
@@ -21,6 +21,25 @@ export function MediaPickerField({
 	const [files, setFiles] = useState<MediaFileEntry[]>([])
 	const [loading, setLoading] = useState(true)
 	const [error, setError] = useState<string | null>(null)
+	const [ingestMediaRoot, setIngestMediaRoot] = useState<string | null>(null)
+
+	useEffect(() => {
+		let cancelled = false
+		fetchAppConfig()
+			.then((config) => {
+				if (!cancelled) {
+					setIngestMediaRoot(config.ingestMediaRoot)
+				}
+			})
+			.catch(() => {
+				if (!cancelled) {
+					setIngestMediaRoot(null)
+				}
+			})
+		return () => {
+			cancelled = true
+		}
+	}, [])
 
 	useEffect(() => {
 		let cancelled = false
@@ -80,6 +99,11 @@ export function MediaPickerField({
 			{!loading && !error && files.length === 0 && (
 				<Form.Text className="text-muted d-block">
 					No files in spravy/{rundownId}/{subdir}/
+				</Form.Text>
+			)}
+			{ingestMediaRoot && (
+				<Form.Text className="text-muted d-block">
+					Ingest folder: {ingestMediaRoot}/spravy/{rundownId}/{subdir}/
 				</Form.Text>
 			)}
 		</>
