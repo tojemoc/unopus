@@ -2,9 +2,9 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import {
 	applyThemeToDocument,
 	getStoredTheme,
+	getToggledTheme,
 	persistThemePreference,
 	resolveTheme,
-	toggleTheme,
 	type ThemeMode
 } from './theme'
 
@@ -45,7 +45,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 				setThemeState(next)
 			},
 			toggle: () => {
-				setThemeState((current) => toggleTheme(current))
+				const next = getToggledTheme(theme)
+				persistThemePreference(next)
+				setThemeState(next)
 			}
 		}),
 		[theme]
@@ -84,7 +86,9 @@ export function useThemeOptional(): ThemeContextValue {
 			setThemeState(next)
 		},
 		toggle: () => {
-			setThemeState((current) => toggleTheme(current))
+			const next = getToggledTheme(theme)
+			persistThemePreference(next)
+			setThemeState(next)
 		}
 	}
 }

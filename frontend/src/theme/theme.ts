@@ -2,7 +2,15 @@ export type ThemeMode = 'dark' | 'light'
 
 const STORAGE_KEY = 'unopus-theme'
 
+function isStorageAvailable(): boolean {
+	return typeof window !== 'undefined' && typeof localStorage !== 'undefined'
+}
+
 export function getStoredTheme(): ThemeMode | null {
+	if (!isStorageAvailable()) {
+		return null
+	}
+
 	const value = localStorage.getItem(STORAGE_KEY)
 	return value === 'dark' || value === 'light' ? value : null
 }
@@ -20,10 +28,18 @@ export function resolveTheme(stored: ThemeMode | null = getStoredTheme()): Theme
 }
 
 export function applyThemeToDocument(theme: ThemeMode): void {
+	if (typeof document === 'undefined') {
+		return
+	}
+
 	document.documentElement.setAttribute('data-theme', theme)
 }
 
 export function persistThemePreference(theme: ThemeMode): void {
+	if (!isStorageAvailable()) {
+		return
+	}
+
 	localStorage.setItem(STORAGE_KEY, theme)
 }
 
@@ -38,9 +54,6 @@ export function initTheme(): ThemeMode {
 	return theme
 }
 
-export function toggleTheme(current: ThemeMode): ThemeMode {
-	const next: ThemeMode = current === 'dark' ? 'light' : 'dark'
-	persistThemePreference(next)
-	applyThemeToDocument(next)
-	return next
+export function getToggledTheme(current: ThemeMode): ThemeMode {
+	return current === 'dark' ? 'light' : 'dark'
 }
