@@ -69,7 +69,7 @@ function RouteComponent() {
 
 			<Stack
 				direction="horizontal"
-				className="rundown-editor-panes"
+				className="rundown-editor-panes align-items-stretch"
 				style={{
 					flex: 1,
 					minHeight: 0,

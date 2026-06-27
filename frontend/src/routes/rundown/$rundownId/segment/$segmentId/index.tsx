@@ -18,7 +18,7 @@ function RouteComponent() {
 
 	const rundown = useAppSelector((state) => state.rundowns.find((r) => r.id === rundownId))
 	return (
-		<Stack className="rundown-main-content h-100">
+		<Stack className="rundown-main-content rundown-main-content-fill">
 			<RundownBreadcrumbs rundownId={rundownId} />
 			<div
 				className="rundown-main-content-scroll p-4"
