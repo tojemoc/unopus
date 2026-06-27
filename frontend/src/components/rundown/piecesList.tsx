@@ -10,7 +10,7 @@ import { createSelector } from '@reduxjs/toolkit'
 import { IconButton } from '../iconButton'
 import { useToasts } from '../toasts/useToasts'
 import { findTypeManifest, normalizeTypeId, toolbarManifests } from '~/util/typeManifest'
-import { useRundownReadiness } from '~/hooks/useRundownReadiness'
+import { useRundownReadinessContext } from '~/hooks/RundownReadinessContext'
 import { ReadinessBadge } from './readinessBadge'
 import { getPieceReadinessState } from './sidebar/partRow'
 
@@ -33,7 +33,7 @@ export function PiecesList({ part }: { part: Part }) {
 	const partIds = useMemo(() => ({ rundownId, segmentId, partId }), [rundownId, segmentId, partId])
 
 	const pieces = useAppSelector((state) => selectPiecesByPart(state, partIds))
-	const { readiness } = useRundownReadiness(rundownId)
+	const { readiness } = useRundownReadinessContext()
 
 	return (
 		<table className="pieces-table rundown-pieces-list">
@@ -67,7 +67,7 @@ function PieceRow({
 	readiness
 }: {
 	piece: Piece
-	readiness: ReturnType<typeof useRundownReadiness>['readiness']
+	readiness: ReturnType<typeof useRundownReadinessContext>['readiness']
 }) {
 	const dispatch = useAppDispatch()
 	const navigate = useNavigate()
@@ -121,7 +121,9 @@ function PieceRow({
 	return (
 		<tr onClick={pieceRowClick}>
 			<td>
-				<ReadinessBadge state={pieceReadiness.state} tooltip={pieceReadiness.tooltip} compact />
+				{pieceReadiness ? (
+					<ReadinessBadge state={pieceReadiness.state} tooltip={pieceReadiness.tooltip} compact />
+				) : null}
 			</td>
 			<td className="piece-type piece-type-chip" style={{ backgroundColor: manifest?.colour }}>
 				{manifest?.shortName || piece.pieceType}

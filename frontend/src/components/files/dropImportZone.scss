@@ -1,10 +1,10 @@
 .drop-import-zone {
-	.drop-zone {
+	.drop-import-zone__target {
 		border: 2px dashed var(--re-border);
 		color: var(--re-text-muted);
 
 		&:hover,
-		&.drag-over {
+		&.drop-import-zone__target--active {
 			border-color: var(--re-accent);
 			color: var(--re-text);
 		}

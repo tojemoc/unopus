@@ -18,11 +18,17 @@ export function ReadinessBadge({
 		na: compact ? '—' : 'N/A'
 	}
 
+	const ariaLabels: Record<ReadinessState, string> = {
+		ready: 'Ready',
+		'not-ready': 'Not ready',
+		na: 'Not applicable'
+	}
+
 	const badge = (
 		<span
 			className={`readiness-badge readiness-badge--${state}`}
 			role="status"
-			aria-label={labels[state]}
+			aria-label={ariaLabels[state]}
 		>
 			{labels[state]}
 		</span>
@@ -32,7 +38,17 @@ export function ReadinessBadge({
 		return badge
 	}
 
-	return <OverlayTrigger overlay={<Tooltip>{tooltip}</Tooltip>}>{badge}</OverlayTrigger>
+	return (
+		<OverlayTrigger
+			overlay={
+				<Tooltip className="readiness-badge-tooltip">
+					<span className="readiness-badge-tooltip__content">{tooltip}</span>
+				</Tooltip>
+			}
+		>
+			{badge}
+		</OverlayTrigger>
+	)
 }
 
 export function getPieceReadinessTooltip(

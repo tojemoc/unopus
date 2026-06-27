@@ -171,6 +171,11 @@
 			background: var(--re-accent-subtle);
 			color: var(--re-text);
 		}
+
+		&:focus-visible {
+			outline: 2px solid var(--re-accent);
+			outline-offset: 2px;
+		}
 	}
 }
 

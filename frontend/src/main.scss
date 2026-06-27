@@ -1,6 +1,6 @@
-@import './theme/tokens.scss';
+@import './theme/tokens';
 @import '~bootstrap/scss/bootstrap';
-@import './theme/bootstrap-overrides.scss';
+@import './theme/bootstrap-overrides';
 
 @import 'react-datepicker/dist/react-datepicker.css';
 @import './styles/octopus-theme.scss';

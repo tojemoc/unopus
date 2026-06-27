@@ -10,15 +10,19 @@ function getStoryReadiness(
 	partId: string,
 	pieces: { id: string; partId: string }[],
 	readiness: RundownReadiness | null
-): { state: 'ready' | 'not-ready' | 'na'; tooltip?: string } {
+): { state: 'ready' | 'not-ready' | 'na'; tooltip?: string } | null {
+	if (!readiness) {
+		return null
+	}
+
 	const partPieces = pieces.filter((piece) => piece.partId === partId)
-	const mediaPieces = partPieces.filter((piece) => readiness?.pieces[piece.id]?.requirements.length)
+	const mediaPieces = partPieces.filter((piece) => readiness.pieces[piece.id]?.requirements.length)
 
 	if (!mediaPieces.length) {
 		return { state: 'na', tooltip: 'No media items in this story' }
 	}
 
-	const partStatus = readiness?.parts[partId]
+	const partStatus = readiness.parts[partId]
 	const ready = partStatus?.ready ?? false
 
 	if (ready) {
@@ -29,7 +33,7 @@ function getStoryReadiness(
 	}
 
 	const issues = mediaPieces
-		.flatMap((piece) => readiness?.pieces[piece.id]?.requirements ?? [])
+		.flatMap((piece) => readiness.pieces[piece.id]?.requirements ?? [])
 		.filter((req) => !req.ready)
 		.map((req) => req.reason ?? 'Not ready')
 
@@ -88,11 +92,20 @@ export function SidebarPartRow({
 			<div
 				className={`story-row ${isActive ? 'active' : ''}`}
 				role="row"
+				tabIndex={0}
 				onClick={openPart}
+				onKeyDown={(event) => {
+					if (event.key === 'Enter' || event.key === ' ') {
+						event.preventDefault()
+						openPart()
+					}
+				}}
 				style={{ borderLeftColor: partTypeManifest?.colour ?? '#666' }}
 			>
 				<div className="col-status" role="cell">
-					<ReadinessBadge state={storyReadiness.state} tooltip={storyReadiness.tooltip} compact />
+					{storyReadiness ? (
+						<ReadinessBadge state={storyReadiness.state} tooltip={storyReadiness.tooltip} compact />
+					) : null}
 				</div>
 				<div className="col-type" role="cell">
 					<span
@@ -120,8 +133,12 @@ export function SidebarPartRow({
 export function getPieceReadinessState(
 	pieceId: string,
 	readiness: RundownReadiness | null
-): { state: 'ready' | 'not-ready' | 'na'; tooltip?: string } {
-	const pieceReadiness: PieceReadiness | undefined = readiness?.pieces[pieceId]
+): { state: 'ready' | 'not-ready' | 'na'; tooltip?: string } | null {
+	if (!readiness) {
+		return null
+	}
+
+	const pieceReadiness: PieceReadiness | undefined = readiness.pieces[pieceId]
 
 	if (!pieceReadiness?.requirements.length) {
 		return { state: 'na', tooltip: 'No media required' }

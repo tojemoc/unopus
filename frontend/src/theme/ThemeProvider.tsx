@@ -1,8 +1,8 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
-	applyTheme,
-	getPreferredTheme,
+	applyThemeToDocument,
 	getStoredTheme,
+	persistThemePreference,
 	resolveTheme,
 	toggleTheme,
 	type ThemeMode
@@ -20,7 +20,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 	const [theme, setThemeState] = useState<ThemeMode>(() => resolveTheme())
 
 	useEffect(() => {
-		applyTheme(theme)
+		applyThemeToDocument(theme)
 	}, [theme])
 
 	useEffect(() => {
@@ -41,7 +41,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 		() => ({
 			theme,
 			setTheme: (next: ThemeMode) => {
-				applyTheme(next)
+				persistThemePreference(next)
 				setThemeState(next)
 			},
 			toggle: () => {
@@ -64,14 +64,27 @@ export function useTheme(): ThemeContextValue {
 
 export function useThemeOptional(): ThemeContextValue {
 	const context = useContext(ThemeContext)
+	const [theme, setThemeState] = useState<ThemeMode>(() => resolveTheme())
+
+	useEffect(() => {
+		if (context) {
+			return
+		}
+		applyThemeToDocument(theme)
+	}, [context, theme])
+
 	if (context) {
 		return context
 	}
 
-	const fallbackTheme = getStoredTheme() ?? getPreferredTheme()
 	return {
-		theme: fallbackTheme,
-		setTheme: applyTheme,
-		toggle: () => toggleTheme(fallbackTheme)
+		theme,
+		setTheme: (next: ThemeMode) => {
+			persistThemePreference(next)
+			setThemeState(next)
+		},
+		toggle: () => {
+			setThemeState((current) => toggleTheme(current))
+		}
 	}
 }

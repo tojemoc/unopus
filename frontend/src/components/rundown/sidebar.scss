@@ -104,7 +104,8 @@
 	.item-title {
 		flex: 1;
 		line-height: 1.25;
-		word-break: break-word;
+		overflow-wrap: anywhere;
+		word-break: normal;
 		color: var(--re-text);
 	}
 

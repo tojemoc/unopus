@@ -36,12 +36,12 @@
 		border: none;
 		width: 100%;
 		text-align: left;
-		color: var(--octo-text-muted);
+		color: var(--re-text-muted);
 		background: none;
 
 		&:hover {
-			background: var(--octo-row-hover);
-			color: var(--octo-text);
+			background: var(--re-row-hover);
+			color: var(--re-text);
 		}
 	}
 }

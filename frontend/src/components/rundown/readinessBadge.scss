@@ -39,3 +39,9 @@
 .pieces-table .readiness-badge {
 	min-width: 4rem;
 }
+
+.readiness-badge-tooltip__content {
+	display: block;
+	white-space: pre-line;
+	text-align: left;
+}

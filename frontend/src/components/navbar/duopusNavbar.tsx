@@ -33,13 +33,17 @@ export function DuopusNavbar({ rundownName }: DuopusNavbarProps) {
 					Unopus
 				</Navbar.Brand>
 				{rundownName && (
-					<div className="octo-breadcrumb ms-2">
+					<nav className="octo-breadcrumb ms-2" aria-label="Breadcrumb">
 						<Link to="/" className="text-decoration-none">
 							Rundowns
 						</Link>
-						<span className="octo-breadcrumb__sep">›</span>
-						<span className="octo-breadcrumb__current">{rundownName}</span>
-					</div>
+						<span className="octo-breadcrumb__sep" aria-hidden="true">
+							›
+						</span>
+						<span className="octo-breadcrumb__current" aria-current="page">
+							{rundownName}
+						</span>
+					</nav>
 				)}
 				<Navbar.Toggle aria-controls="duopus-navbar" />
 				<Navbar.Collapse id="duopus-navbar">

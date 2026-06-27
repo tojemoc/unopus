@@ -12,6 +12,7 @@ import { getIngestMediaRoot } from './media'
 import { findTypeManifest } from './manifestMaterialize'
 
 const CEF_TEMPLATE_VIDEO = /\.(mp4|mov|m4v|mxf)$/i
+const PATH_LOOKUP_CONCURRENCY = 8
 
 function resolveMediaAbsolutePath(relativePath: string): string {
 	const ingestRoot = path.resolve(getIngestMediaRoot())
@@ -29,8 +30,68 @@ async function fileExists(filePath: string): Promise<boolean> {
 	try {
 		const stats = await fs.stat(filePath)
 		return stats.isFile()
-	} catch {
-		return false
+	} catch (error) {
+		if (
+			error &&
+			typeof error === 'object' &&
+			'code' in error &&
+			(error as NodeJS.ErrnoException).code === 'ENOENT'
+		) {
+			return false
+		}
+		throw error
+	}
+}
+
+type PathLookupContext = {
+	checkFile: (filePath: string) => Promise<boolean>
+}
+
+function createPathLookupContext(concurrency = PATH_LOOKUP_CONCURRENCY): PathLookupContext {
+	const cache = new Map<string, Promise<boolean>>()
+	let active = 0
+	const waitQueue: Array<() => void> = []
+
+	const acquire = () =>
+		new Promise<void>((resolve) => {
+			if (active < concurrency) {
+				active += 1
+				resolve()
+				return
+			}
+			waitQueue.push(() => {
+				active += 1
+				resolve()
+			})
+		})
+
+	const release = () => {
+		active -= 1
+		const next = waitQueue.shift()
+		if (next) {
+			next()
+		}
+	}
+
+	return {
+		checkFile(filePath: string): Promise<boolean> {
+			const cached = cache.get(filePath)
+			if (cached) {
+				return cached
+			}
+
+			const pending = (async () => {
+				await acquire()
+				try {
+					return await fileExists(filePath)
+				} finally {
+					release()
+				}
+			})()
+
+			cache.set(filePath, pending)
+			return pending
+		}
 	}
 }
 
@@ -73,14 +134,17 @@ function collectMediaRequirements(
 	return requirements
 }
 
-async function evaluateRequirement(requirement: MediaRequirement): Promise<MediaRequirement> {
+async function evaluateRequirement(
+	requirement: MediaRequirement,
+	pathLookup: PathLookupContext
+): Promise<MediaRequirement> {
 	if (!requirement.path) {
 		return requirement
 	}
 
 	try {
 		const masterPath = resolveMediaAbsolutePath(requirement.path)
-		const masterExists = await fileExists(masterPath)
+		const masterExists = await pathLookup.checkFile(masterPath)
 
 		if (!masterExists) {
 			return {
@@ -92,7 +156,7 @@ async function evaluateRequirement(requirement: MediaRequirement): Promise<Media
 
 		if (requirement.requiresCefWebm && CEF_TEMPLATE_VIDEO.test(requirement.path)) {
 			const webmPath = masterPath.replace(CEF_TEMPLATE_VIDEO, '.webm')
-			const webmExists = await fileExists(webmPath)
+			const webmExists = await pathLookup.checkFile(webmPath)
 
 			if (!webmExists) {
 				return {
@@ -119,9 +183,27 @@ async function evaluateRequirement(requirement: MediaRequirement): Promise<Media
 
 export async function evaluatePieceReadiness(
 	piece: Piece,
-	manifests: TypeManifest[]
+	manifests: TypeManifest[],
+	pathLookup: PathLookupContext
 ): Promise<PieceReadiness> {
 	const manifest = findTypeManifest(manifests, piece.pieceType)
+
+	if (!manifest) {
+		return {
+			pieceId: piece.id,
+			partId: piece.partId,
+			ready: false,
+			requirements: [
+				{
+					fieldId: '_manifest',
+					path: '',
+					ready: false,
+					reason: `Piece type manifest not found: ${piece.pieceType}`
+				}
+			]
+		}
+	}
+
 	const requirements = collectMediaRequirements(piece, manifest)
 
 	if (!requirements.length) {
@@ -133,7 +215,9 @@ export async function evaluatePieceReadiness(
 		}
 	}
 
-	const evaluated = await Promise.all(requirements.map(evaluateRequirement))
+	const evaluated = await Promise.all(
+		requirements.map((requirement) => evaluateRequirement(requirement, pathLookup))
+	)
 
 	return {
 		pieceId: piece.id,
@@ -147,8 +231,9 @@ export async function evaluateRundownReadiness(
 	pieces: Piece[],
 	manifests: TypeManifest[]
 ): Promise<RundownReadiness> {
+	const pathLookup = createPathLookupContext()
 	const pieceResults = await Promise.all(
-		pieces.map((piece) => evaluatePieceReadiness(piece, manifests))
+		pieces.map((piece) => evaluatePieceReadiness(piece, manifests, pathLookup))
 	)
 
 	const piecesById: Record<string, PieceReadiness> = {}

@@ -19,19 +19,28 @@ export function resolveTheme(stored: ThemeMode | null = getStoredTheme()): Theme
 	return stored ?? getPreferredTheme()
 }
 
-export function applyTheme(theme: ThemeMode): void {
+export function applyThemeToDocument(theme: ThemeMode): void {
 	document.documentElement.setAttribute('data-theme', theme)
+}
+
+export function persistThemePreference(theme: ThemeMode): void {
 	localStorage.setItem(STORAGE_KEY, theme)
+}
+
+export function applyTheme(theme: ThemeMode): void {
+	applyThemeToDocument(theme)
+	persistThemePreference(theme)
 }
 
 export function initTheme(): ThemeMode {
 	const theme = resolveTheme()
-	applyTheme(theme)
+	applyThemeToDocument(theme)
 	return theme
 }
 
 export function toggleTheme(current: ThemeMode): ThemeMode {
 	const next: ThemeMode = current === 'dark' ? 'light' : 'dark'
-	applyTheme(next)
+	persistThemePreference(next)
+	applyThemeToDocument(next)
 	return next
 }
