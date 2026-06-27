@@ -2,17 +2,17 @@ export type ThemeMode = 'dark' | 'light'
 
 const STORAGE_KEY = 'unopus-theme'
 
-function isStorageAvailable(): boolean {
-	return typeof window !== 'undefined' && typeof localStorage !== 'undefined'
-}
-
 export function getStoredTheme(): ThemeMode | null {
-	if (!isStorageAvailable()) {
+	if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
 		return null
 	}
 
-	const value = localStorage.getItem(STORAGE_KEY)
-	return value === 'dark' || value === 'light' ? value : null
+	try {
+		const value = localStorage.getItem(STORAGE_KEY)
+		return value === 'dark' || value === 'light' ? value : null
+	} catch {
+		return null
+	}
 }
 
 export function getPreferredTheme(): ThemeMode {
@@ -36,11 +36,15 @@ export function applyThemeToDocument(theme: ThemeMode): void {
 }
 
 export function persistThemePreference(theme: ThemeMode): void {
-	if (!isStorageAvailable()) {
+	if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
 		return
 	}
 
-	localStorage.setItem(STORAGE_KEY, theme)
+	try {
+		localStorage.setItem(STORAGE_KEY, theme)
+	} catch {
+		// Storage may be blocked (private mode, sandboxed iframe, SecurityError).
+	}
 }
 
 export function applyTheme(theme: ThemeMode): void {
