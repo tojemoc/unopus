@@ -1,3 +1,15 @@
+.rundown-editor-panes {
+	min-height: 0;
+	overflow: hidden;
+
+	> .rundown-main-content {
+		flex: 1 1 auto;
+		min-width: 0;
+		min-height: 0;
+		overflow: hidden;
+	}
+}
+
 .rundown-main-content {
 	flex-grow: 1;
 	min-height: 0;
@@ -5,7 +17,9 @@
 	overflow-y: auto;
 
 	&.h-100 {
-		height: 100%;
+		flex: 1 1 auto;
+		min-height: 0;
+		height: auto;
 		overflow: hidden;
 	}
 
@@ -21,16 +35,21 @@
 		&.rundown-main-content-properties-split {
 			display: flex;
 			flex-direction: column;
+			flex: 1 1 auto;
+			min-height: 0;
 			overflow: hidden;
 
 			> .hstack {
-				flex: 1 1 auto;
+				flex: 1 1 0;
 				min-height: 0;
 				align-items: stretch;
+				overflow: hidden;
 			}
 
 			.rundown-split-pane {
+				flex: 1 1 0;
 				min-height: 0;
+				min-width: 0;
 				overflow-x: hidden;
 				overflow-y: auto;
 			}
