@@ -10,6 +10,7 @@ import { db } from '../db'
 import { defaultRundownManifest, TYPE_MANIFESTS } from '../manifest'
 import { mutations as typeManifestMutations } from './typeManifests'
 import { Server, Socket } from 'socket.io'
+import { isValidHttpUrl, normalizeBaseUrl } from '../settingsResolver'
 
 export const mutations = {
 	async create(
@@ -66,6 +67,14 @@ export const mutations = {
 			...payload
 		}
 
+		if (update.previewBaseUrl !== undefined && update.previewBaseUrl !== '') {
+			const normalized = normalizeBaseUrl(update.previewBaseUrl)
+			if (!isValidHttpUrl(normalized)) {
+				return { error: new Error('Preview base URL must be a valid http or https URL') }
+			}
+			update.previewBaseUrl = normalized
+		}
+
 		try {
 			const stmt = db.prepare(`
 				UPDATE settings
@@ -84,6 +93,10 @@ export const mutations = {
 	async reset(): Promise<{ result?: ApplicationSettings; error?: Error }> {
 		await resetTypeManifestsToDefaults()
 
+		return await this.read()
+	},
+	async reloadManifestsFromAssets(): Promise<{ result?: ApplicationSettings; error?: Error }> {
+		await upsertTypeManifestsFromAssets()
 		return await this.read()
 	}
 }
@@ -112,6 +125,12 @@ export function registerSettingsHandlers(socket: Socket, _io: Server) {
 			case 'reset':
 				{
 					const { result, error } = await mutations.reset()
+					callback(result || error)
+				}
+				break
+			case 'reloadManifests':
+				{
+					const { result, error } = await mutations.reloadManifestsFromAssets()
 					callback(result || error)
 				}
 				break
@@ -144,6 +163,37 @@ async function seedDefaultTypeManifests(): Promise<void> {
 
 	for (const typeManifest of TYPE_MANIFESTS) {
 		await typeManifestMutations.create(typeManifest)
+	}
+}
+
+async function upsertTypeManifestsFromAssets(): Promise<void> {
+	const { result: existingManifests } = await typeManifestMutations.read({})
+	const existingList = Array.isArray(existingManifests) ? existingManifests : []
+	const existingIds = new Set(existingList.map((manifest) => manifest.id))
+
+	const rundownExists = existingIds.has(defaultRundownManifest.id)
+	if (rundownExists) {
+		await typeManifestMutations.update({
+			id: defaultRundownManifest.id,
+			update: defaultRundownManifest
+		})
+	} else {
+		await typeManifestMutations.create({
+			id: defaultRundownManifest.id,
+			entityType: TypeManifestEntity.Rundown,
+			payload: defaultRundownManifest.payload
+		})
+	}
+
+	for (const typeManifest of TYPE_MANIFESTS) {
+		if (existingIds.has(typeManifest.id)) {
+			await typeManifestMutations.update({
+				id: typeManifest.id,
+				update: typeManifest
+			})
+		} else {
+			await typeManifestMutations.create(typeManifest)
+		}
 	}
 }
 

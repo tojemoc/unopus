@@ -209,6 +209,10 @@ export interface MediaFileEntry {
 export interface ApplicationSettings {
 	coreUrl?: string
 	corePort?: number
+	/** Overrides INGEST_MEDIA_ROOT env when set (absolute or relative path). */
+	ingestMediaRoot?: string
+	/** Overrides PREVIEW_BASE_URL env when set. */
+	previewBaseUrl?: string
 }
 export interface DBSettings {
 	id: string

@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { Alert } from 'react-bootstrap'
 import { CoreConnectionSettingsForm } from '~/components/settings/coreConnectionSettingsForm'
+import { ReloadTypeManifestsButton } from '~/components/settings/reloadTypeManifestsButton'
 import { ResetToDefaults } from '~/components/settings/resetToDefaultsButton'
 import { useAppSelector } from '~/store/app'
 
@@ -18,7 +19,10 @@ function RouteComponent() {
 			{settings.settings && <CoreConnectionSettingsForm settings={settings.settings} />}
 			{settings.error && <Alert variant="danger">{settings.error}</Alert>}
 
-			<ResetToDefaults />
+			<div className="mt-4 d-flex flex-wrap gap-2">
+				<ReloadTypeManifestsButton />
+				<ResetToDefaults />
+			</div>
 		</>
 	)
 }

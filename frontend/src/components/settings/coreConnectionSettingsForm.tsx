@@ -9,6 +9,13 @@ import { updateSettings } from '~/store/settings'
 import { ipcAPI } from '~/lib/IPC'
 import { useToasts } from '../toasts/useToasts'
 import { friendlyLabel } from '~/util/fieldLabels'
+import { clearPreviewBaseUrlCache } from '~/lib/mediaApi'
+
+function normalizeOptionalUrl(value: string | undefined): string | undefined {
+	const trimmed = value?.trim()
+	if (!trimmed) return undefined
+	return trimmed.replace(/\/+$/, '')
+}
 
 export function CoreConnectionSettingsForm({ settings }: { settings: ApplicationSettings }) {
 	const dispatch = useAppDispatch()
@@ -22,7 +29,13 @@ export function CoreConnectionSettingsForm({ settings }: { settings: Application
 		defaultValues: settings,
 		onSubmit: async (values) => {
 			try {
-				await dispatch(updateSettings({ settings: values.value })).unwrap()
+				const nextSettings: ApplicationSettings = {
+					...values.value,
+					ingestMediaRoot: values.value.ingestMediaRoot?.trim() || undefined,
+					previewBaseUrl: normalizeOptionalUrl(values.value.previewBaseUrl)
+				}
+				await dispatch(updateSettings({ settings: nextSettings })).unwrap()
+				clearPreviewBaseUrlCache()
 				form.reset()
 			} catch (e) {
 				console.error(e)
@@ -100,6 +113,57 @@ export function CoreConnectionSettingsForm({ settings }: { settings: Application
 									placeholder="3000"
 									onChange={(e) => field.handleChange(Number(e.target.value))}
 								/>
+							</Form.Group>
+							<FieldInfo field={field} />
+						</>
+					)}
+				/>
+
+				<form.Field
+					name="ingestMediaRoot"
+					children={(field) => (
+						<>
+							<Form.Group className="mb-3">
+								<Form.Label htmlFor={field.name}>{friendlyLabel('ingestMediaRoot')}</Form.Label>
+								<Form.Control
+									name={field.name}
+									type="text"
+									value={field.state.value ?? ''}
+									onBlur={field.handleBlur}
+									placeholder="../ingest"
+									onChange={(e) => field.handleChange(e.target.value)}
+								/>
+								<Form.Text className="text-muted">
+									Clips are listed from{' '}
+									<code>
+										&lt;ingest root&gt;/spravy/&lt;rundownId&gt;/clips/
+									</code>
+									. Overrides <code>INGEST_MEDIA_ROOT</code> in backend <code>.env</code> when
+									set.
+								</Form.Text>
+							</Form.Group>
+							<FieldInfo field={field} />
+						</>
+					)}
+				/>
+				<form.Field
+					name="previewBaseUrl"
+					children={(field) => (
+						<>
+							<Form.Group className="mb-3">
+								<Form.Label htmlFor={field.name}>{friendlyLabel('previewBaseUrl')}</Form.Label>
+								<Form.Control
+									name={field.name}
+									type="url"
+									value={field.state.value ?? ''}
+									onBlur={field.handleBlur}
+									placeholder="http://localhost:3010/demo-assets"
+									onChange={(e) => field.handleChange(e.target.value)}
+								/>
+								<Form.Text className="text-muted">
+									Base URL for GFX preview iframe templates. Overrides{' '}
+									<code>PREVIEW_BASE_URL</code> in backend <code>.env</code> when set.
+								</Form.Text>
 							</Form.Group>
 							<FieldInfo field={field} />
 						</>

@@ -17,7 +17,10 @@
 			"float": false,
 			"isTemplate": false,
 			"segmentType": "headlines",
-			"payload": { "type": "headlines", "name": "Headlines" }
+			"payload": {
+				"type": "headlines",
+				"name": "Headlines"
+			}
 		},
 		{
 			"id": "seg-story",
@@ -28,7 +31,10 @@
 			"float": false,
 			"isTemplate": false,
 			"segmentType": "story",
-			"payload": { "type": "story", "name": "Long story" }
+			"payload": {
+				"type": "story",
+				"name": "Long story"
+			}
 		},
 		{
 			"id": "seg-opening",
@@ -39,7 +45,10 @@
 			"float": false,
 			"isTemplate": false,
 			"segmentType": "opening",
-			"payload": { "type": "opening", "name": "Opening" }
+			"payload": {
+				"type": "opening",
+				"name": "Opening"
+			}
 		}
 	],
 	"parts": [
@@ -55,7 +64,9 @@
 			"duration": 8,
 			"script": "First headline",
 			"fromPreset": true,
-			"payload": { "type": "ILU" }
+			"payload": {
+				"type": "ILU"
+			}
 		},
 		{
 			"id": "part-ilu-2",
@@ -68,7 +79,9 @@
 			"partType": "ilu",
 			"duration": 8,
 			"fromPreset": true,
-			"payload": { "type": "ILU" }
+			"payload": {
+				"type": "ILU"
+			}
 		},
 		{
 			"id": "part-ilu-3",
@@ -81,7 +94,9 @@
 			"partType": "ilu",
 			"duration": 8,
 			"fromPreset": true,
-			"payload": { "type": "ILU" }
+			"payload": {
+				"type": "ILU"
+			}
 		},
 		{
 			"id": "part-cam-intro",
@@ -94,7 +109,9 @@
 			"partType": "cam",
 			"duration": 5,
 			"fromPreset": true,
-			"payload": { "type": "Cam" }
+			"payload": {
+				"type": "Cam"
+			}
 		},
 		{
 			"id": "part-syn",
@@ -107,7 +124,9 @@
 			"partType": "syn",
 			"duration": 12,
 			"fromPreset": true,
-			"payload": { "type": "SYN" }
+			"payload": {
+				"type": "SYN"
+			}
 		},
 		{
 			"id": "part-vo",
@@ -120,7 +139,9 @@
 			"partType": "vo",
 			"duration": 10,
 			"fromPreset": true,
-			"payload": { "type": "VO" }
+			"payload": {
+				"type": "VO"
+			}
 		},
 		{
 			"id": "part-gfx-tema",
@@ -133,7 +154,9 @@
 			"partType": "gfx",
 			"duration": 6,
 			"fromPreset": true,
-			"payload": { "type": "GFX" }
+			"payload": {
+				"type": "GFX"
+			}
 		},
 		{
 			"id": "part-gfx-mod",
@@ -146,7 +169,9 @@
 			"partType": "gfx",
 			"duration": 6,
 			"fromPreset": true,
-			"payload": { "type": "GFX" }
+			"payload": {
+				"type": "GFX"
+			}
 		},
 		{
 			"id": "part-gfx-headline",
@@ -159,7 +184,9 @@
 			"partType": "gfx",
 			"duration": 6,
 			"fromPreset": true,
-			"payload": { "type": "GFX" }
+			"payload": {
+				"type": "GFX"
+			}
 		}
 	],
 	"pieces": [
@@ -175,7 +202,8 @@
 				"text": "Headline one",
 				"iluFile": "spravy/spravy-v3-smoke/clips/headline1.mp4",
 				"source": "TASR"
-			}
+			},
+			"start": 0
 		},
 		{
 			"id": "piece-h1-cam",
@@ -185,7 +213,10 @@
 			"partId": "part-ilu-1",
 			"name": "Camera",
 			"pieceType": "camera",
-			"payload": { "camNo": 1 }
+			"payload": {
+				"camNo": 1
+			},
+			"start": 0
 		},
 		{
 			"id": "piece-h2-headline",
@@ -199,7 +230,8 @@
 				"text": "Headline two",
 				"iluFile": "spravy/spravy-v3-smoke/clips/headline2.mp4",
 				"source": "TASR"
-			}
+			},
+			"start": 0
 		},
 		{
 			"id": "piece-h2-cam",
@@ -209,7 +241,10 @@
 			"partId": "part-ilu-2",
 			"name": "Camera",
 			"pieceType": "camera",
-			"payload": { "camNo": 1 }
+			"payload": {
+				"camNo": 1
+			},
+			"start": 0
 		},
 		{
 			"id": "piece-h3-headline",
@@ -223,7 +258,8 @@
 				"text": "Headline three",
 				"iluFile": "spravy/spravy-v3-smoke/clips/headline3.mp4",
 				"source": "TASR"
-			}
+			},
+			"start": 0
 		},
 		{
 			"id": "piece-h3-cam",
@@ -233,7 +269,10 @@
 			"partId": "part-ilu-3",
 			"name": "Camera",
 			"pieceType": "camera",
-			"payload": { "camNo": 1 }
+			"payload": {
+				"camNo": 1
+			},
+			"start": 0
 		},
 		{
 			"id": "piece-story-cam",
@@ -243,7 +282,10 @@
 			"partId": "part-cam-intro",
 			"name": "Camera",
 			"pieceType": "camera",
-			"payload": { "camNo": 1 }
+			"payload": {
+				"camNo": 1
+			},
+			"start": 0
 		},
 		{
 			"id": "piece-story-syn-l3d",
@@ -253,7 +295,11 @@
 			"partId": "part-syn",
 			"name": "L3D SYN",
 			"pieceType": "l3d-syn",
-			"payload": { "name": "Guest Name", "role": "Analyst" }
+			"payload": {
+				"name": "Guest Name",
+				"role": "Analyst"
+			},
+			"start": 0
 		},
 		{
 			"id": "piece-story-syn-video",
@@ -263,7 +309,10 @@
 			"partId": "part-syn",
 			"name": "SOT",
 			"pieceType": "video",
-			"payload": { "fileName": "spravy/spravy-v3-smoke/clips/syn-sot.mp4" }
+			"payload": {
+				"fileName": "spravy/spravy-v3-smoke/clips/syn-sot.mp4"
+			},
+			"start": 0
 		},
 		{
 			"id": "piece-story-vo",
@@ -273,7 +322,10 @@
 			"partId": "part-vo",
 			"name": "SOT",
 			"pieceType": "video",
-			"payload": { "fileName": "spravy/spravy-v3-smoke/clips/vo-package.mp4" }
+			"payload": {
+				"fileName": "spravy/spravy-v3-smoke/clips/vo-package.mp4"
+			},
+			"start": 0
 		},
 		{
 			"id": "piece-opening-tema",
@@ -283,7 +335,11 @@
 			"partId": "part-gfx-tema",
 			"name": "L3D Téma",
 			"pieceType": "l3d-tema",
-			"payload": { "headline": "Správy", "subline": "Téma" }
+			"payload": {
+				"headline": "Správy",
+				"subline": "Téma"
+			},
+			"start": 0
 		},
 		{
 			"id": "piece-opening-mod",
@@ -293,7 +349,11 @@
 			"partId": "part-gfx-mod",
 			"name": "L3D Moderátor",
 			"pieceType": "l3d-mod",
-			"payload": { "name": "Moderátor", "title": "Anchor" }
+			"payload": {
+				"name": "Moderátor",
+				"title": "Anchor"
+			},
+			"start": 0
 		},
 		{
 			"id": "piece-opening-headline",
@@ -303,7 +363,11 @@
 			"partId": "part-gfx-headline",
 			"name": "L3D Headline",
 			"pieceType": "l3d-headline",
-			"payload": { "headline": "Breaking", "subline": "Tonight" }
+			"payload": {
+				"headline": "Breaking",
+				"subline": "Tonight"
+			},
+			"start": 0
 		},
 		{
 			"id": "piece-opening-logo",
@@ -313,7 +377,8 @@
 			"partId": "part-gfx-tema",
 			"name": "Logo Bug",
 			"pieceType": "logo-bug",
-			"payload": {}
+			"payload": {},
+			"start": 0
 		}
 	]
 }

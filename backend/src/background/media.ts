@@ -1,12 +1,16 @@
 import fs from 'fs/promises'
 import path from 'path'
+import process from 'node:process'
 import type { MediaFileEntry } from './interfaces'
+import { normalizeBaseUrl, readApplicationSettingsSync } from './settingsResolver'
 
 const DEFAULT_INGEST_MEDIA_ROOT = '../ingest'
 const DEFAULT_SUBDIR = 'clips'
+const DEFAULT_PREVIEW_BASE_URL = 'http://localhost:3010/demo-assets'
 
 export function getIngestMediaRoot(): string {
-	const configured = process.env.INGEST_MEDIA_ROOT?.trim()
+	const settings = readApplicationSettingsSync()
+	const configured = settings?.ingestMediaRoot?.trim() || process.env.INGEST_MEDIA_ROOT?.trim()
 	if (configured) {
 		return path.resolve(configured)
 	}
@@ -14,7 +18,12 @@ export function getIngestMediaRoot(): string {
 }
 
 export function getPreviewBaseUrl(): string {
-	return process.env.PREVIEW_BASE_URL ?? 'http://localhost:3010/demo-assets'
+	const settings = readApplicationSettingsSync()
+	const configured = settings?.previewBaseUrl?.trim() || process.env.PREVIEW_BASE_URL?.trim()
+	if (configured) {
+		return normalizeBaseUrl(configured)
+	}
+	return DEFAULT_PREVIEW_BASE_URL
 }
 
 function resolveIngestSubdir(rundownId: string, subdir: string): string {

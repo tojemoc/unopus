@@ -1,6 +1,6 @@
 import type { Application, Request, Response } from 'express'
 import { getUserFromSession, parseSessionCookie } from '../background/auth/authStore'
-import { getPreviewBaseUrl } from '../background/media'
+import { getIngestMediaRoot, getPreviewBaseUrl } from '../background/media'
 
 function getSessionUser(req: Request) {
 	const sessionId = parseSessionCookie(req.headers.cookie)
@@ -15,7 +15,8 @@ export function registerConfigRoutes(app: Application): void {
 		}
 
 		res.json({
-			previewBaseUrl: getPreviewBaseUrl()
+			previewBaseUrl: getPreviewBaseUrl(),
+			ingestMediaRoot: getIngestMediaRoot()
 		})
 	})
 }
