@@ -38,11 +38,8 @@ export default function TemplateRundownCard({
 	const hasSegments = segments.length > 0
 
 	return (
-		<Card className="mb-2 shadow-sm border-0" style={{ backgroundColor: 'rgba(0, 0, 0, 0.4)' }}>
-			<Card.Header
-				className="py-2 rounded text-white rundown-header"
-				style={{ backgroundColor: '#2689ba', border: 'none' }}
-			>
+		<Card className="mb-2 shadow-sm border-0 template-rundown-card">
+			<Card.Header className="py-2 rounded template-rundown-card__header rundown-header">
 				<Stack direction="horizontal" gap={2} style={{ alignItems: 'center' }}>
 					{
 						<Button
@@ -53,9 +50,9 @@ export default function TemplateRundownCard({
 							style={{ ...(!hasSegments ? { opacity: 0, pointerEvents: 'none' } : {}) }}
 						>
 							{isExpanded ? (
-								<BsChevronDown className="text-white" />
+								<BsChevronDown />
 							) : (
-								<BsChevronRight className="text-white" />
+								<BsChevronRight />
 							)}
 						</Button>
 					}
@@ -63,13 +60,11 @@ export default function TemplateRundownCard({
 					<Card.Title className="mb-0 fw-semibold text-truncate">{rundown.name}</Card.Title>
 
 					{hasSegments && (
-						<Badge bg="white" className="ms-1" style={{ color: '#2689ba' }}>
-							{segments.length}
-						</Badge>
+						<Badge className="ms-1 template-rundown-card__badge">{segments.length}</Badge>
 					)}
 
 					<div className="ms-auto rundown-import-action">
-						<Button size="sm" variant="outline-white" onClick={() => setShowConfirm(true)}>
+						<Button size="sm" variant="outline-light" onClick={() => setShowConfirm(true)}>
 							<BsBoxArrowInUp aria-hidden className="icon-md" /> Import rundown
 						</Button>
 					</div>

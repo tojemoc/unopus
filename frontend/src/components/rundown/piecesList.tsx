@@ -123,7 +123,7 @@ function PieceRow({
 			<td>
 				<ReadinessBadge state={pieceReadiness.state} tooltip={pieceReadiness.tooltip} compact />
 			</td>
-			<td className="piece-type" style={{ backgroundColor: manifest?.colour }}>
+			<td className="piece-type piece-type-chip" style={{ backgroundColor: manifest?.colour }}>
 				{manifest?.shortName || piece.pieceType}
 			</td>
 			<td className="piece-name">{piece.name}</td>

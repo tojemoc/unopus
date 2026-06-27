@@ -1,0 +1,124 @@
+/**
+ * Semantic theme tokens — always use paired surface + text tokens.
+ * Never set `color` without a matching surface token on the same element.
+ */
+
+[data-theme='dark'] {
+	color-scheme: dark;
+
+	--re-bg: #121722;
+	--re-surface-1: #1a2130;
+	--re-surface-2: #222b3d;
+	--re-surface-inset: #171d2a;
+	--re-border: #2f3a4f;
+	--re-border-subtle: rgb(47 58 79 / 65%);
+
+	--re-text: #e6edf7;
+	--re-text-muted: #9aa7bd;
+	--re-text-subtle: #6b7a94;
+	--re-text-on-accent: #ffffff;
+	--re-text-on-chip: #ffffff;
+	--re-text-on-preview: #e6edf7;
+
+	--re-link: #79a8ff;
+	--re-link-hover: #a8c7ff;
+	--re-accent: #4c8dff;
+	--re-accent-subtle: #2a4166;
+	--re-focus: #4c8dff;
+
+	--re-row-hover: #263149;
+	--re-row-active: #2f3f5c;
+	--re-preview-bg: #0a0c10;
+
+	--re-btn-subtle-bg: #141619;
+	--re-btn-subtle-fg: #cccccc;
+	--re-btn-subtle-border: #666666;
+	--re-btn-subtle-hover-fg: #ffffff;
+
+	--re-status-ready-bg: #1f6f43;
+	--re-status-ready-fg: #d8ffe8;
+	--re-status-ready-border: #2ea05a;
+
+	--re-status-notready-bg: #6b1d1d;
+	--re-status-notready-fg: #ffd8d8;
+	--re-status-notready-border: #c93c3c;
+
+	--re-status-na-bg: #2a3140;
+	--re-status-na-fg: #9aa7bd;
+	--re-status-na-border: #3d4657;
+
+	--re-sync-ok: #198754;
+	--re-sync-pending: #ffc107;
+	--re-sync-error: #dc3545;
+
+	--re-rundown-bar-bg: #2689ba;
+	--re-rundown-bar-fg: #ffffff;
+
+	--re-card-bg: #161b22;
+	--re-card-border: #30363d;
+	--re-modal-bg: #1a1d20;
+	--re-modal-fg: #e6edf7;
+}
+
+[data-theme='light'] {
+	color-scheme: light;
+
+	--re-bg: #e9edf3;
+	--re-surface-1: #ffffff;
+	--re-surface-2: #f3f6fa;
+	--re-surface-inset: #e3e9f2;
+	--re-border: #c5ced9;
+	--re-border-subtle: rgb(0 0 0 / 8%);
+
+	--re-text: #1a2333;
+	--re-text-muted: #5a677a;
+	--re-text-subtle: #7b8798;
+	--re-text-on-accent: #ffffff;
+	--re-text-on-chip: #ffffff;
+	--re-text-on-preview: #e6edf7;
+
+	--re-link: #1856c9;
+	--re-link-hover: #0f46ad;
+	--re-accent: #1856c9;
+	--re-accent-subtle: #dce8ff;
+	--re-focus: #1856c9;
+
+	--re-row-hover: #e4eaf4;
+	--re-row-active: #d3dff3;
+	--re-preview-bg: #1a2333;
+
+	--re-btn-subtle-bg: #eef2f7;
+	--re-btn-subtle-fg: #4a5568;
+	--re-btn-subtle-border: #b8c2d0;
+	--re-btn-subtle-hover-fg: #1a2333;
+
+	--re-status-ready-bg: #d4edda;
+	--re-status-ready-fg: #0f5132;
+	--re-status-ready-border: #75b798;
+
+	--re-status-notready-bg: #f8d7da;
+	--re-status-notready-fg: #842029;
+	--re-status-notready-border: #ea868f;
+
+	--re-status-na-bg: #e9ecef;
+	--re-status-na-fg: #5a677a;
+	--re-status-na-border: #ced4da;
+
+	--re-sync-ok: #198754;
+	--re-sync-pending: #cc9a06;
+	--re-sync-error: #dc3545;
+
+	--re-rundown-bar-bg: #1f7ab5;
+	--re-rundown-bar-fg: #ffffff;
+
+	--re-card-bg: #ffffff;
+	--re-card-border: #c5ced9;
+	--re-modal-bg: #ffffff;
+	--re-modal-fg: #1a2333;
+}
+
+html,
+body {
+	background: var(--re-bg);
+	color: var(--re-text);
+}

@@ -1,15 +1,4 @@
 .rundown-navbar {
-	background: #2689ba;
-	flex-shrink: 0;
-	min-height: auto;
-
-	.timing .label {
-		font-size: 0.8em;
-	}
-
-	.navbar-brand,
-	.nav-link {
-		padding-top: 0.25rem;
-		padding-bottom: 0.25rem;
-	}
+	background: var(--re-rundown-bar-bg);
+	color: var(--re-rundown-bar-fg);
 }

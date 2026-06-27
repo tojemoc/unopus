@@ -123,7 +123,7 @@ export function SidebarSegment({
 							duration={segmentDuration}
 							linkTo="/rundown/$rundownId/segment/$segmentId"
 							linkParams={{ rundownId: segment.rundownId, segmentId: segment.id }}
-							buttonClassName="segment-button copy-item text-light"
+							buttonClassName="segment-button copy-item sidebar-item-header"
 							handleCopy={handleCopySegment}
 							deleteButton={
 								<DeleteSegmentButton

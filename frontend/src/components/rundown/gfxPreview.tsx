@@ -69,15 +69,7 @@ export function GfxPreview({
 			<h3 className="mb-2">GFX Preview</h3>
 			{error && <div className="text-warning small mb-2">Preview unavailable: {error}</div>}
 			{previewUrl ? (
-				<div
-					style={{
-						position: 'relative',
-						width: '100%',
-						aspectRatio: '16 / 9',
-						background: '#000',
-						border: '1px solid #444'
-					}}
-				>
+				<div className="gfx-preview-frame">
 					<iframe
 						key={previewUrl}
 						title={`GFX preview for ${piece.name}`}
