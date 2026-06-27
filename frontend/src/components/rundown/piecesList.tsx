@@ -10,6 +10,9 @@ import { createSelector } from '@reduxjs/toolkit'
 import { IconButton } from '../iconButton'
 import { useToasts } from '../toasts/useToasts'
 import { findTypeManifest, normalizeTypeId, toolbarManifests } from '~/util/typeManifest'
+import { useRundownReadinessContext } from '~/hooks/RundownReadinessContext'
+import { ReadinessBadge } from './readinessBadge'
+import { getPieceReadinessState } from './sidebar/partRow'
 
 const selectPiecesByPart = createSelector(
 	[
@@ -30,16 +33,27 @@ export function PiecesList({ part }: { part: Part }) {
 	const partIds = useMemo(() => ({ rundownId, segmentId, partId }), [rundownId, segmentId, partId])
 
 	const pieces = useAppSelector((state) => selectPiecesByPart(state, partIds))
+	const { readiness } = useRundownReadinessContext()
 
 	return (
-		<table className="rundown-pieces-list">
+		<table className="pieces-table rundown-pieces-list">
+			<thead>
+				<tr>
+					<th>Status</th>
+					<th>Type</th>
+					<th>Item</th>
+					<th aria-label="Copy" />
+					<th>Start</th>
+					<th>Dur</th>
+				</tr>
+			</thead>
 			<tbody>
 				{pieces.map((piece: Piece) => (
-					<PieceRow key={piece.id} piece={piece} />
+					<PieceRow key={piece.id} piece={piece} readiness={readiness} />
 				))}
 
 				<tr>
-					<td colSpan={4}>
+					<td colSpan={6}>
 						<NewPieceButtons part={part} existingPieces={pieces} />
 					</td>
 				</tr>
@@ -48,7 +62,13 @@ export function PiecesList({ part }: { part: Part }) {
 	)
 }
 
-function PieceRow({ piece }: { piece: Piece }) {
+function PieceRow({
+	piece,
+	readiness
+}: {
+	piece: Piece
+	readiness: ReturnType<typeof useRundownReadinessContext>['readiness']
+}) {
 	const dispatch = useAppDispatch()
 	const navigate = useNavigate()
 	const toasts = useToasts()
@@ -56,6 +76,8 @@ function PieceRow({ piece }: { piece: Piece }) {
 	const manifest = useAppSelector((state) =>
 		findTypeManifest(state.typeManifests.manifests, piece.pieceType)
 	)
+
+	const pieceReadiness = getPieceReadinessState(piece.id, readiness)
 
 	const pieceRowClick = () => {
 		navigate({
@@ -98,7 +120,12 @@ function PieceRow({ piece }: { piece: Piece }) {
 
 	return (
 		<tr onClick={pieceRowClick}>
-			<td className="piece-type" style={{ backgroundColor: manifest?.colour }}>
+			<td>
+				{pieceReadiness ? (
+					<ReadinessBadge state={pieceReadiness.state} tooltip={pieceReadiness.tooltip} compact />
+				) : null}
+			</td>
+			<td className="piece-type piece-type-chip" style={{ backgroundColor: manifest?.colour }}>
 				{manifest?.shortName || piece.pieceType}
 			</td>
 			<td className="piece-name">{piece.name}</td>

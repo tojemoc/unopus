@@ -1,0 +1,47 @@
+.readiness-badge {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 4.5rem;
+	padding: 0.12rem 0.45rem;
+	border-radius: 2px;
+	font-size: 0.62rem;
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	line-height: 1.2;
+	white-space: nowrap;
+}
+
+.readiness-badge--ready {
+	background: var(--re-status-ready-bg);
+	color: var(--re-status-ready-fg);
+	border: 1px solid var(--re-status-ready-border);
+}
+
+.readiness-badge--not-ready {
+	background: var(--re-status-notready-bg);
+	color: var(--re-status-notready-fg);
+	border: 1px solid var(--re-status-notready-border);
+}
+
+.readiness-badge--na {
+	background: var(--re-status-na-bg);
+	color: var(--re-status-na-fg);
+	border: 1px solid var(--re-status-na-border);
+}
+
+.story-table .readiness-badge {
+	min-width: 4.25rem;
+	font-size: 0.58rem;
+}
+
+.pieces-table .readiness-badge {
+	min-width: 4rem;
+}
+
+.readiness-badge-tooltip__content {
+	display: block;
+	white-space: pre-line;
+	text-align: left;
+}

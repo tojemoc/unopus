@@ -35,20 +35,10 @@ function RouteComponent() {
 					key={`form_${partId}`}
 					style={{ overflowY: 'auto', alignItems: 'stretch' }}
 				>
-					<Stack
-						style={{
-							backgroundColor: 'rgb(30, 30, 30)',
-							flexGrow: 2,
-							minHeight: '100%'
-						}}
-						className="p-4"
-					>
+					<Stack style={{ flexGrow: 2, minHeight: '100%' }} className="re-surface-form p-4">
 						<PartPropertiesForm key={`partForm_${partId}`} part={part} />
 					</Stack>
-					<Stack
-						style={{ backgroundColor: '#000000', flexGrow: 1, minHeight: '100%' }}
-						className="p-4"
-					>
+					<Stack style={{ flexGrow: 1, minHeight: '100%' }} className="re-surface-panel p-4">
 						<PiecesList key={`piecesList_${partId}`} part={part} />
 					</Stack>
 				</Stack>

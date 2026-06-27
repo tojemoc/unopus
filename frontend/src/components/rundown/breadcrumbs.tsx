@@ -82,10 +82,7 @@ export function RundownBreadcrumbs({ rundownId }: { rundownId: string }) {
 	}
 
 	return (
-		<Navbar
-			className="text-white"
-			style={{ height: '2.5em', fontSize: '.75em', backgroundColor: '#2E2E2E' }}
-		>
+		<Navbar className="rundown-breadcrumbs">
 			<Container fluid>
 				<Nav className="">
 					<NavbarText key={`${partId}-sep`}>/</NavbarText>

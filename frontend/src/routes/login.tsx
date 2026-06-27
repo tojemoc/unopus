@@ -1,8 +1,9 @@
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 import { useState, type FormEvent } from 'react'
-import { Alert, Button, Card, Container, Form } from 'react-bootstrap'
+import { Alert, Button, Card, Container, Form, Stack } from 'react-bootstrap'
 import { useAppDispatch, useAppSelector } from '~/store/app'
 import { checkAuth, login } from '~/store/auth'
+import { ThemeToggle } from '~/components/theme/ThemeToggle'
 
 export const Route = createFileRoute('/login')({
 	beforeLoad: async ({ context }) => {
@@ -34,10 +35,14 @@ function LoginPage() {
 
 	return (
 		<Container className="d-flex align-items-center justify-content-center" style={{ minHeight: '100vh' }}>
-			<Card style={{ width: '100%', maxWidth: '26rem' }} className="p-2">
-				<Card.Body>
-					<h1 className="h3 mb-1">Duopus</h1>
-					<p className="text-muted mb-4">Sign in to edit rundowns</p>
+			<Stack gap={3} style={{ width: '100%', maxWidth: '26rem' }}>
+				<div className="d-flex justify-content-end">
+					<ThemeToggle />
+				</div>
+				<Card className="p-2">
+					<Card.Body>
+						<h1 className="h3 mb-1">Unopus</h1>
+						<p className="text-muted mb-4">Sign in to edit rundowns</p>
 					{authError && <Alert variant="danger">{authError}</Alert>}
 					<Form onSubmit={onSubmit}>
 						<Form.Group className="mb-3">
@@ -65,6 +70,7 @@ function LoginPage() {
 					</Form>
 				</Card.Body>
 			</Card>
+			</Stack>
 		</Container>
 	)
 }
