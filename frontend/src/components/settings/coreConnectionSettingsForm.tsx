@@ -162,7 +162,8 @@ export function CoreConnectionSettingsForm({ settings }: { settings: Application
 								/>
 								<Form.Text className="text-muted">
 									Base URL for GFX preview iframe templates (must serve{' '}
-									<code>&lt;template&gt;/index.html</code> files, not the Unopus app). Example:{' '}
+									<code>&lt;template&gt;/index.html</code> files, not the Sofie Rundown Editor
+									app). Example:{' '}
 									<code>https://duopus.tjm.sk/demo-assets</code>. Overrides{' '}
 									<code>PREVIEW_BASE_URL</code> in backend <code>.env</code> when set. If you use
 									nginx in front of the app, ensure <code>/demo-assets/</code> is served as static
