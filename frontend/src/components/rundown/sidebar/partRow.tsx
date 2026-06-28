@@ -1,7 +1,6 @@
 import { useNavigate, useMatchRoute } from '@tanstack/react-router'
 import { useAppSelector } from '~/store/app'
-import type { Part, PieceReadiness, RundownReadiness, Segment } from '~backend/background/interfaces'
-import { PartTypeButtons } from './partTypeButtons'
+import type { Part, PieceReadiness, RundownReadiness } from '~backend/background/interfaces'
 import { findTypeManifest } from '~/util/typeManifest'
 import { displayTime } from './displayTime'
 import { ReadinessBadge, getPieceReadinessTooltip } from '../readinessBadge'
@@ -45,14 +44,10 @@ function getStoryReadiness(
 
 export function SidebarPartRow({
 	part,
-	segment,
-	insertRank,
 	readiness,
 	partPieces
 }: {
 	part: Part
-	segment: Segment
-	insertRank: number
 	readiness: RundownReadiness | null
 	partPieces: { id: string; partId: string }[]
 }) {
@@ -67,8 +62,8 @@ export function SidebarPartRow({
 		matchRoute({
 			to: '/rundown/$rundownId/segment/$segmentId/part/$partId',
 			params: {
-				rundownId: segment.rundownId,
-				segmentId: segment.id,
+				rundownId: part.rundownId,
+				segmentId: part.segmentId,
 				partId: part.id
 			}
 		})
@@ -80,51 +75,46 @@ export function SidebarPartRow({
 		void navigate({
 			to: '/rundown/$rundownId/segment/$segmentId/part/$partId',
 			params: {
-				rundownId: segment.rundownId,
-				segmentId: segment.id,
+				rundownId: part.rundownId,
+				segmentId: part.segmentId,
 				partId: part.id
 			}
 		})
 	}
 
 	return (
-		<div className="sidebar-part-wrapper">
-			<div
-				className={`story-row ${isActive ? 'active' : ''}`}
-				role="row"
-				tabIndex={0}
-				onClick={openPart}
-				onKeyDown={(event) => {
-					if (event.key === 'Enter' || event.key === ' ') {
-						event.preventDefault()
-						openPart()
-					}
-				}}
-				style={{ borderLeftColor: partTypeManifest?.colour ?? '#666' }}
-			>
-				<div className="col-status" role="cell">
-					{storyReadiness ? (
-						<ReadinessBadge state={storyReadiness.state} tooltip={storyReadiness.tooltip} compact />
-					) : null}
-				</div>
-				<div className="col-type" role="cell">
-					<span
-						className="story-type-chip"
-						style={{ backgroundColor: partTypeManifest?.colour ?? '#666' }}
-						title={partTypeManifest?.name ?? part.partType}
-					>
-						{partTypeManifest?.shortName ?? part.partType.slice(0, 4).toUpperCase()}
-					</span>
-				</div>
-				<div className="col-title" role="cell" title={part.name}>
-					{part.name}
-				</div>
-				<div className="col-duration" role="cell">
-					{part.duration ? displayTime(part.duration) : '--:--'}
-				</div>
+		<div
+			className={`story-row ${isActive ? 'active' : ''}`}
+			role="row"
+			tabIndex={0}
+			onClick={openPart}
+			onKeyDown={(event) => {
+				if (event.key === 'Enter' || event.key === ' ') {
+					event.preventDefault()
+					openPart()
+				}
+			}}
+			style={{ borderLeftColor: partTypeManifest?.colour ?? '#666' }}
+		>
+			<div className="col-status" role="cell">
+				{storyReadiness ? (
+					<ReadinessBadge state={storyReadiness.state} tooltip={storyReadiness.tooltip} compact />
+				) : null}
 			</div>
-			<div className="part-button add-button-container">
-				<PartTypeButtons segment={segment} rank={insertRank} />
+			<div className="col-type" role="cell">
+				<span
+					className="story-type-chip"
+					style={{ backgroundColor: partTypeManifest?.colour ?? '#666' }}
+					title={partTypeManifest?.name ?? part.partType}
+				>
+					{partTypeManifest?.shortName ?? part.partType.slice(0, 4).toUpperCase()}
+				</span>
+			</div>
+			<div className="col-title" role="cell" title={part.name}>
+				{part.name}
+			</div>
+			<div className="col-duration" role="cell">
+				{part.duration ? displayTime(part.duration) : '--:--'}
 			</div>
 		</div>
 	)
