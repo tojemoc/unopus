@@ -153,8 +153,7 @@
 
 	.segment-button.add-button,
 	.segment-footer-button,
-	.sidebar-segment .add-button-container .add-button,
-	.sidebar-part-wrapper .add-button-container .add-button {
+	.sidebar-segment .add-button-container .add-button {
 		background: var(--re-btn-subtle-bg);
 		color: var(--re-btn-subtle-fg);
 		border-color: var(--re-btn-subtle-bg);
@@ -212,43 +211,6 @@
 			font-size: 0.8em;
 			padding: 0.2em 0.7em;
 			border-radius: 2em;
-		}
-		.sidebar-part-wrapper {
-			position: relative;
-			margin-bottom: 0.15em;
-
-			.part-edit-hint {
-				font-size: 0.65em;
-				font-weight: normal;
-			}
-
-			.add-button-container {
-				width: 100%;
-				position: absolute;
-				height: 0.25em;
-				top: 2.1em;
-				z-index: 5;
-				.add-button {
-					all: unset;
-					position: absolute;
-					top: -1.05em;
-					right: 4.5em;
-					z-index: 6;
-					cursor: pointer;
-					text-align: center;
-					font-size: 0.7em;
-					border-radius: 2em;
-					padding-right: 0.7em;
-					padding-left: 0.2em;
-					transition: opacity 0.5s ease-out;
-					opacity: 0;
-				}
-				&:hover .add-button,
-				.add-button:hover {
-					transition: opacity 0.2s ease-out;
-					opacity: 1;
-				}
-			}
 		}
 		.segment-buttons {
 			position: static;

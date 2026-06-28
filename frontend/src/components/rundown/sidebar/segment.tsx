@@ -12,9 +12,7 @@ import { useToasts } from '~/components/toasts/useToasts'
 import { BsCaretDownFill, BsFillTrashFill, BsTrash } from 'react-icons/bs'
 import { Stack, type ButtonProps } from 'react-bootstrap'
 import { HoverIconButton } from '~/components/rundownList/hoverIconButton'
-import { PartTypeButtons } from './partTypeButtons'
 import { DeleteSegmentButton } from '../deleteSegmentButton'
-import { computeInsertRank } from '~/util/lib'
 
 const selectAllParts = (state: RootState) => state.parts.parts
 const selectAllPieces = (state: RootState) => state.pieces.pieces
@@ -42,9 +40,6 @@ export function SidebarSegment({
 	const parts = useAppSelector((s) => selectPartsBySegmentId(s, segment.id))
 	const allPieces = useAppSelector(selectAllPieces)
 	const sortedParts = [...parts].sort((a, b) => a.rank - b.rank)
-	const partInsertRankById = Object.fromEntries(
-		sortedParts.map((part) => [part.id, computeInsertRank(sortedParts, part.id)])
-	)
 
 	const segmentDuration = sortedParts.reduce((acc, part) => acc + (part.duration ?? 0), 0)
 
@@ -160,8 +155,6 @@ export function SidebarSegment({
 							Component={({ data }) => (
 								<SidebarPartRow
 									part={data}
-									segment={segment}
-									insertRank={partInsertRankById[data.id]}
 									readiness={readiness}
 									partPieces={allPieces}
 								/>
@@ -169,9 +162,9 @@ export function SidebarSegment({
 						/>
 					</div>
 				) : (
-					<Stack className="add-button-container px-2 py-2">
-						<PartTypeButtons segment={segment} rank={0} />
-					</Stack>
+					<div className="story-table-empty px-2 py-2 text-muted">
+						No stories yet — use the toolbar above to add one.
+					</div>
 				)}
 			</div>
 		</div>
