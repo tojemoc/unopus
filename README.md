@@ -64,6 +64,87 @@ yarn build
 yarn lint
 ```
 
+### Piece export regression test
+
+```
+yarn workspace @sofie-rundown-editor/backend test
+```
+
+## SPRÁVY v3 / ingest contract
+
+Bundled manifests and the smoke rundown live in [`assets/`](assets/):
+
+- `sofie-rundown-editor-piece-types.json`
+- `sofie-rundown-editor-part-types.json`
+- `sofie-rundown-editor-segment-types.json`
+- `spravy-v3-smoke-rundown.json` (external id `spravy-v3-smoke`)
+
+These should stay aligned with [`sofie-demo-blueprints/assets/`](https://github.com/SuperFlyTV/sofie-demo-blueprints/tree/main/assets). This repo is the source of truth for SPRÁVY v3 types; copy updated JSON into blueprints when publishing.
+
+**After upgrading**, open **Settings → Connection** and click **Reload type manifests from assets** to upsert built-in piece/part/segment types without removing custom types.
+
+### Media ingest layout
+
+Stage clips under:
+
+```
+<INGEST_MEDIA_ROOT>/spravy/<rundownId>/clips/<file>.mp4
+```
+
+Set `INGEST_MEDIA_ROOT` in `backend/.env`, or override it in **Settings → Connection**. Paths in piece payloads use POSIX form: `spravy/<rundownId>/clips/<file>.mp4`.
+
+### GFX preview
+
+Preview iframes load templates from `PREVIEW_BASE_URL` (default `http://localhost:3010/demo-assets`). Override in **Settings → Connection** for production template hosts.
+
+The build copies lightweight preview HTML stubs into `frontend/dist/demo-assets/` so they ship with the static bundle. Each piece type with `previewTemplate` loads:
+
+```text
+{previewBaseUrl}/{previewTemplate}/index.html?{payload query params}
+```
+
+**Production behind nginx:** if nginx serves `frontend/dist` directly, add a location so `/demo-assets/` does not fall through to the SPA `index.html` (which causes MIME type errors on `./assets/*.js`):
+
+```nginx
+# Serve GFX preview stubs before the SPA catch-all
+location /demo-assets/ {
+    alias /path/to/frontend/dist/demo-assets/;
+    try_files $uri =404;
+}
+
+location / {
+    root /path/to/frontend/dist;
+    try_files $uri $uri/ /index.html;
+}
+
+# API and sockets still proxy to the Node backend on 3010
+location /api/ {
+    proxy_pass http://127.0.0.1:3010;
+}
+location /socket.io/ {
+    proxy_pass http://127.0.0.1:3010;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+}
+```
+
+Alternatively, proxy all traffic to the Node backend (`yarn start` on port 3010) and skip serving `dist` from nginx.
+
+For **full-fidelity** previews (real Vue templates), run `yarn serve` from `sofie-demo-assets` and set the preview base URL to that host (e.g. `http://192.168.1.115:8080`).
+
+Pieces exported to Sofie use:
+
+```json
+{
+  "objectType": "<pieceType>",
+  "objectTime": 0,
+  "attributes": { "...payload": "...", "adlib": false }
+}
+```
+
+Undefined `start` is treated as timeline position `0`, not AdLib.
+
 ### Making a new release
 
 1. Merge everything for the release in main

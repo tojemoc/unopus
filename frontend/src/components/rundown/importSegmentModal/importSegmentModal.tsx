@@ -90,11 +90,11 @@ export default function ImportSegmentModal({
 	}
 
 	return (
-		<Modal show={rank !== undefined} onHide={onClose} size="lg">
-			<Modal.Header closeButton style={{ backgroundColor: '#1a1d20ff' }}>
+		<Modal show={rank !== undefined} onHide={onClose} size="lg" className="re-modal-surface">
+			<Modal.Header closeButton>
 				<Modal.Title>Import Segments</Modal.Title>
 			</Modal.Header>
-			<Modal.Body style={{ backgroundColor: '#1a1d20ff' }}>
+			<Modal.Body>
 				{templateStatus === 'pending' ? (
 					<div className="d-flex justify-content-center py-3">
 						<Spinner animation="border" />
@@ -120,7 +120,7 @@ export default function ImportSegmentModal({
 					<p className="text-muted fst-italic">No template segments or rundowns available</p>
 				)}
 			</Modal.Body>
-			<Modal.Footer style={{ backgroundColor: '#1a1d20ff' }}>
+			<Modal.Footer>
 				<Button variant="secondary" onClick={onClose} disabled={loading}>
 					Cancel
 				</Button>

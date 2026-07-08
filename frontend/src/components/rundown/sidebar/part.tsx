@@ -1,25 +1,24 @@
 import { useNavigate } from '@tanstack/react-router'
-import { useAppDispatch } from '~/store/app'
+import { useAppDispatch, useAppSelector } from '~/store/app'
 import { copyPart } from '~/store/parts'
 import type { Part, Segment } from '~backend/background/interfaces'
 import { SidebarElementHeader } from './sidebarElementHeader'
 import { useToasts } from '~/components/toasts/useToasts'
-import { BsFillTrashFill, BsPlus, BsTrash } from 'react-icons/bs'
+import { BsFillTrashFill, BsTrash } from 'react-icons/bs'
+import { PartTypeButtons } from './partTypeButtons'
 import { DeletePartButton } from '../deletePartButton'
 import type { ButtonProps } from 'react-bootstrap'
 import { HoverIconButton } from '~/components/rundownList/hoverIconButton'
-import { useAppSelector } from '~/store/app'
+import { findTypeManifest } from '~/util/typeManifest'
 
 export function SidebarPart({
 	part,
 	segment,
-	handleAddPart,
 	insertRank,
 	lastEdit
 }: {
 	part: Part
 	segment: Segment
-	handleAddPart: (rank: number) => Promise<string | void>
 	insertRank: number
 	lastEdit?: { displayName: string; editedAt: number }
 }) {
@@ -27,7 +26,7 @@ export function SidebarPart({
 	const navigate = useNavigate()
 	const toasts = useToasts()
 	const partTypeManifest = useAppSelector((state) =>
-		state.typeManifests.manifests?.find((m) => m.id === part.partType)
+		findTypeManifest(state.typeManifests.manifests, part.partType)
 	)
 
 	const handleCopyPart = () =>
@@ -94,10 +93,7 @@ export function SidebarPart({
 				/>
 			</div>
 			<div className="part-button add-button-container">
-				<button className="part-button add-button" onClick={() => handleAddPart(insertRank)}>
-					<BsPlus className="icon-lg" aria-hidden />
-					Add Part
-				</button>
+				<PartTypeButtons segment={segment} rank={insertRank} />
 			</div>
 		</div>
 	)

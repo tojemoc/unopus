@@ -78,6 +78,8 @@ export interface Part extends IHasPayload {
 	script?: string
 	duration?: number
 	partType: string
+	/** True when the part was created from a part-type preset button */
+	fromPreset?: boolean
 }
 export interface Piece extends IHasPayload {
 	/** Id of the adlib as reported by the ingest source. Must be unique for each adlib */
@@ -133,13 +135,31 @@ export interface DBPiece {
 export enum ManifestFieldType {
 	String = 'string',
 	Number = 'number',
-	Boolean = 'boolean'
+	Boolean = 'boolean',
+	MediaPick = 'mediaPick'
 }
 export enum TypeManifestEntity {
 	Rundown = 'rundown',
 	Segment = 'segment',
 	Part = 'part',
 	Piece = 'piece'
+}
+
+export interface DefaultPieceTemplate {
+	pieceType: string
+	name?: string
+	payload?: Record<string, PayloadValue>
+	/** When true, piece is not auto-created — user can add via piece buttons */
+	optional?: boolean
+}
+
+export interface DefaultPartTemplate {
+	partType: string
+	name?: string
+	duration?: number
+	script?: string
+	/** Override the part type manifest defaultPieces for this instance */
+	defaultPieces?: DefaultPieceTemplate[]
 }
 
 export interface TypeManifest {
@@ -149,6 +169,18 @@ export interface TypeManifest {
 	shortName: string
 	colour: string
 	includeTypeInName?: boolean
+	/** HTML template folder name for GFX preview iframe (e.g. l3d-tema) */
+	previewTemplate?: string
+	/** Label shown on creation toolbar buttons */
+	buttonLabel?: string
+	/** Editorial type string sent to Sofie ingest (part types) */
+	ingestType?: string
+	/** Show this type on segment/part creation toolbars */
+	showInToolbar?: boolean
+	/** Part types: pieces created automatically when adding this part type */
+	defaultPieces?: DefaultPieceTemplate[]
+	/** Segment types: parts created automatically when adding this segment type */
+	defaultParts?: DefaultPartTemplate[]
 
 	payload: PayloadManifest[]
 }
@@ -163,11 +195,57 @@ export interface PayloadManifest {
 	label: string
 	type: ManifestFieldType
 	includeInName?: boolean
+	/** Subfolder under spravy/<rundownId>/ for mediaPick fields (default: clips) */
+	subdir?: string
+}
+
+export interface MediaFileEntry {
+	name: string
+	path: string
+	size?: number
+	mtime?: number
+}
+
+/** Single media field readiness (MOS-style clip status). */
+export interface MediaRequirement {
+	fieldId: string
+	path: string
+	ready: boolean
+	reason?: string
+	/** ILU / template video needs a WebM sibling for Caspar CEF playback. */
+	requiresCefWebm?: boolean
+}
+
+export interface PieceReadiness {
+	pieceId: string
+	partId: string
+	ready: boolean
+	requirements: MediaRequirement[]
+}
+
+export interface RundownReadiness {
+	pieces: Record<string, PieceReadiness>
+	parts: Record<
+		string,
+		{
+			ready: boolean
+			mediaPieceCount: number
+			readyMediaPieceCount: number
+		}
+	>
+	summary: {
+		totalMediaPieces: number
+		readyMediaPieces: number
+	}
 }
 
 export interface ApplicationSettings {
 	coreUrl?: string
 	corePort?: number
+	/** Overrides INGEST_MEDIA_ROOT env when set (absolute or relative path). */
+	ingestMediaRoot?: string
+	/** Overrides PREVIEW_BASE_URL env when set. */
+	previewBaseUrl?: string
 }
 export interface DBSettings {
 	id: string
@@ -265,7 +343,10 @@ export interface MutatedPiece {
 	position: number | undefined
 }
 
-export type MutationPartCreate = SetOptional<Part, 'id' | 'rank'>
+export type MutationPartCreate = SetOptional<Part, 'id' | 'rank'> & {
+	/** Override defaultPieces from the part type manifest for this create only */
+	presetPieces?: DefaultPieceTemplate[]
+}
 
 export type MutationPartCopy = SetOptional<
 	Pick<Part, 'id' | 'rundownId' | 'segmentId'>,
@@ -334,7 +415,10 @@ export type MutationRundownDelete = Pick<Rundown, 'id'>
 
 export type MutationSegmentsRead = { rundownId: string } | { isTemplate: boolean }
 
-export type MutationSegmentCreate = SetOptional<Segment, 'id' | 'rank' | 'isTemplate'>
+export type MutationSegmentCreate = SetOptional<Segment, 'id' | 'rank' | 'isTemplate'> & {
+	/** When true, create default parts/pieces from the segment type manifest */
+	materializePreset?: boolean
+}
 
 export type MutationSegmentRead = Pick<Segment, 'id' | 'rundownId'>
 

@@ -1,6 +1,9 @@
+@import './theme/tokens';
 @import '~bootstrap/scss/bootstrap';
+@import './theme/bootstrap-overrides';
 
 @import 'react-datepicker/dist/react-datepicker.css';
+@import './styles/octopus-theme.scss';
 
 html,
 body {
@@ -8,7 +11,6 @@ body {
 }
 
 #root {
-	// display: flex;
 	height: 100%;
 }
 
@@ -28,7 +30,7 @@ body {
 	pointer-events: auto;
 }
 .split-button-divider .dropdown-toggle {
-	border-left: 1px solid var(--bs-dark);
+	border-left: 1px solid var(--re-border);
 }
 .icon-lg {
 	font-size: 1.5em;

@@ -1,4 +1,5 @@
 import express from 'express'
+import fs from 'fs'
 import http from 'http'
 import path from 'path'
 import { Server, Socket } from 'socket.io'
@@ -15,8 +16,15 @@ import { attachSocketAuth, type AuthenticatedSocket } from './background/auth/so
 import { getUserFromSession, parseSessionCookie } from './background/auth/authStore'
 import { registerAuthRoutes } from './routes/auth'
 import { registerEditsRoutes } from './routes/edits'
+import { registerMediaRoutes } from './routes/media'
+import { registerReadinessRoutes } from './routes/readiness'
+import { registerConfigRoutes } from './routes/config'
 
 const frontendPath = path.resolve(__dirname, '../../frontend/dist')
+const demoAssetsInDist = path.join(frontendPath, 'demo-assets')
+const demoAssetsPath = fs.existsSync(demoAssetsInDist)
+	? demoAssetsInDist
+	: path.resolve(__dirname, '../../demo-assets')
 
 const PUBLIC_API_PREFIXES = ['/api/auth/login']
 
@@ -69,6 +77,9 @@ export async function initSocketServer(port: number = 3010) {
 
 	registerAuthRoutes(app)
 	registerEditsRoutes(app)
+	registerMediaRoutes(app)
+	registerReadinessRoutes(app)
+	registerConfigRoutes(app)
 
 	if (io) {
 		type SocketIOHandler = (socket: Socket, io: Server) => void
@@ -101,6 +112,7 @@ export async function initSocketServer(port: number = 3010) {
 			handlers.map((handler: SocketIOHandler) => handler(socket, io))
 		})
 
+		app.use('/demo-assets', express.static(demoAssetsPath, { fallthrough: false }))
 		app.use(express.static(frontendPath))
 
 		app.get('/favicon.png', (_, res) => {
@@ -110,6 +122,10 @@ export async function initSocketServer(port: number = 3010) {
 		app.use((req, res, next) => {
 			if (req.method !== 'GET' || req.path.startsWith('/api/')) {
 				next()
+				return
+			}
+			if (req.path === '/demo-assets' || req.path.startsWith('/demo-assets/')) {
+				res.status(404).type('text/plain').send('GFX preview template not found')
 				return
 			}
 			res.sendFile(path.join(frontendPath, 'index.html'), (err) => {

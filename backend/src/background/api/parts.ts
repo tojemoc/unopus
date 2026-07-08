@@ -13,9 +13,15 @@ import {
 	MutationPartCopy,
 	MutationPartCopyResult,
 	MutationPartCloneFromSegmentToSegment,
-	TypeManifestEntity
+	TypeManifestEntity,
+	type DefaultPieceTemplate
 } from '../interfaces'
-import { mutations as typeManifestMutations } from './typeManifests'
+import { mutations as typeManifestMutations, resolveManifestId } from './typeManifests'
+import {
+	findTypeManifest,
+	getPartIngestType,
+	pieceNameFromManifest
+} from '../manifestMaterialize'
 import { db } from '../db'
 import { v4 as uuid } from 'uuid'
 import { coreHandler } from '../coreHandler'
@@ -29,6 +35,13 @@ import { recordEntityEdit } from '../auth/authStore'
 import type { AuthenticatedSocket } from '../auth/socketAuth'
 
 async function mutatePart(part: Part): Promise<MutatedPart> {
+	const { result: partTypeManifests } = await typeManifestMutations.read({
+		entityType: TypeManifestEntity.Part
+	})
+	const partManifestList = Array.isArray(partTypeManifests) ? partTypeManifests : []
+	const partManifest = findTypeManifest(partManifestList, part.partType)
+	const ingestType = getPartIngestType(part, partManifest)
+
 	return {
 		externalId: part.id,
 		name: part.name,
@@ -39,7 +52,7 @@ async function mutatePart(part: Part): Promise<MutatedPart> {
 			externalId: part.id,
 			rank: part.rank,
 			name: part.name,
-			type: part.partType,
+			type: ingestType,
 			float: part.float,
 			script: part.script,
 			duration: part.duration,
@@ -82,21 +95,28 @@ export const mutations = {
 			entityType: TypeManifestEntity.Part
 		})
 
-		const defaultPartType =
-			Array.isArray(partTypeManifests) && partTypeManifests.length > 0
-				? partTypeManifests[0].id
-				: undefined
+		const partTypeManifestList = Array.isArray(partTypeManifests) ? partTypeManifests : []
+
+		const defaultPartType = partTypeManifestList[0]?.id
 		if (!defaultPartType) {
 			return { error: new Error('No part type manifests exist') }
 		}
 		const payloadHasType = payload.partType && payload.partType !== ''
 
+		let resolvedPartType = defaultPartType
 		if (payloadHasType) {
-			const { result } = await typeManifestMutations.readOne(String(payload.partType))
-			if (!result || result.entityType !== TypeManifestEntity.Part) {
+			const matchedPartType = resolveManifestId(String(payload.partType), partTypeManifestList)
+			if (!matchedPartType) {
 				return { error: new Error(`Invalid part type: ${payload.partType}`) }
 			}
+			resolvedPartType = matchedPartType
 		}
+
+		const partManifest = findTypeManifest(partTypeManifestList, resolvedPartType)
+		const ingestType = getPartIngestType(
+			{ partType: resolvedPartType } as Part,
+			partManifest
+		)
 
 		const segmentParts: Part | Part[] | undefined = (
 			await mutations.read({ segmentId: payload.segmentId })
@@ -111,15 +131,17 @@ export const mutations = {
 		const id = payload.id || uuid()
 		const document: Partial<MutationPartCreate> = {
 			...payload,
-			partType: payloadHasType ? payload.partType : defaultPartType,
+			partType: payloadHasType ? resolvedPartType : defaultPartType,
 			payload: {
-				...payload.payload
+				...payload.payload,
+				type: ingestType
 			},
 			rank: payload.rank ?? partsLength
 		}
 		delete document.playlistId
 		delete document.rundownId
 		delete document.segmentId
+		delete document.presetPieces
 
 		if (!payload.rundownId || !payload.segmentId)
 			return { error: new Error('Missing rundown or segment id') }
@@ -139,7 +161,47 @@ export const mutations = {
 			)
 			if (result.changes === 0) throw new Error('No rows were inserted')
 
-			return this.readOne(id)
+			const { result: part, error: readError } = await this.readOne(id)
+			if (readError || !part) return { error: readError ?? new Error('Failed to read part') }
+
+			if (payload.fromPreset) {
+				const templates =
+					payload.presetPieces !== undefined ?
+						payload.presetPieces
+					:	findTypeManifest(partTypeManifestList, part.partType)?.defaultPieces
+
+				if (templates?.length) {
+					const { result: pieceTypeManifests } = await typeManifestMutations.read({
+						entityType: TypeManifestEntity.Piece
+					})
+					const pieceManifestList = Array.isArray(pieceTypeManifests) ? pieceTypeManifests : []
+
+					for (const template of templates) {
+						if (template.optional) continue
+
+						const pieceManifest = findTypeManifest(pieceManifestList, template.pieceType)
+						const resolvedPieceType = pieceManifest?.id ?? template.pieceType
+
+						const { result: createdPiece, error: pieceError } = await piecesMutations.create({
+							playlistId: part.playlistId,
+							rundownId: part.rundownId,
+							segmentId: part.segmentId,
+							partId: part.id,
+							name: template.name ?? pieceNameFromManifest(pieceManifest, 'New piece'),
+							pieceType: resolvedPieceType,
+							payload: template.payload ?? {},
+							start: 0
+						})
+						if (pieceError || !createdPiece) {
+							return {
+								error: pieceError ?? new Error(`Failed to materialize preset piece: ${template.pieceType}`)
+							}
+						}
+					}
+				}
+			}
+
+			return { result: part }
 		} catch (e) {
 			console.error(e)
 			return { error: e as Error }
@@ -528,7 +590,14 @@ export function registerPartsHandlers(socket: Socket, io: Server) {
 		switch (action) {
 			case IpcOperationType.Create:
 				{
-					const { result, error } = await handlePartCreate(payload)
+					const { result, error, materialized } = await handlePartCreate(payload)
+					if (materialized && result) {
+						const piecesResult = await piecesMutations.read({ rundownId: result.rundownId })
+						io.emit('pieces:update', {
+							action: 'update',
+							pieces: piecesResult.result
+						})
+					}
 					callback(result || error)
 				}
 				break
@@ -605,7 +674,7 @@ async function handlePartCreate(payload: MutationPartCreate) {
 			}
 		}
 
-		return { result, error: returnedError }
+		return { result, error: returnedError, materialized: payload.fromPreset === true }
 	}
 }
 async function handleCopyPart(payload: MutationPartCopy) {

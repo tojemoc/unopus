@@ -1,13 +1,19 @@
 .rundown-empty-state {
 	text-align: center;
 	padding: 3rem 1rem;
-	color: #8b949e;
+	color: var(--re-text-muted);
 	font-size: 1.1rem;
 }
 
 .rundown-card {
-	background: #161b22;
-	border-color: #30363d;
+	background: var(--re-card-bg);
+	border-color: var(--re-card-border);
+	color: var(--re-text);
+
+	.card-title,
+	.card-text {
+		color: var(--re-text);
+	}
 
 	&__sync {
 		padding: 0.15rem 0.5rem;
@@ -15,20 +21,20 @@
 		font-size: 0.75rem;
 
 		&--synced {
-			background: rgba(25, 135, 84, 0.25);
-			color: #75b798;
+			background: color-mix(in srgb, var(--re-sync-ok) 25%, transparent);
+			color: var(--re-status-ready-fg);
 		}
 		&--unsynced {
-			background: rgba(108, 117, 125, 0.3);
-			color: #adb5bd;
+			background: var(--re-status-na-bg);
+			color: var(--re-status-na-fg);
 		}
 		&--pending {
-			background: rgba(255, 193, 7, 0.2);
-			color: #ffda6a;
+			background: color-mix(in srgb, var(--re-sync-pending) 20%, transparent);
+			color: var(--re-text);
 		}
 		&--error {
-			background: rgba(220, 53, 69, 0.25);
-			color: #ea868f;
+			background: color-mix(in srgb, var(--re-sync-error) 25%, transparent);
+			color: var(--re-status-notready-fg);
 		}
 	}
 }

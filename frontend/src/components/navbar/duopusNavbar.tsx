@@ -5,6 +5,7 @@ import Navbar from 'react-bootstrap/esm/Navbar'
 import { Button, Stack } from 'react-bootstrap'
 import { useAppDispatch, useAppSelector } from '~/store/app'
 import { logout } from '~/store/auth'
+import { ThemeToggle } from '~/components/theme/ThemeToggle'
 import './duopusNavbar.scss'
 
 interface DuopusNavbarProps {
@@ -29,12 +30,20 @@ export function DuopusNavbar({ rundownName }: DuopusNavbarProps) {
 		<Navbar expand="lg" className="duopus-navbar">
 			<Container fluid>
 				<Navbar.Brand as={Link} to="/" className="brand-text">
-					Duopus
+					Unopus
 				</Navbar.Brand>
 				{rundownName && (
-					<Navbar.Text className="ms-2 text-light">
-						<span className="text-muted">/</span> {rundownName}
-					</Navbar.Text>
+					<nav className="octo-breadcrumb ms-2" aria-label="Breadcrumb">
+						<Link to="/" className="text-decoration-none">
+							Rundowns
+						</Link>
+						<span className="octo-breadcrumb__sep" aria-hidden="true">
+							›
+						</span>
+						<span className="octo-breadcrumb__current" aria-current="page">
+							{rundownName}
+						</span>
+					</nav>
 				)}
 				<Navbar.Toggle aria-controls="duopus-navbar" />
 				<Navbar.Collapse id="duopus-navbar">
@@ -47,6 +56,7 @@ export function DuopusNavbar({ rundownName }: DuopusNavbarProps) {
 						</Nav.Link>
 					</Nav>
 					<Stack direction="horizontal" gap={3} className="align-items-center">
+						<ThemeToggle />
 						{user && <span className="user-label">{user.displayName}</span>}
 						<Button variant="outline-secondary" size="sm" onClick={onLogout}>
 							Log out

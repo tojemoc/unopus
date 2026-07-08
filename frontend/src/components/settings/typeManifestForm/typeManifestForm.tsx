@@ -229,6 +229,7 @@ export function TypeManifestForm({
 																<option value={ManifestFieldType.String}>String</option>
 																<option value={ManifestFieldType.Number}>Number</option>
 																<option value={ManifestFieldType.Boolean}>Boolean</option>
+																<option value={ManifestFieldType.MediaPick}>Media pick</option>
 															</Form.Select>
 															<FieldInfo field={field} />
 														</>

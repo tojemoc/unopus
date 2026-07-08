@@ -15,8 +15,8 @@ function RouteComponent() {
 	if (!rundown) throw redirect({ to: '/' })
 
 	return (
-		<Stack className="rundown-main-content">
-			<div className="p-4">
+		<Stack className="rundown-main-content rundown-main-content-fill">
+			<div className="rundown-main-content-scroll p-4">
 				<SyncControl rundown={rundown} />
 				<RundownPropertiesForm rundown={rundown} />
 			</div>

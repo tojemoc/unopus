@@ -24,6 +24,7 @@ export interface NewPartPayload {
 	script?: string
 	partType?: string | undefined
 	duration?: number
+	fromPreset?: boolean
 	payload?: Record<string, PayloadValue>
 }
 export interface UpdatePartPayload {
@@ -35,9 +36,9 @@ export interface RemovePartPayload {
 
 export const addNewPart = createAppAsyncThunk(
 	'parts/addNewPart',
-	async (payload: NewPartPayload) => {
+	async (payload: NewPartPayload, { dispatch }) => {
 		const rank: number = payload.rank ?? 0
-		return ipcAPI.addNewPart({
+		const part = await ipcAPI.addNewPart({
 			name: payload.name ?? `Part ${rank + 1}`,
 			playlistId: payload.playlistId,
 			rundownId: payload.rundownId,
@@ -45,8 +46,15 @@ export const addNewPart = createAppAsyncThunk(
 			rank: payload.rank,
 			float: false,
 			payload: payload.payload ?? {},
-			partType: payload.partType ?? ''
+			partType: payload.partType ?? '',
+			fromPreset: payload.fromPreset
 		})
+
+		if (payload.fromPreset) {
+			await dispatch(loadPieces({ rundownId: payload.rundownId }))
+		}
+
+		return part
 	}
 )
 export const copyPart = createAppAsyncThunk(

@@ -3,13 +3,8 @@
 
 	tr {
 		min-height: 2em;
-		line-height: 2em;
+		line-height: 1.6;
 		cursor: pointer;
-
-		&:hover {
-			background-color: #777;
-			color: white;
-		}
 	}
 
 	td {
@@ -23,34 +18,30 @@
 		border-radius: 0.25rem;
 		font-size: 0.75rem;
 		font-weight: 600;
-		color: #fff;
+		color: var(--re-text-on-chip);
 	}
 
 	.piece-start,
 	.piece-duration {
 		width: 60px;
-
 		text-align: center;
+		font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+		font-size: 0.75rem;
 	}
 
 	.add-piece-button {
 		grid-column: 1/5;
-
 		text-decoration: none;
-
 		display: block;
 		border: none;
 		width: 100%;
 		text-align: left;
-
-		// font-size: 1.2em;
-		// line-height: 2em;
-		color: #777;
+		color: var(--re-text-muted);
 		background: none;
 
 		&:hover {
-			background-color: #777;
-			color: white;
+			background: var(--re-row-hover);
+			color: var(--re-text);
 		}
 	}
 }

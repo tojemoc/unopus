@@ -99,3 +99,9 @@ export async function fetchEntityEdit(
 	}>(`/api/edits/${entityType}/${entityId}`)
 	return data.edit
 }
+
+export async function fetchRundownReadiness(rundownId: string) {
+	return request<import('~backend/background/interfaces').RundownReadiness>(
+		`/api/rundowns/${rundownId}/readiness`
+	)
+}

@@ -1,0 +1,113 @@
+[data-theme='dark'],
+[data-theme='light'] {
+	--bs-body-bg: var(--re-bg);
+	--bs-body-color: var(--re-text);
+	--bs-secondary-color: var(--re-text-muted);
+	--bs-tertiary-color: var(--re-text-subtle);
+	--bs-emphasis-color: var(--re-text);
+	--bs-border-color: var(--re-border);
+	--bs-link-color: var(--re-link);
+	--bs-link-hover-color: var(--re-link-hover);
+
+	--bs-card-bg: var(--re-card-bg);
+	--bs-card-color: var(--re-text);
+	--bs-card-border-color: var(--re-card-border);
+
+	--bs-modal-bg: var(--re-modal-bg);
+	--bs-modal-color: var(--re-modal-fg);
+
+	--bs-navbar-color: var(--re-text-muted);
+	--bs-navbar-hover-color: var(--re-text);
+	--bs-navbar-active-color: var(--re-link);
+	--bs-navbar-brand-color: var(--re-text);
+
+	--bs-list-group-bg: var(--re-surface-1);
+	--bs-list-group-color: var(--re-text);
+	--bs-list-group-border-color: var(--re-border);
+
+	--bs-form-control-bg: var(--re-surface-1);
+	--bs-form-control-color: var(--re-text);
+	--bs-form-control-border-color: var(--re-border);
+
+	--bs-table-color: var(--re-text);
+	--bs-table-bg: transparent;
+	--bs-table-hover-bg: var(--re-row-hover);
+	--bs-table-border-color: var(--re-border-subtle);
+}
+
+[data-theme='dark'] .btn-outline-secondary {
+	--bs-btn-color: var(--re-text-muted);
+	--bs-btn-border-color: var(--re-border);
+	--bs-btn-hover-bg: var(--re-row-hover);
+	--bs-btn-hover-color: var(--re-text);
+	--bs-btn-hover-border-color: var(--re-border);
+}
+
+[data-theme='light'] .btn-outline-secondary {
+	--bs-btn-color: var(--re-text-muted);
+	--bs-btn-border-color: var(--re-border);
+	--bs-btn-hover-bg: var(--re-row-hover);
+	--bs-btn-hover-color: var(--re-text);
+	--bs-btn-hover-border-color: var(--re-border);
+}
+
+[data-theme='dark'] .text-muted,
+[data-theme='light'] .text-muted {
+	color: var(--re-text-muted) !important;
+}
+
+[data-theme='dark'] .text-primary,
+[data-theme='light'] .text-primary {
+	color: var(--re-link) !important;
+}
+
+[data-theme='dark'] .modal-content,
+[data-theme='light'] .modal-content {
+	background-color: var(--re-modal-bg);
+	color: var(--re-modal-fg);
+	border-color: var(--re-border);
+}
+
+[data-theme='dark'] .modal-header,
+[data-theme='light'] .modal-header,
+[data-theme='dark'] .modal-footer,
+[data-theme='light'] .modal-footer {
+	border-color: var(--re-border);
+}
+
+[data-theme='dark'] .form-control,
+[data-theme='light'] .form-control,
+[data-theme='dark'] .form-select,
+[data-theme='light'] .form-select {
+	background-color: var(--re-surface-1);
+	color: var(--re-text);
+	border-color: var(--re-border);
+}
+
+[data-theme='dark'] .form-control:focus,
+[data-theme='light'] .form-control:focus,
+[data-theme='dark'] .form-select:focus,
+[data-theme='light'] .form-select:focus {
+	background-color: var(--re-surface-1);
+	color: var(--re-text);
+	border-color: var(--re-focus);
+	box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--re-focus) 25%, transparent);
+}
+
+[data-theme='dark'] .dropdown-menu,
+[data-theme='light'] .dropdown-menu {
+	background-color: var(--re-surface-1);
+	color: var(--re-text);
+	border-color: var(--re-border);
+}
+
+[data-theme='dark'] .dropdown-item,
+[data-theme='light'] .dropdown-item {
+	color: var(--re-text);
+}
+
+[data-theme='dark'] .dropdown-item:hover,
+[data-theme='light'] .dropdown-item:hover {
+	background-color: var(--re-row-hover);
+	color: var(--re-text);
+}

@@ -42,6 +42,7 @@ export interface BackendApi {
 	getCoreConnectionInfo: () => Promise<CoreConnectionInfo>
 
 	resetSettings: () => Promise<void>
+	reloadTypeManifests: () => Promise<ApplicationSettings>
 	getSettings: () => Promise<ApplicationSettings>
 	updateSettings: (settings: ApplicationSettings) => Promise<ApplicationSettings>
 

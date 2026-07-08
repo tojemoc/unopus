@@ -5,13 +5,12 @@ import type { Segment } from '~backend/background/interfaces'
 import './sidebar.scss'
 import { DragTypes } from '~/components/drag-and-drop/DragTypes'
 import { DraggableContainer } from '../drag-and-drop/DraggableContainer'
-import { useCallback, useEffect, useState } from 'react'
-import { fetchRundownEdits } from '~/lib/authApi'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import ImportSegmentModal from './importSegmentModal/importSegmentModal'
 import { SidebarSegment } from './sidebar/segment'
 import { useToasts } from '../toasts/useToasts'
 import { SegmentButtons } from './sidebar/segmentButtons'
-import { computeInsertRank } from '~/util/lib'
+import { useRundownReadinessContext } from '~/hooks/RundownReadinessContext'
 
 export function RundownSidebar({
 	rundownId,
@@ -26,33 +25,28 @@ export function RundownSidebar({
 	const [showImportModal, setShowImportModal] = useState<number | undefined>(undefined)
 
 	const segments = useAppSelector((state) => state.segments.segments)
-	const sortedSegments = [...segments].sort((a, b) => a.rank - b.rank)
-	const insertRankBySegmentId = Object.fromEntries(
-		sortedSegments.map((segment) => [segment.id, computeInsertRank(sortedSegments, segment.id)])
+	const sortedSegments = useMemo(
+		() => [...segments].sort((a, b) => a.rank - b.rank),
+		[segments]
 	)
 
+	const { readiness, loading, error, refresh } = useRundownReadinessContext()
+
 	const [openSegments, setOpenSegments] = useState<Record<string, boolean>>({})
-	const [partEdits, setPartEdits] = useState<
-		Record<string, { displayName: string; editedAt: number }>
-	>({})
 
 	useEffect(() => {
-		let cancelled = false
-		fetchRundownEdits(rundownId)
-			.then((edits) => {
-				if (!cancelled) {
-					setPartEdits(edits)
+		setOpenSegments((prev) => {
+			let changed = false
+			const next = { ...prev }
+			for (const segment of sortedSegments) {
+				if (next[segment.id] === undefined) {
+					next[segment.id] = true
+					changed = true
 				}
-			})
-			.catch((error) => {
-				if (!cancelled) {
-					console.error('Failed to load rundown edit history', rundownId, error)
-				}
-			})
-		return () => {
-			cancelled = true
-		}
-	}, [rundownId])
+			}
+			return changed ? next : prev
+		})
+	}, [sortedSegments])
 
 	const isSegmentOpen = useCallback(
 		(segmentId: string) => openSegments[segmentId] ?? true,
@@ -88,40 +82,56 @@ export function RundownSidebar({
 			})
 	}
 
+	const readyCount = readiness?.summary.readyMediaPieces ?? 0
+	const totalCount = readiness?.summary.totalMediaPieces ?? 0
+	const summaryText = error
+		? 'Readiness check failed'
+		: loading
+			? 'Checking media…'
+			: `${readyCount}/${totalCount} media items ready`
+
 	return (
-		<div className="rundown-sidebar" style={{ overflowY: 'auto', overflowX: 'hidden' }}>
-			<DraggableContainer
-				items={sortedSegments}
-				itemType={DragTypes.SEGMENT}
-				Component={({ data: segment }) => (
-					<>
+		<div className="rundown-sidebar">
+			<div className="rundown-sidebar-toolbar">
+				<span className="rundown-sidebar-toolbar__title">Stories</span>
+				<span className="rundown-sidebar-toolbar__summary" title={error ?? undefined}>
+					{summaryText}
+				</span>
+				<button type="button" className="rundown-sidebar-toolbar__refresh" onClick={() => void refresh()}>
+					Refresh
+				</button>
+			</div>
+
+			<div className="rundown-sidebar-scroll">
+				<DraggableContainer
+					items={sortedSegments}
+					itemType={DragTypes.SEGMENT}
+					Component={({ data: segment }) => (
 						<SidebarSegment
 							key={segment.id}
 							segment={segment}
 							isOpen={isSegmentOpen(segment.id)}
 							onToggleOpen={() => toggleSegmentOpen(segment.id)}
-							insertRank={insertRankBySegmentId[segment.id]}
-							setShowImportModal={setShowImportModal}
-							partEdits={partEdits}
+							readiness={readiness}
 						/>
-					</>
-				)}
-				id={rundownId}
-				reorder={handleReorderSegment}
-			/>
+					)}
+					id={rundownId}
+					reorder={handleReorderSegment}
+				/>
 
-			<SegmentButtons
-				rundownId={rundownId}
-				playlistId={playlistId}
-				rank={sortedSegments.length}
-				setShowImportModal={setShowImportModal}
-			/>
+				<SegmentButtons
+					rundownId={rundownId}
+					playlistId={playlistId}
+					rank={sortedSegments.length}
+					setShowImportModal={setShowImportModal}
+				/>
 
-			<ImportSegmentModal
-				rank={showImportModal}
-				onClose={() => setShowImportModal(undefined)}
-				targetRundownId={rundownId}
-			/>
+				<ImportSegmentModal
+					rank={showImportModal}
+					onClose={() => setShowImportModal(undefined)}
+					targetRundownId={rundownId}
+				/>
+			</div>
 		</div>
 	)
 }

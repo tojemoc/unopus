@@ -9,11 +9,15 @@ import './navbar.scss'
 import { toTime, toTimeDiff } from '~/util/lib'
 import { useAppSelector } from '~/store/app'
 import { Stack } from 'react-bootstrap'
+import { usePartInsertTarget } from '~/hooks/usePartInsertTarget'
+import { PartTypeButtons } from './sidebar/partTypeButtons'
 
 export function RundownNavbar({ rundown }: { rundown: Rundown }) {
 	const parts = useAppSelector((state) =>
 		state.parts.parts.filter((p) => p.rundownId === rundown.id)
 	)
+
+	const insertTarget = usePartInsertTarget(rundown.id)
 
 	const start = rundown.expectedStartTime
 		? new Date(rundown.expectedStartTime).toLocaleTimeString()
@@ -37,7 +41,7 @@ export function RundownNavbar({ rundown }: { rundown: Rundown }) {
 
 	return (
 		<Navbar expand="lg" className="rundown-navbar">
-			<Container fluid className="d-flex justify-content-between">
+			<Container fluid className="rundown-navbar__inner">
 				<Stack className="timing" direction="horizontal" gap={3}>
 					<Stack>
 						<div className="label">Expected start:</div>
@@ -53,11 +57,23 @@ export function RundownNavbar({ rundown }: { rundown: Rundown }) {
 					</Stack>
 				</Stack>
 
-				<Nav.Link as={Link} to={`/rundown/${rundown.id}`}>
+				<div className="rundown-navbar__quick-add">
+					{insertTarget ? (
+						<PartTypeButtons
+							segment={insertTarget.segment}
+							rank={insertTarget.rank}
+							insertHint={insertTarget.hint}
+						/>
+					) : (
+						<PartTypeButtons disabled disabledReason="Open a story to add a part" />
+					)}
+				</div>
+
+				<Nav.Link as={Link} to={`/rundown/${rundown.id}`} className="rundown-navbar__title">
 					{rundown.name}
 				</Nav.Link>
 
-				<Nav className="">
+				<Nav className="rundown-navbar__close">
 					<Nav.Link as={Link} to="/">
 						<FontAwesomeIcon icon={faClose} size="xl" />
 					</Nav.Link>

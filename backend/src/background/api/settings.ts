@@ -10,6 +10,7 @@ import { db } from '../db'
 import { defaultRundownManifest, TYPE_MANIFESTS } from '../manifest'
 import { mutations as typeManifestMutations } from './typeManifests'
 import { Server, Socket } from 'socket.io'
+import { isValidHttpUrl, normalizeBaseUrl } from '../settingsResolver'
 
 export const mutations = {
 	async create(
@@ -66,6 +67,14 @@ export const mutations = {
 			...payload
 		}
 
+		if (update.previewBaseUrl !== undefined && update.previewBaseUrl !== '') {
+			const normalized = normalizeBaseUrl(update.previewBaseUrl)
+			if (!isValidHttpUrl(normalized)) {
+				return { error: new Error('Preview base URL must be a valid http or https URL') }
+			}
+			update.previewBaseUrl = normalized
+		}
+
 		try {
 			const stmt = db.prepare(`
 				UPDATE settings
@@ -82,10 +91,12 @@ export const mutations = {
 		}
 	},
 	async reset(): Promise<{ result?: ApplicationSettings; error?: Error }> {
-		// Reset to defaults from manifest
-		await initializeDefaults()
+		await resetTypeManifestsToDefaults()
 
-		// Return the current settings
+		return await this.read()
+	},
+	async reloadManifestsFromAssets(): Promise<{ result?: ApplicationSettings; error?: Error }> {
+		await upsertTypeManifestsFromAssets()
 		return await this.read()
 	}
 }
@@ -117,6 +128,12 @@ export function registerSettingsHandlers(socket: Socket, _io: Server) {
 					callback(result || error)
 				}
 				break
+			case 'reloadManifests':
+				{
+					const { result, error } = await mutations.reloadManifestsFromAssets()
+					callback(result || error)
+				}
+				break
 			default:
 				callback(new Error(`Unknown operation type ${action}`))
 		}
@@ -128,32 +145,73 @@ const DEFAULT_SETTINGS: ApplicationSettings = {
 	corePort: 3000
 }
 
-export async function initializeDefaults() {
-	mutations.read().then(({ result }) => {
-		if (!result) {
-			mutations.create(DEFAULT_SETTINGS)
-		}
-	})
+async function deleteAllTypeManifests(): Promise<void> {
+	const { result } = await typeManifestMutations.read({})
+	if (!Array.isArray(result)) return
 
-	// Reset type manifests using the typeManifests module
-	// First, get all existing manifests
-	const existingManifests = await typeManifestMutations.read({})
-
-	if (existingManifests && Array.isArray(existingManifests)) {
-		// Delete them all
-		for (const manifest of existingManifests) {
-			await typeManifestMutations.delete({ id: manifest.id })
-		}
+	for (const manifest of result) {
+		await typeManifestMutations.delete({ id: manifest.id })
 	}
-	// Insert the defaults
+}
+
+async function seedDefaultTypeManifests(): Promise<void> {
 	await typeManifestMutations.create({
 		id: 'rundown',
 		entityType: TypeManifestEntity.Rundown,
-		// Only store the payload array for now; keep other fields in settings
 		payload: defaultRundownManifest.payload
 	})
 
 	for (const typeManifest of TYPE_MANIFESTS) {
 		await typeManifestMutations.create(typeManifest)
 	}
+}
+
+async function upsertTypeManifestsFromAssets(): Promise<void> {
+	const { result: existingManifests } = await typeManifestMutations.read({})
+	const existingList = Array.isArray(existingManifests) ? existingManifests : []
+	const existingIds = new Set(existingList.map((manifest) => manifest.id))
+
+	const rundownExists = existingIds.has(defaultRundownManifest.id)
+	if (rundownExists) {
+		await typeManifestMutations.update({
+			id: defaultRundownManifest.id,
+			update: defaultRundownManifest
+		})
+	} else {
+		await typeManifestMutations.create({
+			id: defaultRundownManifest.id,
+			entityType: TypeManifestEntity.Rundown,
+			payload: defaultRundownManifest.payload
+		})
+	}
+
+	for (const typeManifest of TYPE_MANIFESTS) {
+		if (existingIds.has(typeManifest.id)) {
+			await typeManifestMutations.update({
+				id: typeManifest.id,
+				update: typeManifest
+			})
+		} else {
+			await typeManifestMutations.create(typeManifest)
+		}
+	}
+}
+
+async function resetTypeManifestsToDefaults(): Promise<void> {
+	await deleteAllTypeManifests()
+	await seedDefaultTypeManifests()
+}
+
+export async function initializeDefaults() {
+	const { result: settings } = await mutations.read()
+	if (!settings) {
+		await mutations.create(DEFAULT_SETTINGS)
+	}
+
+	const { result: existingManifests } = await typeManifestMutations.read({})
+	if (Array.isArray(existingManifests) && existingManifests.length > 0) {
+		return
+	}
+
+	await seedDefaultTypeManifests()
 }

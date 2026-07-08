@@ -1,12 +1,15 @@
 import { useForm } from '@tanstack/react-form'
 import { Button, ButtonGroup, Form, Modal } from 'react-bootstrap'
 import type { Piece } from '~backend/background/interfaces'
+import { ManifestFieldType } from '~backend/background/interfaces'
 import { FieldInfo } from '../form'
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useAppDispatch, useAppSelector } from '~/store/app'
 import { removePiece, updatePiece } from '~/store/pieces'
 import { useToasts } from '../toasts/useToasts'
+import { MediaPickerField } from './mediaPickerField'
+import { GfxPreview } from './gfxPreview'
 
 export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 	const dispatch = useAppDispatch()
@@ -37,6 +40,17 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 	return (
 		<div>
 			<h2>Piece</h2>
+
+			<form.Subscribe
+				selector={(state) => state.values.payload}
+				children={(payload) => (
+					<GfxPreview
+						piece={piece}
+						manifest={manifest}
+						payload={(payload ?? {}) as Record<string, unknown>}
+					/>
+				)}
+			/>
 
 			<Form
 				onSubmit={(e) => {
@@ -123,7 +137,7 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 									<Form.Group className="mb-3">
 										<Form.Label htmlFor={field.name}>{fieldInfo.label}:</Form.Label>
 
-										{fieldInfo.type === 'string' && (
+										{fieldInfo.type === ManifestFieldType.String && (
 											<Form.Control
 												name={field.name}
 												type="text"
@@ -134,7 +148,7 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 											/>
 										)}
 
-										{fieldInfo.type === 'number' && (
+										{fieldInfo.type === ManifestFieldType.Number && (
 											<Form.Control
 												name={field.name}
 												type="number"
@@ -144,13 +158,24 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 											/>
 										)}
 
-										{fieldInfo.type === 'boolean' && (
+										{fieldInfo.type === ManifestFieldType.Boolean && (
 											<Form.Switch
 												name={field.name}
 												type="text"
 												checked={Boolean(field.state.value)}
 												onBlur={field.handleBlur}
 												onChange={(e) => field.handleChange(e.target.checked)}
+											/>
+										)}
+
+										{fieldInfo.type === ManifestFieldType.MediaPick && (
+											<MediaPickerField
+												name={field.name}
+												rundownId={piece.rundownId}
+												subdir={fieldInfo.subdir ?? 'clips'}
+												value={field.state.value as string | undefined}
+												onBlur={field.handleBlur}
+												onChange={(value) => field.handleChange(value)}
 											/>
 										)}
 									</Form.Group>

@@ -1,23 +1,21 @@
 import { useNavigate } from '@tanstack/react-router'
 import { createSelector } from '@reduxjs/toolkit'
 import { useAppDispatch, useAppSelector, type RootState } from '~/store/app'
-import { addNewPart, movePart, reorderParts } from '~/store/parts'
+import { movePart, reorderParts } from '~/store/parts'
 import { copySegment } from '~/store/segments'
-import type { Part, Segment } from '~backend/background/interfaces'
+import type { Part, RundownReadiness, Segment } from '~backend/background/interfaces'
 import { DragTypes } from '~/components/drag-and-drop/DragTypes'
 import { DraggableContainer } from '~/components/drag-and-drop/DraggableContainer'
-import { SidebarPart } from './part'
+import { SidebarPartRow, StoryTableHeader } from './partRow'
 import { SidebarElementHeader } from './sidebarElementHeader'
 import { useToasts } from '~/components/toasts/useToasts'
-import { BsCaretDownFill, BsFillTrashFill, BsPlus, BsTrash } from 'react-icons/bs'
+import { BsCaretDownFill, BsFillTrashFill, BsTrash } from 'react-icons/bs'
 import { Stack, type ButtonProps } from 'react-bootstrap'
 import { HoverIconButton } from '~/components/rundownList/hoverIconButton'
-import { SegmentButtons } from './segmentButtons'
 import { DeleteSegmentButton } from '../deleteSegmentButton'
-import type { Dispatch, SetStateAction } from 'react'
-import { computeInsertRank } from '~/util/lib'
 
 const selectAllParts = (state: RootState) => state.parts.parts
+const selectAllPieces = (state: RootState) => state.pieces.pieces
 
 const selectPartsBySegmentId = createSelector(
 	[selectAllParts, (_: RootState, segmentId: string) => segmentId],
@@ -28,50 +26,22 @@ export function SidebarSegment({
 	segment,
 	isOpen,
 	onToggleOpen,
-	setShowImportModal,
-	insertRank,
-	partEdits
+	readiness
 }: {
 	segment: Segment
 	isOpen: boolean
 	onToggleOpen: () => void
-	setShowImportModal: Dispatch<SetStateAction<number | undefined>>
-	insertRank: number
-	partEdits: Record<string, { displayName: string; editedAt: number }>
+	readiness: RundownReadiness | null
 }) {
 	const dispatch = useAppDispatch()
 	const navigate = useNavigate()
 	const toasts = useToasts()
 
 	const parts = useAppSelector((s) => selectPartsBySegmentId(s, segment.id))
+	const allPieces = useAppSelector(selectAllPieces)
 	const sortedParts = [...parts].sort((a, b) => a.rank - b.rank)
-	const partInsertRankById = Object.fromEntries(
-		sortedParts.map((part) => [part.id, computeInsertRank(sortedParts, part.id)])
-	)
 
 	const segmentDuration = sortedParts.reduce((acc, part) => acc + (part.duration ?? 0), 0)
-
-	const handleAddPart = (rank: number) =>
-		dispatch(
-			addNewPart({
-				rundownId: segment.rundownId,
-				playlistId: segment.playlistId,
-				segmentId: segment.id,
-				rank
-			})
-		)
-			.unwrap()
-			.then((part) =>
-				navigate({
-					to: `/rundown/${segment.rundownId}/segment/${segment.id}/part/${part.id}`
-				})
-			)
-			.catch(() =>
-				toasts.show({
-					headerContent: 'Adding part',
-					bodyContent: 'Encountered an unexpected error'
-				})
-			)
 
 	const handleReorderPart = (
 		targetPart: Part,
@@ -129,7 +99,7 @@ export function SidebarSegment({
 
 	return (
 		<div className={`sidebar-segment ${isOpen ? 'open' : 'closed'}`}>
-			<div className={'copy-item'}>
+			<div className="copy-item segment-header-row">
 				<Stack direction="horizontal">
 					<span
 						className="segment-toggle"
@@ -139,7 +109,6 @@ export function SidebarSegment({
 							onToggleOpen()
 						}}
 						aria-label={isOpen ? 'Collapse segment' : 'Expand segment'}
-						style={{ width: '2em', height: '2em' }}
 					>
 						<BsCaretDownFill />
 					</span>
@@ -149,7 +118,7 @@ export function SidebarSegment({
 							duration={segmentDuration}
 							linkTo="/rundown/$rundownId/segment/$segmentId"
 							linkParams={{ rundownId: segment.rundownId, segmentId: segment.id }}
-							buttonClassName="segment-button copy-item text-light"
+							buttonClassName="segment-button copy-item sidebar-item-header"
 							handleCopy={handleCopySegment}
 							deleteButton={
 								<DeleteSegmentButton
@@ -174,38 +143,30 @@ export function SidebarSegment({
 				</Stack>
 			</div>
 
-			<div className="ps-3 segment-content">
+			<div className="segment-content">
 				{sortedParts.length > 0 ? (
-					<DraggableContainer
-						items={sortedParts}
-						itemType={DragTypes.PART}
-						id={segment.id}
-						reorder={handleReorderPart}
-						Component={({ data }) => (
-							<SidebarPart
-								part={data}
-								segment={segment}
-								handleAddPart={handleAddPart}
-								insertRank={partInsertRankById[data.id]}
-								lastEdit={partEdits[data.id]}
-							/>
-						)}
-					/>
+					<div className="story-table" role="table">
+						<StoryTableHeader />
+						<DraggableContainer
+							items={sortedParts}
+							itemType={DragTypes.PART}
+							id={segment.id}
+							reorder={handleReorderPart}
+							Component={({ data }) => (
+								<SidebarPartRow
+									part={data}
+									readiness={readiness}
+									partPieces={allPieces}
+								/>
+							)}
+						/>
+					</div>
 				) : (
-					<Stack className="add-button-container">
-						<button className="add-button" onClick={() => handleAddPart(0)}>
-							<BsPlus className="icon-lg" aria-hidden />
-							Add Part
-						</button>
-					</Stack>
+					<div className="story-table-empty px-2 py-2 text-muted">
+						No stories yet — use the toolbar above to add one.
+					</div>
 				)}
 			</div>
-			<SegmentButtons
-				rundownId={segment.rundownId}
-				playlistId={segment.playlistId}
-				rank={insertRank}
-				setShowImportModal={setShowImportModal}
-			/>
 		</div>
 	)
 }

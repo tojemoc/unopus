@@ -31,10 +31,22 @@ export async function saveToFile(args: SaveToFileArgs): Promise<void> {
 		type: 'application/json'
 	})
 
+	downloadBlob(blob, `${args.title || 'document'}.json`)
+}
+
+export async function saveTextToFile(args: { title: string; contents: string; extension: string }): Promise<void> {
+	const blob = new Blob([args.contents], {
+		type: 'text/plain;charset=utf-8'
+	})
+
+	downloadBlob(blob, `${args.title || 'document'}.${args.extension}`)
+}
+
+function downloadBlob(blob: Blob, filename: string): void {
 	const url = URL.createObjectURL(blob)
 	const a = document.createElement('a')
 	a.href = url
-	a.download = `${args.title || 'document'}.json`
+	a.download = filename
 	document.body.appendChild(a)
 	a.click()
 	document.body.removeChild(a)

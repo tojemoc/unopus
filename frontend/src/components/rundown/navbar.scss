@@ -1,7 +1,83 @@
 .rundown-navbar {
-	background: #2689ba;
+	background: var(--re-rundown-bar-bg);
+	color: var(--re-rundown-bar-fg);
+	flex-shrink: 0;
 
-	.timing .label {
-		font-size: 0.8em;
+	.label {
+		font-size: 0.7rem;
+		opacity: 0.85;
+	}
+
+	.rundown-navbar__inner {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem 1.25rem;
+	}
+
+	.timing {
+		flex-shrink: 0;
+	}
+
+	.rundown-navbar__quick-add {
+		flex: 1 1 auto;
+		display: flex;
+		justify-content: center;
+		min-width: 0;
+		overflow-x: auto;
+
+		.part-type-buttons {
+			flex-wrap: wrap;
+			justify-content: center;
+		}
+
+		.preset-button {
+			all: unset;
+			display: inline-flex;
+			align-items: center;
+			cursor: pointer;
+			font-size: 0.72rem;
+			font-weight: 600;
+			color: var(--re-rundown-bar-fg);
+			padding: 0.2rem 0.55rem;
+			border-radius: 2em;
+			background: rgba(255, 255, 255, 0.08);
+			border: 2px solid currentColor;
+
+			&:hover:not(:disabled) {
+				background: rgba(255, 255, 255, 0.16);
+			}
+
+			&:disabled {
+				opacity: 0.45;
+				cursor: not-allowed;
+			}
+
+			&:focus-visible {
+				outline: 2px solid var(--re-focus);
+				outline-offset: 2px;
+			}
+		}
+	}
+
+	.rundown-navbar__title {
+		flex-shrink: 0;
+		color: var(--re-rundown-bar-fg);
+		text-decoration: none;
+		font-weight: 600;
+
+		&:hover {
+			color: var(--re-rundown-bar-fg);
+			opacity: 0.9;
+		}
+	}
+
+	.rundown-navbar__close {
+		flex-shrink: 0;
+
+		.nav-link {
+			color: var(--re-rundown-bar-fg);
+		}
 	}
 }

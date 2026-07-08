@@ -46,6 +46,9 @@ export const ipcAPI: BackendApi = {
 	resetSettings: () => {
 		return getSocket().emitWithAck('settings', 'reset', undefined)
 	},
+	reloadTypeManifests: () => {
+		return getSocket().emitWithAck('settings', 'reloadManifests', undefined)
+	},
 	getSettings: () => {
 		return getSocket().emitWithAck('settings', 'read', undefined)
 	},

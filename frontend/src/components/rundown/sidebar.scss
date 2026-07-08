@@ -1,57 +1,114 @@
+.rundown-editor-panes {
+	min-height: 0;
+	overflow: hidden;
+
+	> .rundown-main-content {
+		flex: 1 1 auto;
+		min-width: 0;
+		min-height: 0;
+		overflow: hidden;
+	}
+}
+
 .rundown-main-content {
 	flex-grow: 1;
-	overflow: hidden;
+	min-height: 0;
+	overflow-x: hidden;
+	overflow-y: auto;
+
+	&.rundown-main-content-fill {
+		flex: 1 1 auto;
+		min-height: 0;
+		overflow: hidden;
+	}
+
+	.rundown-main-content-scroll,
 	.rundown-main-content-properties {
-		height: 100%;
+		flex: 1 1 auto;
+		min-height: 0;
+		overflow-x: hidden;
 		overflow-y: auto;
-		> .hstack {
-			min-height: 100%;
-		}
-		> .hstack > div {
-			align-items: stretch;
+	}
+
+	.rundown-main-content-properties {
+		&.rundown-main-content-properties-split {
+			display: flex;
+			flex-direction: column;
+			flex: 1 1 auto;
+			min-height: 0;
+			overflow: hidden;
+
+			> .hstack {
+				flex: 1 1 0;
+				min-height: 0;
+				align-items: stretch;
+				overflow: hidden;
+			}
+
+			.rundown-split-pane {
+				flex: 1 1 0;
+				min-height: 0;
+				min-width: 0;
+				overflow-x: hidden;
+				overflow-y: auto;
+			}
 		}
 	}
 }
 
 .rundown-sidebar {
-	background-color: rgba(0, 0, 0, 0.4);
-	padding: 0 0.3em;
+	display: flex;
+	flex-direction: column;
 	height: 100%;
-	overflow-y: auto;
-	width: 20%;
-	min-width: 18em;
-	max-width: 28em;
+	min-height: 0;
+
+	.rundown-sidebar-scroll {
+		flex: 1 1 auto;
+		min-height: 0;
+		overflow-y: auto;
+		overflow-x: hidden;
+	}
 	a {
 		text-decoration: none;
+		color: inherit;
 
 		&.active > div {
-			border: 1px solid #009dff;
+			border: 1px solid var(--re-focus);
 		}
 
 		> div {
 			padding: 0 2px;
 			text-decoration: none;
-
 			border: none;
 			width: 100%;
 			text-align: left;
+			color: var(--re-text);
 		}
 	}
 
 	.item-duration {
 		font-size: 0.7em;
-		padding-left: 0.5em;
-		top: 1.9em;
+		padding-left: 0.25em;
 		font-family: monospace;
+		color: var(--re-text-muted);
+		white-space: nowrap;
+		flex-shrink: 0;
 	}
 
-	.floated {
-		text-decoration: line-through;
+	.sidebar-item-header {
+		width: 100%;
+		padding: 0.35em 0.3em;
+		color: var(--re-text);
 	}
 
-	.add-button {
-		color: #777;
+	.item-title {
+		flex: 1;
+		line-height: 1.25;
+		overflow-wrap: anywhere;
+		word-break: normal;
+		color: var(--re-text);
 	}
+
 	.segment-toggle {
 		display: inline-flex;
 		align-items: center;
@@ -61,64 +118,56 @@
 		cursor: pointer;
 		user-select: none;
 		font-size: 0.8rem;
+		color: var(--re-text-muted);
 		transition: transform 0.2s ease;
 	}
 
-	.item-title {
-		flex: 1;
-		position: relative;
-		top: -0.4em;
+	.add-button {
+		color: var(--re-text-subtle);
 	}
 
-	.copy-item {
-		border-radius: 0.15em;
+	.preset-buttons {
+		.preset-button,
+		.part-button.preset-button {
+			all: unset;
+			display: inline-flex;
+			align-items: center;
+			cursor: pointer;
+			font-size: 0.75em;
+			color: var(--re-btn-subtle-fg);
+			padding: 0.25em 0.65em;
+			border-radius: 2em;
+			background: var(--re-btn-subtle-bg);
+			border: 2px solid var(--re-btn-subtle-border);
+
+			&:hover {
+				color: var(--re-btn-subtle-hover-fg);
+			}
+
+			&:focus-visible {
+				outline: 2px solid var(--re-focus);
+				outline-offset: 2px;
+			}
+		}
 	}
 
-	.segment-header-content {
-		display: flex;
-		align-items: center;
-		padding: 0.4em 0.3em;
-		width: max-content;
-	}
+	.segment-button.add-button,
+	.segment-footer-button,
+	.sidebar-segment .add-button-container .add-button {
+		background: var(--re-btn-subtle-bg);
+		color: var(--re-btn-subtle-fg);
+		border-color: var(--re-btn-subtle-bg);
 
-	.segment-button {
-		padding-right: 0.2em;
-		margin-bottom: 0.1em;
-	}
-	.segment-buttons {
-		z-index: 6;
-		display: flex;
-		justify-content: space-evenly;
-		font-size: 1em;
-		margin: 2em 0;
-	}
-
-	.segment-button.add-button {
-		all: unset;
-		background: #141619;
-		border: 0.2em solid #141619;
-		border-radius: 2em;
-		padding-right: 0.7em;
-		padding-left: 0.2em;
-		cursor: pointer;
-		font-size: 0.8em;
-	}
-
-	.icon-lg {
-		position: relative;
-		top: -0.05em;
+		&:hover {
+			color: var(--re-btn-subtle-hover-fg);
+		}
 	}
 
 	.sidebar-segment {
-		border-bottom: 1px solid #4a4b4c;
+		border-bottom: 1px solid var(--re-border);
 		padding: 0.5em 0 0.78em;
-
-		.item-duration {
-			font-size: 0.7em;
-			padding-left: 0.5em;
-			top: 2.7em;
-			font-family: monospace;
-		}
+		position: relative;
+		color: var(--re-text);
 
 		&.closed {
 			.segment-toggle {
@@ -144,102 +193,46 @@
 			opacity: 1;
 		}
 
-		.segment-content div :last-child .add-button-container {
-			height: 1.5em;
-		}
 		.segment-content > div:last-child {
-			margin-bottom: 0.75em;
+			margin-bottom: 0.5em;
 		}
 		.add-button-container {
-			padding-right: 1rem;
+			padding: 0.35em 1rem 0.5em 0;
 			width: 100%;
-			height: 0.25em;
-			top: 2.7em;
-			z-index: 5;
-			.add-button {
-				all: unset;
-				z-index: 6;
-				cursor: pointer;
-				text-align: center;
-				font-size: 0.8em;
-				border-radius: 2em;
-				padding-right: 0.7em;
-				padding-left: 0.2em;
-				transition: opacity 0.5s ease-out;
-			}
 		}
-		.sidebar-part-wrapper {
-			position: relative;
-			margin-left: 1em;
-			margin-bottom: 0.35em;
 
-			.sidebar-part {
-				padding: 0.45em 0.35em;
-				min-height: 2.5em;
-			}
-
-			.part-edit-hint {
-				font-size: 0.65em;
-				font-weight: normal;
-			}
-
-			.item-duration {
-				top: 1.7em;
-			}
-
-			.add-button-container {
-				width: 100%;
-				position: absolute;
-				height: 0.25em;
-				top: 2.45em;
-				z-index: 5;
-				.add-button {
-					all: unset;
-					position: absolute;
-					top: -1.05em;
-					right: 4.5em;
-					z-index: 6;
-					cursor: pointer;
-					text-align: center;
-					font-size: 0.7em;
-					background: #141619;
-					border: 0.27em solid #141619;
-					border-radius: 2em;
-					padding-right: 0.7em;
-					padding-left: 0.2em;
-					transition: opacity 0.5s ease-out;
-					opacity: 0;
-				}
-				&:hover .add-button,
-				.add-button:hover {
-					transition: opacity 0.2s ease-out;
-					opacity: 1;
-				}
-			}
+		.segment-footer-button {
+			all: unset;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			gap: 0.25em;
+			align-self: center;
+			cursor: pointer;
+			font-size: 0.8em;
+			padding: 0.2em 0.7em;
+			border-radius: 2em;
 		}
 		.segment-buttons {
-			position: absolute;
-			bottom: -2.6em;
-			z-index: 6;
+			position: static;
 			display: flex;
-			justify-content: space-evenly;
+			flex-wrap: wrap;
+			justify-content: flex-start;
+			gap: 0.35em;
 			width: 100%;
 			font-size: 0.9em;
+			margin: 0;
 
 			.segment-button {
 				font-size: 0.8em;
-				border: 0.2em solid #141619;
+				border: 0.2em solid var(--re-btn-subtle-bg);
 				border-radius: 2em;
-				padding-right: 0.7em;
-				transition: opacity 0.5s ease-out;
-
-				cursor: pointer;
-				opacity: 0;
-			}
-			&:hover .segment-button,
-			.segment-button:hover {
+				padding: 0.25em 0.65em;
 				transition: opacity 0.2s ease-out;
+				cursor: pointer;
 				opacity: 1;
+				color: var(--re-btn-subtle-fg);
+				background: var(--re-btn-subtle-bg);
 			}
 		}
 
@@ -247,8 +240,5 @@
 			position: relative;
 			top: -0.05em;
 		}
-	}
-	div :last-child .segment-buttons {
-		display: none;
 	}
 }
