@@ -39,7 +39,16 @@ body {
 	font-size: 1.25em;
 }
 .bttn-icon {
-	position: absolute;
+	position: static;
+	vertical-align: text-bottom;
+}
+
+.rundown-actions .btn,
+.rundown-actions .btn-group > .btn,
+.rundown-actions .btn-group > .dropdown-toggle {
+	padding: 0.38rem 0.75rem;
+	font-size: 1rem;
+	line-height: 1.2;
 }
 
 .sync-plus-wrapper {
