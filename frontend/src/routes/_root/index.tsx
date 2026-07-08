@@ -106,7 +106,7 @@ function Index() {
 					<Tab eventKey="rundowns" title="Rundowns" />
 					<Tab eventKey="templates" title="Templates" />
 				</Tabs>
-				<Stack direction="horizontal" gap={2}>
+				<Stack direction="horizontal" gap={2} className="rundown-actions">
 					<SplitButton
 						title={
 							<span className="d-inline-flex align-items-center gap-2">
@@ -116,7 +116,6 @@ function Index() {
 						}
 						onClick={() => createNewRundown(activeTab === 'templates')}
 						variant="primary"
-						size="lg"
 					>
 						{templateRundowns.map((templateRundown) => (
 							<Dropdown.Item
@@ -127,7 +126,7 @@ function Index() {
 							</Dropdown.Item>
 						))}
 					</SplitButton>
-					<Button onClick={() => selectImportRundown(activeTab === 'templates')} variant="outline-primary" size="lg">
+					<Button onClick={() => selectImportRundown(activeTab === 'templates')} variant="outline-primary">
 						<BsBoxArrowInUp className="bttn-icon icon-md me-2" aria-hidden />
 						Import
 					</Button>
