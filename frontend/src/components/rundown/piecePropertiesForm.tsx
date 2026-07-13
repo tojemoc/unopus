@@ -141,11 +141,13 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 											fieldInfo.options &&
 											fieldInfo.options.length > 0 && (
 												<div>
-													<ButtonGroup>
+													<ButtonGroup role="radiogroup" aria-label={fieldInfo.label}>
 														{fieldInfo.options.map((option) => (
 															<Button
 																key={option}
 																type="button"
+																role="radio"
+																aria-checked={(field.state.value || '') === option}
 																variant={
 																	(field.state.value || '') === option
 																		? 'primary'
@@ -157,9 +159,11 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 															</Button>
 														))}
 													</ButtonGroup>
-													<Form.Text className="text-muted d-block mt-1">
-														Leave unselected to hide the source pill on air.
-													</Form.Text>
+													{fieldInfo.optionsHelperText && (
+														<Form.Text className="text-muted d-block mt-1">
+															{fieldInfo.optionsHelperText}
+														</Form.Text>
+													)}
 												</div>
 											)}
 

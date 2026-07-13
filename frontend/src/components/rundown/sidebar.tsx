@@ -104,7 +104,7 @@ export function RundownSidebar({
 			</div>
 
 			<div className="rundown-sidebar-scroll">
-				<div className="story-table story-table--sidebar" role="table">
+				<div className="story-table story-table--sidebar">
 					<StoryTableHeader />
 					<DraggableContainer
 						items={sortedSegments}

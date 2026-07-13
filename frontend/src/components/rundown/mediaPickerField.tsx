@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button, Form } from 'react-bootstrap'
 import { fetchAppConfig, fetchRundownMedia } from '~/lib/mediaApi'
 import type { MediaFileEntry } from '~backend/background/interfaces'
@@ -23,9 +23,10 @@ export function MediaPickerField({
 	const [files, setFiles] = useState<MediaFileEntry[]>([])
 	const [folderPath, setFolderPath] = useState<string | null>(null)
 	const [folderExists, setFolderExists] = useState(true)
-	const [loading, setLoading] = useState(true)
+	const [initialLoading, setInitialLoading] = useState(true)
 	const [error, setError] = useState<string | null>(null)
 	const [ingestMediaRoot, setIngestMediaRoot] = useState<string | null>(null)
+	const requestIdRef = useRef(0)
 
 	useEffect(() => {
 		let cancelled = false
@@ -45,34 +46,54 @@ export function MediaPickerField({
 		}
 	}, [])
 
-	const loadMedia = useCallback(async () => {
-		setLoading(true)
-		setError(null)
+	const loadMedia = useCallback(
+		async (options?: { showInitialLoading?: boolean }) => {
+			const requestId = ++requestIdRef.current
+			const showInitialLoading = options?.showInitialLoading ?? false
 
-		try {
-			const listing = await fetchRundownMedia(rundownId, subdir)
-			setFiles(listing.files)
-			setFolderPath(listing.folderPath)
-			setFolderExists(listing.folderExists)
-		} catch (e) {
-			setError((e as Error).message)
-			setFiles([])
-		} finally {
-			setLoading(false)
-		}
-	}, [rundownId, subdir])
+			if (showInitialLoading) {
+				setInitialLoading(true)
+			}
+			setError(null)
+
+			try {
+				const listing = await fetchRundownMedia(rundownId, subdir)
+				if (requestId !== requestIdRef.current) {
+					return
+				}
+
+				setFiles(listing.files)
+				setFolderPath(listing.folderPath)
+				setFolderExists(listing.folderExists)
+			} catch (e) {
+				if (requestId !== requestIdRef.current) {
+					return
+				}
+
+				setError((e as Error).message)
+				setFiles([])
+			} finally {
+				if (requestId === requestIdRef.current && showInitialLoading) {
+					setInitialLoading(false)
+				}
+			}
+		},
+		[rundownId, subdir]
+	)
 
 	useEffect(() => {
-		void loadMedia()
+		void loadMedia({ showInitialLoading: true })
 		const interval = window.setInterval(() => {
 			void loadMedia()
 		}, MEDIA_POLL_MS)
 
 		return () => {
+			requestIdRef.current += 1
 			window.clearInterval(interval)
 		}
 	}, [loadMedia])
 
+	const logicalFolderPath = folderPath ?? `spravy/${rundownId}/${subdir}/`
 	const hasCurrentValue = Boolean(value)
 	const valueInList = files.some((f) => f.path === value)
 
@@ -85,9 +106,9 @@ export function MediaPickerField({
 					value={value ?? ''}
 					onBlur={onBlur}
 					onChange={(e) => onChange(e.target.value)}
-					disabled={loading}
+					disabled={initialLoading}
 				>
-					<option value="">{loading ? 'Loading clips…' : '— Select clip —'}</option>
+					<option value="">{initialLoading ? 'Loading clips…' : '— Select clip —'}</option>
 					{hasCurrentValue && !valueInList && (
 						<option value={value}>{value} (assigned — not listed in folder)</option>
 					)}
@@ -97,7 +118,12 @@ export function MediaPickerField({
 						</option>
 					))}
 				</Form.Select>
-				<Button type="button" variant="outline-secondary" size="sm" onClick={() => void loadMedia()}>
+				<Button
+					type="button"
+					variant="outline-secondary"
+					size="sm"
+					onClick={() => void loadMedia({ showInitialLoading: true })}
+				>
 					Refresh
 				</Button>
 			</div>
@@ -106,15 +132,15 @@ export function MediaPickerField({
 					Could not list media: {error}
 				</Form.Text>
 			)}
-			{!loading && !error && !folderExists && (
+			{!initialLoading && !error && !folderExists && (
 				<Form.Text className="text-muted d-block">
-					Ingest folder not found at {folderPath ?? `spravy/${rundownId}/${subdir}/`}. Create it or
-					check Settings → Ingest media root.
+					Ingest folder not found at {logicalFolderPath}. Create it or check Settings → Ingest media
+					root.
 				</Form.Text>
 			)}
-			{!loading && !error && folderExists && files.length === 0 && (
+			{!initialLoading && !error && folderExists && files.length === 0 && (
 				<Form.Text className="text-muted d-block">
-					No files in {folderPath ?? `spravy/${rundownId}/${subdir}/`} yet.
+					No files in {logicalFolderPath} yet.
 				</Form.Text>
 			)}
 			{ingestMediaRoot && (

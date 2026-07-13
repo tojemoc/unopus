@@ -215,7 +215,8 @@
 				"id": "source",
 				"label": "Source",
 				"type": "string",
-				"options": ["", "TASR", "ČTK", "Reuters", "AP"]
+				"options": ["", "TASR", "ČTK", "Reuters", "AP"],
+				"optionsHelperText": "Leave unselected to hide the source pill on air."
 			}
 		]
 	},

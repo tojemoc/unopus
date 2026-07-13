@@ -85,7 +85,6 @@ export function SidebarPartRow({
 	return (
 		<div
 			className={`story-row ${isActive ? 'active' : ''}`}
-			role="row"
 			tabIndex={0}
 			onClick={openPart}
 			onKeyDown={(event) => {
@@ -96,12 +95,12 @@ export function SidebarPartRow({
 			}}
 			style={{ borderLeftColor: partTypeManifest?.colour ?? '#666' }}
 		>
-			<div className="col-status" role="cell">
+			<div className="col-status">
 				{storyReadiness ? (
 					<ReadinessBadge state={storyReadiness.state} tooltip={storyReadiness.tooltip} compact />
 				) : null}
 			</div>
-			<div className="col-type" role="cell">
+			<div className="col-type">
 				<span
 					className="story-type-chip"
 					style={{ backgroundColor: partTypeManifest?.colour ?? '#666' }}
@@ -110,10 +109,10 @@ export function SidebarPartRow({
 					{partTypeManifest?.shortName ?? part.partType.slice(0, 4).toUpperCase()}
 				</span>
 			</div>
-			<div className="col-title" role="cell" title={part.name}>
+			<div className="col-title" title={part.name}>
 				{part.name}
 			</div>
-			<div className="col-duration" role="cell">
+			<div className="col-duration">
 				{part.duration ? displayTime(part.duration) : '--:--'}
 			</div>
 		</div>
@@ -142,19 +141,11 @@ export function getPieceReadinessState(
 
 export function StoryTableHeader() {
 	return (
-		<div className="story-table-header" role="row">
-			<div className="col-status" role="columnheader">
-				Status
-			</div>
-			<div className="col-type" role="columnheader">
-				Type
-			</div>
-			<div className="col-title" role="columnheader">
-				Story
-			</div>
-			<div className="col-duration" role="columnheader">
-				Dur
-			</div>
+		<div className="story-table-header">
+			<div className="col-status">Status</div>
+			<div className="col-type">Type</div>
+			<div className="col-title">Story</div>
+			<div className="col-duration">Dur</div>
 		</div>
 	)
 }
