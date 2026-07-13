@@ -37,19 +37,40 @@ function resolveIngestSubdir(rundownId: string, subdir: string): string {
 	return targetDir
 }
 
+function getRundownMediaFolder(rundownId: string, subdir: string = DEFAULT_SUBDIR): string {
+	const safeSubdir = subdir.replace(/[/\\]/g, '')
+	return resolveIngestSubdir(rundownId, safeSubdir)
+}
+
+function getRelativeRundownMediaFolder(rundownId: string, subdir: string): string {
+	const safeSubdir = subdir.replace(/[/\\]/g, '')
+	return path.posix.join('spravy', rundownId, safeSubdir)
+}
+
+export interface RundownMediaListing {
+	files: MediaFileEntry[]
+	folderPath: string
+	folderExists: boolean
+}
+
 export async function listRundownMedia(
 	rundownId: string,
 	subdir: string = DEFAULT_SUBDIR
-): Promise<MediaFileEntry[]> {
-	const safeSubdir = subdir.replace(/[/\\]/g, '')
-	const mediaDir = resolveIngestSubdir(rundownId, safeSubdir)
+): Promise<RundownMediaListing> {
+	const mediaDir = getRundownMediaFolder(rundownId, subdir)
+	const relativeFolderPath = getRelativeRundownMediaFolder(rundownId, subdir)
 
 	let entries
+	let folderExists = true
 	try {
 		entries = await fs.readdir(mediaDir, { withFileTypes: true })
 	} catch (error) {
 		if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-			return []
+			return {
+				files: [],
+				folderPath: relativeFolderPath,
+				folderExists: false,
+			}
 		}
 		throw error
 	}
@@ -63,7 +84,7 @@ export async function listRundownMedia(
 
 		const filePath = path.join(mediaDir, entry.name)
 		const stats = await fs.stat(filePath)
-		const relativePath = path.posix.join('spravy', rundownId, safeSubdir, entry.name)
+		const relativePath = path.posix.join(relativeFolderPath, entry.name)
 
 		files.push({
 			name: entry.name,
@@ -75,5 +96,9 @@ export async function listRundownMedia(
 
 	files.sort((a, b) => a.name.localeCompare(b.name))
 
-	return files
+	return {
+		files,
+		folderPath: relativeFolderPath,
+		folderExists,
+	}
 }

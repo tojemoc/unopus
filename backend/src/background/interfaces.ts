@@ -197,6 +197,10 @@ export interface PayloadManifest {
 	includeInName?: boolean
 	/** Subfolder under spravy/<rundownId>/ for mediaPick fields (default: clips) */
 	subdir?: string
+	/** Fixed choices for string fields (rendered as radio buttons when set) */
+	options?: string[]
+	/** Helper text shown below option radio buttons */
+	optionsHelperText?: string
 }
 
 export interface MediaFileEntry {

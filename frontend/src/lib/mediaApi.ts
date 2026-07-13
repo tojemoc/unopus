@@ -18,15 +18,20 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 	return body
 }
 
+export type RundownMediaListing = {
+	files: MediaFileEntry[]
+	folderPath: string
+	folderExists: boolean
+}
+
 export async function fetchRundownMedia(
 	rundownId: string,
 	subdir: string = 'clips'
-): Promise<MediaFileEntry[]> {
+): Promise<RundownMediaListing> {
 	const params = new URLSearchParams({ subdir })
-	const data = await request<{ files: MediaFileEntry[] }>(
+	return request<RundownMediaListing>(
 		`/api/rundowns/${encodeURIComponent(rundownId)}/media?${params}`
 	)
-	return data.files
 }
 
 let previewBaseUrlCache: string | null = null

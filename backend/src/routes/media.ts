@@ -18,8 +18,8 @@ export function registerMediaRoutes(app: Application): void {
 		const subdir = typeof req.query.subdir === 'string' ? req.query.subdir : 'clips'
 
 		try {
-			const files = await listRundownMedia(rundownId, subdir)
-			res.json({ files })
+			const listing = await listRundownMedia(rundownId, subdir)
+			res.json(listing)
 		} catch (error) {
 			console.error(error)
 			res.status(400).json({ error: (error as Error).message })
