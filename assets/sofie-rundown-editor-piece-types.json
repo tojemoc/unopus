@@ -214,7 +214,8 @@
 			{
 				"id": "source",
 				"label": "Source",
-				"type": "string"
+				"type": "string",
+				"options": ["", "TASR", "ČTK", "Reuters", "AP"]
 			}
 		]
 	},

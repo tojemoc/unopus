@@ -37,19 +37,35 @@ function resolveIngestSubdir(rundownId: string, subdir: string): string {
 	return targetDir
 }
 
+export function getRundownMediaFolder(rundownId: string, subdir: string = DEFAULT_SUBDIR): string {
+	const safeSubdir = subdir.replace(/[/\\]/g, '')
+	return resolveIngestSubdir(rundownId, safeSubdir)
+}
+
+export interface RundownMediaListing {
+	files: MediaFileEntry[]
+	folderPath: string
+	folderExists: boolean
+}
+
 export async function listRundownMedia(
 	rundownId: string,
 	subdir: string = DEFAULT_SUBDIR
-): Promise<MediaFileEntry[]> {
+): Promise<RundownMediaListing> {
 	const safeSubdir = subdir.replace(/[/\\]/g, '')
 	const mediaDir = resolveIngestSubdir(rundownId, safeSubdir)
 
 	let entries
+	let folderExists = true
 	try {
 		entries = await fs.readdir(mediaDir, { withFileTypes: true })
 	} catch (error) {
 		if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-			return []
+			return {
+				files: [],
+				folderPath: mediaDir,
+				folderExists: false,
+			}
 		}
 		throw error
 	}
@@ -75,5 +91,9 @@ export async function listRundownMedia(
 
 	files.sort((a, b) => a.name.localeCompare(b.name))
 
-	return files
+	return {
+		files,
+		folderPath: mediaDir,
+		folderExists,
+	}
 }

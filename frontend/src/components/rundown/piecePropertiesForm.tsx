@@ -137,7 +137,34 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 									<Form.Group className="mb-3">
 										<Form.Label htmlFor={field.name}>{fieldInfo.label}:</Form.Label>
 
-										{fieldInfo.type === ManifestFieldType.String && (
+										{fieldInfo.type === ManifestFieldType.String &&
+											fieldInfo.options &&
+											fieldInfo.options.length > 0 && (
+												<div>
+													<ButtonGroup>
+														{fieldInfo.options.map((option) => (
+															<Button
+																key={option}
+																type="button"
+																variant={
+																	(field.state.value || '') === option
+																		? 'primary'
+																		: 'outline-secondary'
+																}
+																onClick={() => field.handleChange(option)}
+															>
+																{option || 'None'}
+															</Button>
+														))}
+													</ButtonGroup>
+													<Form.Text className="text-muted d-block mt-1">
+														Leave unselected to hide the source pill on air.
+													</Form.Text>
+												</div>
+											)}
+
+										{fieldInfo.type === ManifestFieldType.String &&
+											(!fieldInfo.options || fieldInfo.options.length === 0) && (
 											<Form.Control
 												name={field.name}
 												type="text"

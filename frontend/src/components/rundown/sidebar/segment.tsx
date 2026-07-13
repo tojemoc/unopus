@@ -6,7 +6,7 @@ import { copySegment } from '~/store/segments'
 import type { Part, RundownReadiness, Segment } from '~backend/background/interfaces'
 import { DragTypes } from '~/components/drag-and-drop/DragTypes'
 import { DraggableContainer } from '~/components/drag-and-drop/DraggableContainer'
-import { SidebarPartRow, StoryTableHeader } from './partRow'
+import { SidebarPartRow } from './partRow'
 import { SidebarElementHeader } from './sidebarElementHeader'
 import { useToasts } from '~/components/toasts/useToasts'
 import { BsCaretDownFill, BsFillTrashFill, BsTrash } from 'react-icons/bs'
@@ -145,22 +145,19 @@ export function SidebarSegment({
 
 			<div className="segment-content">
 				{sortedParts.length > 0 ? (
-					<div className="story-table" role="table">
-						<StoryTableHeader />
-						<DraggableContainer
-							items={sortedParts}
-							itemType={DragTypes.PART}
-							id={segment.id}
-							reorder={handleReorderPart}
-							Component={({ data }) => (
-								<SidebarPartRow
-									part={data}
-									readiness={readiness}
-									partPieces={allPieces}
-								/>
-							)}
-						/>
-					</div>
+					<DraggableContainer
+						items={sortedParts}
+						itemType={DragTypes.PART}
+						id={segment.id}
+						reorder={handleReorderPart}
+						Component={({ data }) => (
+							<SidebarPartRow
+								part={data}
+								readiness={readiness}
+								partPieces={allPieces}
+							/>
+						)}
+					/>
 				) : (
 					<div className="story-table-empty px-2 py-2 text-muted">
 						No stories yet — use the toolbar above to add one.

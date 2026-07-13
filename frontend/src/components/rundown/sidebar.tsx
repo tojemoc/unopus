@@ -8,6 +8,7 @@ import { DraggableContainer } from '../drag-and-drop/DraggableContainer'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import ImportSegmentModal from './importSegmentModal/importSegmentModal'
 import { SidebarSegment } from './sidebar/segment'
+import { StoryTableHeader } from './sidebar/partRow'
 import { useToasts } from '../toasts/useToasts'
 import { SegmentButtons } from './sidebar/segmentButtons'
 import { useRundownReadinessContext } from '~/hooks/RundownReadinessContext'
@@ -103,21 +104,24 @@ export function RundownSidebar({
 			</div>
 
 			<div className="rundown-sidebar-scroll">
-				<DraggableContainer
-					items={sortedSegments}
-					itemType={DragTypes.SEGMENT}
-					Component={({ data: segment }) => (
-						<SidebarSegment
-							key={segment.id}
-							segment={segment}
-							isOpen={isSegmentOpen(segment.id)}
-							onToggleOpen={() => toggleSegmentOpen(segment.id)}
-							readiness={readiness}
-						/>
-					)}
-					id={rundownId}
-					reorder={handleReorderSegment}
-				/>
+				<div className="story-table story-table--sidebar" role="table">
+					<StoryTableHeader />
+					<DraggableContainer
+						items={sortedSegments}
+						itemType={DragTypes.SEGMENT}
+						Component={({ data: segment }) => (
+							<SidebarSegment
+								key={segment.id}
+								segment={segment}
+								isOpen={isSegmentOpen(segment.id)}
+								onToggleOpen={() => toggleSegmentOpen(segment.id)}
+								readiness={readiness}
+							/>
+						)}
+						id={rundownId}
+						reorder={handleReorderSegment}
+					/>
+				</div>
 
 				<SegmentButtons
 					rundownId={rundownId}
