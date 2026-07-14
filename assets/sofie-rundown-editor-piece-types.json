@@ -212,11 +212,19 @@
 				"subdir": "clips"
 			},
 			{
-				"id": "source",
+				"id": "iluFallback",
+				"label": "Use Caspar media fallback",
+				"type": "boolean"
+			},
+			{
+				"id": "sourceEnabled",
 				"label": "Source",
-				"type": "string",
-				"options": ["", "TASR", "ČTK", "Reuters", "AP"],
-				"optionsHelperText": "Leave unselected to hide the source pill on air."
+				"type": "boolean"
+			},
+			{
+				"id": "source",
+				"label": "Source text",
+				"type": "string"
 			}
 		]
 	},

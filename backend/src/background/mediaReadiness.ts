@@ -10,6 +10,7 @@ import {
 } from './interfaces'
 import { getIngestMediaRoot } from './media'
 import { findTypeManifest } from './manifestMaterialize'
+import { resolveSourceEnabled, trimSourceText } from './sourcePayload'
 
 const CEF_TEMPLATE_VIDEO = /\.(mp4|mov|m4v|mxf)$/i
 const PATH_LOOKUP_CONCURRENCY = 8
@@ -129,6 +130,19 @@ function collectMediaRequirements(
 			ready: false,
 			requiresCefWebm: field.id === 'iluFile'
 		})
+	}
+
+	const hasSourceToggle = manifest.payload.some((field) => field.id === 'sourceEnabled')
+	const sourceText = trimSourceText(piece.payload?.source)
+	if (hasSourceToggle && resolveSourceEnabled(piece.payload?.sourceEnabled, sourceText)) {
+		if (!sourceText) {
+			requirements.push({
+				fieldId: 'source',
+				path: '',
+				ready: false,
+				reason: 'Source is enabled but empty — pill will not show on air'
+			})
+		}
 	}
 
 	return requirements

@@ -17,6 +17,7 @@ import { sendPartUpdateToCore } from './parts'
 import { mutations as partsMutations } from './parts'
 import { Server, Socket } from 'socket.io'
 import { mutations as typeManifestMutations, resolveManifestId } from './typeManifests'
+import { resolveSourceEnabled, trimSourceText } from '../sourcePayload'
 
 export const mutations = {
 	async create(payload: MutationPieceCreate): Promise<{ result?: Piece; error?: Error }> {
@@ -453,6 +454,26 @@ export async function handleCloneSetPiece(payload: MutationPieceCloneFromParToPa
 	}
 }
 
+function normalizeGraphicAttributesForExport(
+	payload: Piece['payload'] | undefined
+): Record<string, unknown> {
+	const attributes: Record<string, unknown> = { ...(payload ?? {}) }
+
+	const sourceText = trimSourceText(attributes.source)
+	const sourceEnabled = resolveSourceEnabled(attributes.sourceEnabled, sourceText)
+
+	delete attributes.sourceEnabled
+
+	// Only send a non-empty source when the toggle is on (avoids an empty on-air pill).
+	if (!sourceEnabled || !sourceText) {
+		delete attributes.source
+	} else {
+		attributes.source = sourceText
+	}
+
+	return attributes
+}
+
 export function mutatePieceForExport(piece: Piece): MutatedPiece {
 	const objectTime = piece.start ?? 0
 
@@ -464,7 +485,7 @@ export function mutatePieceForExport(piece: Piece): MutatedPiece {
 		duration: piece.duration,
 		clipName: undefined,
 		attributes: {
-			...piece.payload,
+			...normalizeGraphicAttributesForExport(piece.payload),
 			adlib: false
 		},
 		position: undefined
