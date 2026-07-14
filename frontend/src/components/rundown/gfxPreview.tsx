@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { fetchPreviewBaseUrl } from '~/lib/mediaApi'
 import type { Piece, TypeManifest } from '~backend/background/interfaces'
+import { resolveSourceEnabled, trimSourceText } from '~/util/sourcePayload'
 
 function buildPreviewUrl(
 	baseUrl: string,
@@ -61,12 +62,8 @@ export function GfxPreview({
 		delete previewPayload.sourceEnabled
 		delete previewPayload.iluFallback
 
-		const rawEnabled = payload.sourceEnabled
-		const sourceText = typeof payload.source === 'string' ? payload.source.trim() : ''
-		const sourceEnabled =
-			rawEnabled === true ||
-			rawEnabled === 'true' ||
-			((rawEnabled === undefined || rawEnabled === null) && sourceText.length > 0)
+		const sourceText = trimSourceText(payload.source)
+		const sourceEnabled = resolveSourceEnabled(payload.sourceEnabled, sourceText)
 
 		if (!sourceEnabled || !sourceText) {
 			delete previewPayload.source

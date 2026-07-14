@@ -10,13 +10,7 @@ import { removePiece, updatePiece } from '~/store/pieces'
 import { useToasts } from '../toasts/useToasts'
 import { MediaPickerField } from './mediaPickerField'
 import { GfxPreview } from './gfxPreview'
-
-/** Source toggle: explicit value wins; otherwise legacy non-empty source counts as on. */
-function resolveSourceEnabled(enabledValue: unknown, sourceText: unknown): boolean {
-	if (enabledValue === true || enabledValue === 'true') return true
-	if (enabledValue === false || enabledValue === 'false') return false
-	return typeof sourceText === 'string' && sourceText.trim().length > 0
-}
+import { resolveSourceEnabled } from '~/util/sourcePayload'
 
 export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 	const dispatch = useAppDispatch()

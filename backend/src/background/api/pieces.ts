@@ -17,6 +17,7 @@ import { sendPartUpdateToCore } from './parts'
 import { mutations as partsMutations } from './parts'
 import { Server, Socket } from 'socket.io'
 import { mutations as typeManifestMutations, resolveManifestId } from './typeManifests'
+import { resolveSourceEnabled, trimSourceText } from '../sourcePayload'
 
 export const mutations = {
 	async create(payload: MutationPieceCreate): Promise<{ result?: Piece; error?: Error }> {
@@ -458,12 +459,8 @@ function normalizeGraphicAttributesForExport(
 ): Record<string, unknown> {
 	const attributes: Record<string, unknown> = { ...(payload ?? {}) }
 
-	const rawEnabled = attributes.sourceEnabled
-	const sourceText = typeof attributes.source === 'string' ? attributes.source.trim() : ''
-	const sourceEnabled =
-		rawEnabled === true ||
-		rawEnabled === 'true' ||
-		((rawEnabled === undefined || rawEnabled === null) && sourceText.length > 0)
+	const sourceText = trimSourceText(attributes.source)
+	const sourceEnabled = resolveSourceEnabled(attributes.sourceEnabled, sourceText)
 
 	delete attributes.sourceEnabled
 

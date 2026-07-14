@@ -10,6 +10,7 @@ import {
 } from './interfaces'
 import { getIngestMediaRoot } from './media'
 import { findTypeManifest } from './manifestMaterialize'
+import { resolveSourceEnabled, trimSourceText } from './sourcePayload'
 
 const CEF_TEMPLATE_VIDEO = /\.(mp4|mov|m4v|mxf)$/i
 const PATH_LOOKUP_CONCURRENCY = 8
@@ -95,13 +96,6 @@ function createPathLookupContext(concurrency = PATH_LOOKUP_CONCURRENCY): PathLoo
 	}
 }
 
-function isSourceEnabled(payload: Piece['payload']): boolean {
-	const raw = payload?.sourceEnabled
-	if (raw === true || raw === 'true') return true
-	if (raw === false || raw === 'false') return false
-	return false
-}
-
 function collectMediaRequirements(
 	piece: Piece,
 	manifest: TypeManifest | undefined
@@ -139,9 +133,8 @@ function collectMediaRequirements(
 	}
 
 	const hasSourceToggle = manifest.payload.some((field) => field.id === 'sourceEnabled')
-	if (hasSourceToggle && isSourceEnabled(piece.payload)) {
-		const sourceText =
-			typeof piece.payload?.source === 'string' ? piece.payload.source.trim() : ''
+	const sourceText = trimSourceText(piece.payload?.source)
+	if (hasSourceToggle && resolveSourceEnabled(piece.payload?.sourceEnabled, sourceText)) {
 		if (!sourceText) {
 			requirements.push({
 				fieldId: 'source',

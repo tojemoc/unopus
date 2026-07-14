@@ -71,6 +71,9 @@ index d63154f..03c566e 100644
  	const { pieceName: _pieceName, ...templateAttributes } = attributes
  	delete templateAttributes.iluFallback
  
++	// Keep source-enabled resolution in lockstep with unopus
++	// `backend/src/background/sourcePayload.ts` / `frontend/src/util/sourcePayload.ts`
++	// (explicit true/'true' and false/'false'; missing falls back to non-empty trimmed source).
 +	const rawSourceEnabled = templateAttributes.sourceEnabled
 +	delete templateAttributes.sourceEnabled
 +
