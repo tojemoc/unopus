@@ -201,6 +201,8 @@
 			"payload": {
 				"text": "Headline one",
 				"iluFile": "spravy/spravy-v3-smoke/clips/headline1.mp4",
+				"iluFallback": true,
+				"sourceEnabled": true,
 				"source": "TASR"
 			},
 			"start": 0
@@ -229,6 +231,8 @@
 			"payload": {
 				"text": "Headline two",
 				"iluFile": "spravy/spravy-v3-smoke/clips/headline2.mp4",
+				"iluFallback": true,
+				"sourceEnabled": true,
 				"source": "TASR"
 			},
 			"start": 0
@@ -257,6 +261,8 @@
 			"payload": {
 				"text": "Headline three",
 				"iluFile": "spravy/spravy-v3-smoke/clips/headline3.mp4",
+				"iluFallback": true,
+				"sourceEnabled": true,
 				"source": "TASR"
 			},
 			"start": 0

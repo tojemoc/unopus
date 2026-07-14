@@ -11,6 +11,13 @@ import { useToasts } from '../toasts/useToasts'
 import { MediaPickerField } from './mediaPickerField'
 import { GfxPreview } from './gfxPreview'
 
+/** Source toggle: explicit value wins; otherwise legacy non-empty source counts as on. */
+function resolveSourceEnabled(enabledValue: unknown, sourceText: unknown): boolean {
+	if (enabledValue === true || enabledValue === 'true') return true
+	if (enabledValue === false || enabledValue === 'false') return false
+	return typeof sourceText === 'string' && sourceText.trim().length > 0
+}
+
 export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 	const dispatch = useAppDispatch()
 	const toasts = useToasts()
@@ -128,6 +135,83 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 				/>
 
 				{manifest?.payload?.map((fieldInfo) => {
+					const hasSourceToggle = manifest.payload?.some((f) => f.id === 'sourceEnabled')
+					// Source text is rendered together with the Source toggle.
+					if (fieldInfo.id === 'source' && hasSourceToggle) {
+						return null
+					}
+
+					if (fieldInfo.id === 'sourceEnabled') {
+						return (
+							<form.Field
+								key={`payload.${fieldInfo.id}`}
+								name={`payload.${fieldInfo.id}`}
+								children={(enabledField) => (
+									<form.Field
+										name="payload.source"
+										children={(sourceField) => {
+											const sourceText =
+												typeof sourceField.state.value === 'string'
+													? sourceField.state.value
+													: ''
+											const enabled = resolveSourceEnabled(
+												enabledField.state.value,
+												sourceText
+											)
+											const showEmptyWarning = enabled && !sourceText.trim()
+
+											return (
+												<>
+													<Form.Group className="mb-3">
+														<Form.Label htmlFor={enabledField.name}>
+															{fieldInfo.label}:
+														</Form.Label>
+														<Form.Switch
+															name={enabledField.name}
+															id={enabledField.name}
+															checked={enabled}
+															onBlur={enabledField.handleBlur}
+															onChange={(e) =>
+																enabledField.handleChange(e.target.checked)
+															}
+														/>
+														{enabled && (
+															<>
+																<Form.Control
+																	className="mt-2"
+																	name={sourceField.name}
+																	type="text"
+																	placeholder="e.g. TASR, ČTK, Reuters…"
+																	value={sourceText}
+																	onBlur={sourceField.handleBlur}
+																	onChange={(e) =>
+																		sourceField.handleChange(e.target.value)
+																	}
+																/>
+																{showEmptyWarning ? (
+																	<Form.Text className="text-warning d-block mt-1">
+																		Source is on but empty — the on-air pill will be
+																		hidden until text is entered.
+																	</Form.Text>
+																) : (
+																	<Form.Text className="text-muted d-block mt-1">
+																		Shown as a source pill on air.
+																	</Form.Text>
+																)}
+															</>
+														)}
+													</Form.Group>
+													<FieldInfo field={enabledField} />
+													<FieldInfo field={sourceField} />
+												</>
+											)
+										}}
+									/>
+								)}
+							/>
+						)
+					}
+
 					return (
 						<form.Field
 							key={`payload.${fieldInfo.id}`}
@@ -169,15 +253,15 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 
 										{fieldInfo.type === ManifestFieldType.String &&
 											(!fieldInfo.options || fieldInfo.options.length === 0) && (
-											<Form.Control
-												name={field.name}
-												type="text"
-												// eslint-disable-next-line @typescript-eslint/no-explicit-any
-												value={field.state.value as any}
-												onBlur={field.handleBlur}
-												onChange={(e) => field.handleChange(e.target.value)}
-											/>
-										)}
+												<Form.Control
+													name={field.name}
+													type="text"
+													// eslint-disable-next-line @typescript-eslint/no-explicit-any
+													value={field.state.value as any}
+													onBlur={field.handleBlur}
+													onChange={(e) => field.handleChange(e.target.value)}
+												/>
+											)}
 
 										{fieldInfo.type === ManifestFieldType.Number && (
 											<Form.Control

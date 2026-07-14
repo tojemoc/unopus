@@ -57,7 +57,22 @@ export function GfxPreview({
 		if (!previewBaseUrl || !template) {
 			return null
 		}
-		return buildPreviewUrl(previewBaseUrl, template, payload)
+		const previewPayload = { ...payload }
+		delete previewPayload.sourceEnabled
+		delete previewPayload.iluFallback
+
+		const rawEnabled = payload.sourceEnabled
+		const sourceText = typeof payload.source === 'string' ? payload.source.trim() : ''
+		const sourceEnabled =
+			rawEnabled === true ||
+			rawEnabled === 'true' ||
+			((rawEnabled === undefined || rawEnabled === null) && sourceText.length > 0)
+
+		if (!sourceEnabled || !sourceText) {
+			delete previewPayload.source
+		}
+
+		return buildPreviewUrl(previewBaseUrl, template, previewPayload)
 	}, [previewBaseUrl, template, payload])
 
 	if (!template) {

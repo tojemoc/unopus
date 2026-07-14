@@ -95,6 +95,13 @@ function createPathLookupContext(concurrency = PATH_LOOKUP_CONCURRENCY): PathLoo
 	}
 }
 
+function isSourceEnabled(payload: Piece['payload']): boolean {
+	const raw = payload?.sourceEnabled
+	if (raw === true || raw === 'true') return true
+	if (raw === false || raw === 'false') return false
+	return false
+}
+
 function collectMediaRequirements(
 	piece: Piece,
 	manifest: TypeManifest | undefined
@@ -129,6 +136,20 @@ function collectMediaRequirements(
 			ready: false,
 			requiresCefWebm: field.id === 'iluFile'
 		})
+	}
+
+	const hasSourceToggle = manifest.payload.some((field) => field.id === 'sourceEnabled')
+	if (hasSourceToggle && isSourceEnabled(piece.payload)) {
+		const sourceText =
+			typeof piece.payload?.source === 'string' ? piece.payload.source.trim() : ''
+		if (!sourceText) {
+			requirements.push({
+				fieldId: 'source',
+				path: '',
+				ready: false,
+				reason: 'Source is enabled but empty — pill will not show on air'
+			})
+		}
 	}
 
 	return requirements

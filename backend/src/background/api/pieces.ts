@@ -453,6 +453,30 @@ export async function handleCloneSetPiece(payload: MutationPieceCloneFromParToPa
 	}
 }
 
+function normalizeGraphicAttributesForExport(
+	payload: Piece['payload'] | undefined
+): Record<string, unknown> {
+	const attributes: Record<string, unknown> = { ...(payload ?? {}) }
+
+	const rawEnabled = attributes.sourceEnabled
+	const sourceText = typeof attributes.source === 'string' ? attributes.source.trim() : ''
+	const sourceEnabled =
+		rawEnabled === true ||
+		rawEnabled === 'true' ||
+		((rawEnabled === undefined || rawEnabled === null) && sourceText.length > 0)
+
+	delete attributes.sourceEnabled
+
+	// Only send a non-empty source when the toggle is on (avoids an empty on-air pill).
+	if (!sourceEnabled || !sourceText) {
+		delete attributes.source
+	} else {
+		attributes.source = sourceText
+	}
+
+	return attributes
+}
+
 export function mutatePieceForExport(piece: Piece): MutatedPiece {
 	const objectTime = piece.start ?? 0
 
@@ -464,7 +488,7 @@ export function mutatePieceForExport(piece: Piece): MutatedPiece {
 		duration: piece.duration,
 		clipName: undefined,
 		attributes: {
-			...piece.payload,
+			...normalizeGraphicAttributesForExport(piece.payload),
 			adlib: false
 		},
 		position: undefined
