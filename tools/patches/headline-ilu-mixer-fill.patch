@@ -1,0 +1,135 @@
+From 23d62eb67feb29c9b63f47b43cd9dccd163cdf05 Mon Sep 17 00:00:00 2001
+From: Cursor Agent <cursoragent@cursor.com>
+Date: Tue, 14 Jul 2026 08:20:57 +0000
+Subject: [PATCH] Position headline ILU MEDIA with MIXER FILL and Source toggle
+
+Transform Caspar clip-player ILU video to the HTML #ilu-slide frame
+(8%/15%/62%/73%) instead of fullscreen. Sync piece types to Source
+toggle + text, and omit empty or disabled source from template data.
+---
+ assets/sofie-rundown-editor-piece-types.json  |  5 ++--
+ .../src/__tests__/iluMediaPackages.spec.ts    | 16 ++++++++++
+ .../src/base/showstyle/helpers/graphics.ts    | 29 +++++++++++++++++++
+ .../src/common/definitions/objects.ts         |  2 ++
+ 4 files changed, 50 insertions(+), 2 deletions(-)
+
+diff --git a/assets/sofie-rundown-editor-piece-types.json b/assets/sofie-rundown-editor-piece-types.json
+index 39205b6..8c62bf7 100644
+--- a/assets/sofie-rundown-editor-piece-types.json
++++ b/assets/sofie-rundown-editor-piece-types.json
+@@ -9,8 +9,9 @@
+     "payload": [
+       { "id": "text", "label": "Text", "type": "string", "includeInName": true },
+       { "id": "iluFile", "label": "ILU clip", "type": "mediaPick", "subdir": "clips" },
+-      { "id": "source", "label": "Source", "type": "string", "options": ["", "TASR", "ČTK", "Reuters", "AP"] },
+-      { "id": "iluFallback", "label": "Use Caspar media fallback", "type": "boolean" }
++      { "id": "iluFallback", "label": "Use Caspar media fallback", "type": "boolean" },
++      { "id": "sourceEnabled", "label": "Source", "type": "boolean" },
++      { "id": "source", "label": "Source text", "type": "string" }
+     ]
+   },
+   {
+diff --git a/packages/blueprints/src/__tests__/iluMediaPackages.spec.ts b/packages/blueprints/src/__tests__/iluMediaPackages.spec.ts
+index 67fba31..29669eb 100644
+--- a/packages/blueprints/src/__tests__/iluMediaPackages.spec.ts
++++ b/packages/blueprints/src/__tests__/iluMediaPackages.spec.ts
+@@ -187,6 +187,14 @@ describe('gfx/headline ILU expectedPackages', () => {
+ 		expect(media?.content).toMatchObject({
+ 			type: TSR.TimelineContentTypeCasparCg.MEDIA,
+ 			file: 'spravy/rundown-1/clips/foo',
++			mixer: {
++				fill: {
++					x: 0.08,
++					y: 0.15,
++					xScale: 0.62,
++					yScale: 0.73,
++				},
++			},
+ 		})
+ 
+ 		const template = piece?.content.timelineObjects?.find(
+@@ -240,6 +248,14 @@ describe('gfx/headline ILU expectedPackages', () => {
+ 		expect(media?.content).toMatchObject({
+ 			type: TSR.TimelineContentTypeCasparCg.MEDIA,
+ 			file: 'spravy/rundown-1/clips/foo',
++			mixer: {
++				fill: {
++					x: 0.08,
++					y: 0.15,
++					xScale: 0.62,
++					yScale: 0.73,
++				},
++			},
+ 		})
+ 		expect(piece?.expectedPackages?.[0]?.layers).toEqual([CasparCGLayers.CasparCGClipPlayer1])
+ 	})
+diff --git a/packages/blueprints/src/base/showstyle/helpers/graphics.ts b/packages/blueprints/src/base/showstyle/helpers/graphics.ts
+index d63154f..03c566e 100644
+--- a/packages/blueprints/src/base/showstyle/helpers/graphics.ts
++++ b/packages/blueprints/src/base/showstyle/helpers/graphics.ts
+@@ -39,6 +39,21 @@ function getTemplateAttributes(
+ 	const { pieceName: _pieceName, ...templateAttributes } = attributes
+ 	delete templateAttributes.iluFallback
+ 
++	const rawSourceEnabled = templateAttributes.sourceEnabled
++	delete templateAttributes.sourceEnabled
++
++	const sourceText = typeof templateAttributes.source === 'string' ? templateAttributes.source.trim() : ''
++	const sourceEnabled =
++		rawSourceEnabled === true ||
++		rawSourceEnabled === 'true' ||
++		((rawSourceEnabled === undefined || rawSourceEnabled === null) && sourceText.length > 0)
++
++	if (!sourceEnabled || !sourceText) {
++		delete templateAttributes.source
++	} else {
++		templateAttributes.source = sourceText
++	}
++
+ 	if (options?.omitIluFile) {
+ 		delete templateAttributes.iluFile
+ 	}
+@@ -70,6 +85,17 @@ function shouldPlayHeadlineIluOnMediaLayer(object: GraphicObjectBase): boolean {
+ 	return object.clipName === 'gfx/headline' && !!object.attributes.iluFile && !useHeadlineIluFallback(object)
+ }
+ 
++/**
++ * Match `#ilu-slide` framing in sofie-demo-assets headline templates:
++ * left 8%, top 15%, width 62%, bottom 12% → height 73%.
++ */
++const HEADLINE_ILU_MIXER_FILL = {
++	x: 0.08,
++	y: 0.15,
++	xScale: 0.62,
++	yScale: 0.73,
++}
++
+ function createHeadlineIluMediaTimelineObject(
+ 	iluFile: string,
+ 	isAdlib?: boolean
+@@ -85,6 +111,9 @@ function createHeadlineIluMediaTimelineObject(
+ 			deviceType: TSR.DeviceType.CASPARCG,
+ 			type: TSR.TimelineContentTypeCasparCg.MEDIA,
+ 			file: toCasparPlayPath(iluFile),
++			mixer: {
++				fill: HEADLINE_ILU_MIXER_FILL,
++			},
+ 		},
+ 	})
+ }
+diff --git a/packages/blueprints/src/common/definitions/objects.ts b/packages/blueprints/src/common/definitions/objects.ts
+index 55cde6e..ae6416c 100644
+--- a/packages/blueprints/src/common/definitions/objects.ts
++++ b/packages/blueprints/src/common/definitions/objects.ts
+@@ -57,6 +57,8 @@ export type GraphicObjectAttributes = {
+ 	subline?: string
+ 	role?: string
+ 	source?: string
++	/** When true, show the on-air source pill (requires non-empty `source`). */
++	sourceEnabled?: boolean | string
+ 	iluFile?: string
+ 	iluFallback?: boolean | string
+ 	url?: string
+-- 
+2.43.0
+
