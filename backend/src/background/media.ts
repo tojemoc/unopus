@@ -49,8 +49,12 @@ function getRelativeRundownMediaFolder(rundownId: string, subdir: string): strin
 
 export interface RundownMediaListing {
 	files: MediaFileEntry[]
+	/** Path relative to ingest root, e.g. spravy/<rundownId>/clips */
 	folderPath: string
+	/** Absolute filesystem path for the rundown clips folder */
+	absoluteFolderPath: string
 	folderExists: boolean
+	ingestMediaRoot: string
 }
 
 export async function listRundownMedia(
@@ -59,6 +63,7 @@ export async function listRundownMedia(
 ): Promise<RundownMediaListing> {
 	const mediaDir = getRundownMediaFolder(rundownId, subdir)
 	const relativeFolderPath = getRelativeRundownMediaFolder(rundownId, subdir)
+	const ingestMediaRoot = getIngestMediaRoot()
 
 	let entries
 	let folderExists = true
@@ -69,7 +74,9 @@ export async function listRundownMedia(
 			return {
 				files: [],
 				folderPath: relativeFolderPath,
+				absoluteFolderPath: mediaDir,
 				folderExists: false,
+				ingestMediaRoot,
 			}
 		}
 		throw error
@@ -99,6 +106,18 @@ export async function listRundownMedia(
 	return {
 		files,
 		folderPath: relativeFolderPath,
+		absoluteFolderPath: mediaDir,
 		folderExists,
+		ingestMediaRoot,
 	}
+}
+
+/** Create the rundown ingest clips folder (and parents) if missing. */
+export async function ensureRundownMediaFolder(
+	rundownId: string,
+	subdir: string = DEFAULT_SUBDIR
+): Promise<RundownMediaListing> {
+	const mediaDir = getRundownMediaFolder(rundownId, subdir)
+	await fs.mkdir(mediaDir, { recursive: true })
+	return listRundownMedia(rundownId, subdir)
 }

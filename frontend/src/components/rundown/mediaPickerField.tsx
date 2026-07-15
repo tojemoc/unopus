@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { Button, Form } from 'react-bootstrap'
-import { fetchAppConfig, fetchRundownMedia } from '~/lib/mediaApi'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { Button, Form, InputGroup } from 'react-bootstrap'
+import { ensureRundownMediaFolder, fetchAppConfig, fetchRundownMedia } from '~/lib/mediaApi'
 import type { MediaFileEntry } from '~backend/background/interfaces'
 
 const MEDIA_POLL_MS = 10_000
@@ -22,11 +22,14 @@ export function MediaPickerField({
 }) {
 	const [files, setFiles] = useState<MediaFileEntry[]>([])
 	const [folderPath, setFolderPath] = useState<string | null>(null)
+	const [absoluteFolderPath, setAbsoluteFolderPath] = useState<string | null>(null)
 	const [folderExists, setFolderExists] = useState(true)
 	const [initialLoading, setInitialLoading] = useState(true)
+	const [creatingFolder, setCreatingFolder] = useState(false)
 	const [error, setError] = useState<string | null>(null)
 	const [ingestMediaRoot, setIngestMediaRoot] = useState<string | null>(null)
 	const requestIdRef = useRef(0)
+	const datalistId = useId()
 
 	useEffect(() => {
 		let cancelled = false
@@ -46,6 +49,19 @@ export function MediaPickerField({
 		}
 	}, [])
 
+	const applyListing = useCallback(
+		(listing: Awaited<ReturnType<typeof fetchRundownMedia>>) => {
+			setFiles(listing.files)
+			setFolderPath(listing.folderPath)
+			setAbsoluteFolderPath(listing.absoluteFolderPath)
+			setFolderExists(listing.folderExists)
+			if (listing.ingestMediaRoot) {
+				setIngestMediaRoot(listing.ingestMediaRoot)
+			}
+		},
+		[]
+	)
+
 	const loadMedia = useCallback(
 		async (options?: { showInitialLoading?: boolean }) => {
 			const requestId = ++requestIdRef.current
@@ -62,9 +78,7 @@ export function MediaPickerField({
 					return
 				}
 
-				setFiles(listing.files)
-				setFolderPath(listing.folderPath)
-				setFolderExists(listing.folderExists)
+				applyListing(listing)
 			} catch (e) {
 				if (requestId !== requestIdRef.current) {
 					return
@@ -78,7 +92,7 @@ export function MediaPickerField({
 				}
 			}
 		},
-		[rundownId, subdir]
+		[applyListing, rundownId, subdir]
 	)
 
 	useEffect(() => {
@@ -93,59 +107,120 @@ export function MediaPickerField({
 		}
 	}, [loadMedia])
 
-	const logicalFolderPath = folderPath ?? `spravy/${rundownId}/${subdir}/`
-	const hasCurrentValue = Boolean(value)
-	const valueInList = files.some((f) => f.path === value)
+	const handleCreateFolder = useCallback(async () => {
+		setCreatingFolder(true)
+		setError(null)
+		try {
+			const listing = await ensureRundownMediaFolder(rundownId, subdir)
+			applyListing(listing)
+		} catch (e) {
+			setError((e as Error).message)
+		} finally {
+			setCreatingFolder(false)
+		}
+	}, [applyListing, rundownId, subdir])
+
+	const logicalFolderPath = folderPath ?? `spravy/${rundownId}/${subdir}`
+	const absolutePath =
+		absoluteFolderPath ??
+		(ingestMediaRoot ? `${ingestMediaRoot.replace(/[/\\]+$/, '')}/${logicalFolderPath}` : null)
 
 	return (
 		<>
-			<div className="d-flex gap-2 align-items-start">
-				<Form.Select
-					className="flex-grow-1"
+			<InputGroup>
+				<Form.Control
 					name={name}
+					list={datalistId}
 					value={value ?? ''}
+					placeholder="e.g. spravy/my-rundown/clips/clip.mp4"
+					disabled={initialLoading}
 					onBlur={onBlur}
-					onChange={(e) => onChange(e.target.value)}
+					onChange={(e) => onChange(e.target.value.trimStart())}
+					autoComplete="off"
+				/>
+				<Button
+					type="button"
+					variant="outline-secondary"
+					onClick={() => void loadMedia({ showInitialLoading: true })}
 					disabled={initialLoading}
 				>
-					<option value="">{initialLoading ? 'Loading clips…' : '— Select clip —'}</option>
-					{hasCurrentValue && !valueInList && (
-						<option value={value}>{value} (assigned — not listed in folder)</option>
-					)}
+					Refresh
+				</Button>
+			</InputGroup>
+			<datalist id={datalistId}>
+				{files.map((file) => (
+					<option key={file.path} value={file.path}>
+						{file.name}
+					</option>
+				))}
+			</datalist>
+			{files.length > 0 && (
+				<Form.Select
+					className="mt-2"
+					aria-label="Pick a scanned clip"
+					value={files.some((f) => f.path === value) ? (value ?? '') : ''}
+					onBlur={onBlur}
+					onChange={(e) => onChange(e.target.value)}
+				>
+					<option value="">— Or pick from scanned folder —</option>
 					{files.map((file) => (
 						<option key={file.path} value={file.path}>
 							{file.name}
 						</option>
 					))}
 				</Form.Select>
-				<Button
-					type="button"
-					variant="outline-secondary"
-					size="sm"
-					onClick={() => void loadMedia({ showInitialLoading: true })}
-				>
-					Refresh
-				</Button>
-			</div>
+			)}
 			{error && (
 				<Form.Text className="text-warning d-block">
 					Could not list media: {error}
 				</Form.Text>
 			)}
 			{!initialLoading && !error && !folderExists && (
-				<Form.Text className="text-muted d-block">
-					Ingest folder not found at {logicalFolderPath}. Create it or check Settings → Ingest media
-					root.
-				</Form.Text>
+				<>
+					<Form.Text className="text-muted d-block">
+						Scan folder not found
+						{absolutePath ? (
+							<>
+								:{' '}
+								<code className="user-select-all">{absolutePath}</code>
+							</>
+						) : (
+							<>
+								{' '}
+								at <code>{logicalFolderPath}</code>
+							</>
+						)}
+						. Paths are relative to the ingest root (same tree Softie Package Manager uses). You can
+						still type a path above.
+					</Form.Text>
+					<Button
+						type="button"
+						variant="outline-primary"
+						size="sm"
+						className="mt-1"
+						disabled={creatingFolder}
+						onClick={() => void handleCreateFolder()}
+					>
+						{creatingFolder ? 'Creating…' : 'Create scan folder'}
+					</Button>
+				</>
 			)}
 			{!initialLoading && !error && folderExists && files.length === 0 && (
 				<Form.Text className="text-muted d-block">
-					No files in {logicalFolderPath} yet.
+					No files in <code className="user-select-all">{absolutePath ?? logicalFolderPath}</code>{' '}
+					yet — type a path relative to the ingest/Caspar media root, or drop files into that
+					folder.
 				</Form.Text>
 			)}
 			{ingestMediaRoot && (
 				<Form.Text className="text-muted d-block">
-					Ingest root: {ingestMediaRoot}
+					Ingest root: <code className="user-select-all">{ingestMediaRoot}</code>
+					{folderExists && absolutePath ? (
+						<>
+							{' '}
+							· scan: <code className="user-select-all">{absolutePath}</code>
+						</>
+					) : null}
 				</Form.Text>
 			)}
 		</>
