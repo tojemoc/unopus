@@ -138,8 +138,11 @@ export function CoreConnectionSettingsForm({ settings }: { settings: Application
 									<code>
 										&lt;ingest root&gt;/spravy/&lt;rundownId&gt;/clips/
 									</code>
-									. Overrides <code>INGEST_MEDIA_ROOT</code> in backend <code>.env</code> when
-									set.
+									. File name / ILU clip fields also accept any path typed relative to this
+									root (same layout Softie Package Manager expects). Overrides{' '}
+									<code>INGEST_MEDIA_ROOT</code> in backend <code>.env</code> when set. In Docker
+									this is often <code>/app/ingest</code> — mount your media tree there or change
+									this setting.
 								</Form.Text>
 							</Form.Group>
 							<FieldInfo field={field} />

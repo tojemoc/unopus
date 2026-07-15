@@ -21,7 +21,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export type RundownMediaListing = {
 	files: MediaFileEntry[]
 	folderPath: string
+	absoluteFolderPath: string
 	folderExists: boolean
+	ingestMediaRoot: string
 }
 
 export async function fetchRundownMedia(
@@ -31,6 +33,19 @@ export async function fetchRundownMedia(
 	const params = new URLSearchParams({ subdir })
 	return request<RundownMediaListing>(
 		`/api/rundowns/${encodeURIComponent(rundownId)}/media?${params}`
+	)
+}
+
+export async function ensureRundownMediaFolder(
+	rundownId: string,
+	subdir: string = 'clips'
+): Promise<RundownMediaListing> {
+	return request<RundownMediaListing>(
+		`/api/rundowns/${encodeURIComponent(rundownId)}/media/ensure-folder`,
+		{
+			method: 'POST',
+			body: JSON.stringify({ subdir })
+		}
 	)
 }
 

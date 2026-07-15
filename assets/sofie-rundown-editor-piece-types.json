@@ -18,8 +18,8 @@
 	{
 		"id": "video",
 		"entityType": "piece",
-		"name": "SOT",
-		"shortName": "SOT",
+		"name": "Video clip (SOT/VID)",
+		"shortName": "VID",
 		"colour": "#0a20ed",
 		"includeTypeInName": true,
 		"payload": [
@@ -207,7 +207,7 @@
 			},
 			{
 				"id": "iluFile",
-				"label": "Illustration",
+				"label": "ILU clip",
 				"type": "mediaPick",
 				"subdir": "clips"
 			},
