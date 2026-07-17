@@ -1,5 +1,6 @@
 import fs from 'fs/promises'
 import path from 'path'
+import type { CorePieceContentStatus } from './coreContentStatus'
 import {
 	ManifestFieldType,
 	type MediaRequirement,
@@ -150,8 +151,26 @@ function collectMediaRequirements(
 
 async function evaluateRequirement(
 	requirement: MediaRequirement,
-	pathLookup: PathLookupContext
+	pathLookup: PathLookupContext,
+	coreStatus?: CorePieceContentStatus
 ): Promise<MediaRequirement> {
+	// Source-toggle and empty-path checks stay local; Core status applies to assigned media paths only.
+	if (coreStatus && requirement.path) {
+		if (coreStatus.ready) {
+			return {
+				...requirement,
+				ready: true,
+				reason: undefined
+			}
+		}
+
+		return {
+			...requirement,
+			ready: false,
+			reason: coreStatus.reason ?? 'Not ready on playout system'
+		}
+	}
+
 	if (!requirement.path) {
 		return requirement
 	}
@@ -198,7 +217,8 @@ async function evaluateRequirement(
 export async function evaluatePieceReadiness(
 	piece: Piece,
 	manifests: TypeManifest[],
-	pathLookup: PathLookupContext
+	pathLookup: PathLookupContext,
+	coreStatus?: CorePieceContentStatus
 ): Promise<PieceReadiness> {
 	const manifest = findTypeManifest(manifests, piece.pieceType)
 
@@ -230,7 +250,7 @@ export async function evaluatePieceReadiness(
 	}
 
 	const evaluated = await Promise.all(
-		requirements.map((requirement) => evaluateRequirement(requirement, pathLookup))
+		requirements.map((requirement) => evaluateRequirement(requirement, pathLookup, coreStatus))
 	)
 
 	return {
@@ -243,11 +263,14 @@ export async function evaluatePieceReadiness(
 
 export async function evaluateRundownReadiness(
 	pieces: Piece[],
-	manifests: TypeManifest[]
+	manifests: TypeManifest[],
+	coreStatuses?: Map<string, CorePieceContentStatus>
 ): Promise<RundownReadiness> {
 	const pathLookup = createPathLookupContext()
 	const pieceResults = await Promise.all(
-		pieces.map((piece) => evaluatePieceReadiness(piece, manifests, pathLookup))
+		pieces.map((piece) =>
+			evaluatePieceReadiness(piece, manifests, pathLookup, coreStatuses?.get(piece.id))
+		)
 	)
 
 	const piecesById: Record<string, PieceReadiness> = {}
