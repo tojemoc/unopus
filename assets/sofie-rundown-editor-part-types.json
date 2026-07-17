@@ -11,6 +11,7 @@
 		"payload": [],
 		"defaultPieces": [
 			{ "pieceType": "headline" },
+			{ "pieceType": "l3d-headline" },
 			{ "pieceType": "camera", "payload": { "camNo": 1 } },
 			{ "pieceType": "video", "optional": true }
 		]
