@@ -1,5 +1,6 @@
 import type { Application, Request, Response } from 'express'
 import { getUserFromSession, parseSessionCookie } from '../background/auth/authStore'
+import { fetchCoreContentStatusForRundown } from '../background/coreContentStatus'
 import { evaluateRundownReadiness } from '../background/mediaReadiness'
 import { mutations as piecesMutations } from '../background/api/pieces'
 import { mutations as typeManifestMutations } from '../background/api/typeManifests'
@@ -45,7 +46,12 @@ export function registerReadinessRoutes(app: Application): void {
 				(manifest) => manifest.entityType === TypeManifestEntity.Piece
 			)
 
-			const readiness = await evaluateRundownReadiness(pieces, pieceManifests)
+			const coreStatuses = await fetchCoreContentStatusForRundown(rundownId)
+			const readiness = await evaluateRundownReadiness(
+				pieces,
+				pieceManifests,
+				coreStatuses ?? undefined
+			)
 			res.json(readiness)
 		} catch (error) {
 			console.error(error)

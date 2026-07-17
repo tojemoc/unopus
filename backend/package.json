@@ -19,7 +19,7 @@
 		"copy:assets": "cp -r ../assets dist/assets",
 		"watch-types": "run -T tsc -p tsconfig.json --watch --noEmit",
 		"start": "dotenv -e .env -- node ./dist/main.js",
-		"test": "node --import tsx --test src/background/api/pieces.export.test.ts",
+		"test": "node --import tsx --test src/background/api/pieces.export.test.ts src/background/mediaReadiness.test.ts",
 		"lint": "run -T eslint ."
 	},
 	"main": "dist/main.js",
