@@ -77,6 +77,21 @@
 		"defaultPieces": [{ "pieceType": "l3d-tema" }]
 	},
 	{
+		"id": "intro",
+		"entityType": "part",
+		"name": "Intro",
+		"shortName": "Intro",
+		"buttonLabel": "Intro",
+		"ingestType": "Intro",
+		"colour": "#666666",
+		"showInToolbar": true,
+		"payload": [],
+		"defaultPieces": [
+			{ "pieceType": "intro" },
+			{ "pieceType": "bg-loop", "optional": true, "payload": { "fileName": "loops/360_loop" } }
+		]
+	},
+	{
 		"id": "remi",
 		"entityType": "part",
 		"name": "REMI",
