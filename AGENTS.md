@@ -55,4 +55,5 @@ Husky runs `lint-staged` on commit, which applies Prettier to `*.{js,css,json,md
 
 Do **not** reintroduce these under `assets/` in this repo. Backend `manifest.ts` resolves them
 from the megarepo when this clone is nested as `sofie/rundown-editor/`, or via
-`SOFIE_MEGAREPO_ASSETS`. Reload in the UI: **Settings → Connection → Reload type manifests**.
+`SOFIE_MEGAREPO_ASSETS` (set by `scripts/fetch-sofie-megarepo-assets.sh` in CI). Reload in the UI:
+**Settings → Connection → Reload type manifests**.

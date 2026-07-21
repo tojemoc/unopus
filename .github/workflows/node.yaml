@@ -31,6 +31,8 @@ jobs:
           yarn
         env:
           CI: true
+      - name: Fetch sofie megarepo assets
+        run: bash scripts/fetch-sofie-megarepo-assets.sh
       - name: Run typecheck and linter
         run: |
           yarn build
@@ -55,6 +57,9 @@ jobs:
 
       - name: Install dependencies with Yarn
         run: yarn install --frozen-lockfile
+
+      - name: Fetch sofie megarepo assets
+        run: bash scripts/fetch-sofie-megarepo-assets.sh
 
       - name: Run build
         run: yarn build

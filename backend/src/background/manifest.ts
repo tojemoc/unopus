@@ -13,24 +13,24 @@ export const defaultRundownManifest: TypeManifest = {
 
 function resolveManifestPath(filename: string): string {
 	const candidates = [
+		// Explicit override (CI / standalone checkout)
+		process.env.SOFIE_MEGAREPO_ASSETS ? join(process.env.SOFIE_MEGAREPO_ASSETS, filename) : '',
 		// Nested in tojemoc/sofie megarepo: rundown-editor/backend/{src|dist}/background → ../../../../assets
-		join(__dirname, '../../../../assets', filename),
-		// Explicit override (standalone checkout / CI)
-		process.env.SOFIE_MEGAREPO_ASSETS
-			? join(process.env.SOFIE_MEGAREPO_ASSETS, filename)
-			: '',
-		// Legacy in-repo / packaged paths (removed from git; may exist in older deploys)
-		join(__dirname, '../assets', filename),
-		join(__dirname, '../../../assets', filename)
+		join(__dirname, '../../../../assets', filename)
 	].filter(Boolean)
 
 	for (const filePath of candidates) {
 		if (existsSync(filePath)) return filePath
 	}
 
+	const legacyNearDist = join(__dirname, '../assets', filename)
+	const legacyRepoRoot = join(__dirname, '../../../assets', filename)
 	throw new Error(
 		`Manifest file not found: ${filename}. Canonical copy lives in the sofie megarepo at assets/. ` +
-			`Set SOFIE_MEGAREPO_ASSETS or run nested under sofie/rundown-editor/.`
+			`Set SOFIE_MEGAREPO_ASSETS or run nested under sofie/rundown-editor/. Tried:\n` +
+			candidates.map((p) => `  - ${p}`).join('\n') +
+			`\n  - ${legacyNearDist} (legacy packaged path; no longer used)` +
+			`\n  - ${legacyRepoRoot} (legacy in-repo path; no longer used)`
 	)
 }
 
