@@ -19,7 +19,7 @@ Once up and running in Rundown Editor go to `Settings -> Core Connection` and se
 1. Begin by navigating to the Settings page in the top right.
 2. Enter the URL and port of your Sofie instance (defaults to `127.0.0.1:3000`).
 3. Click "Save".
-4. Download and import [this demo set of Piece Types](https://raw.githubusercontent.com/SuperFlyTV/sofie-demo-blueprints/main/assets/sofie-rundown-editor-piece-types.json) (right click and "Save link as...") on the Settings page.
+4. Download and import [piece types from the sofie megarepo](https://raw.githubusercontent.com/tojemoc/sofie/main/assets/sofie-rundown-editor-piece-types.json) (right click and "Save link as...") on the Settings page — or run nested under the megarepo and use **Reload type manifests**.
 5. Before continuing, open the Sofie Core interface, navigate to the Settings page, click on your Studio, and attach `sofie-rundown-editor` as a Device by clicking the plus sign (+) under "Attached Devices".
 6. Back in Rundown Editor, navigate to the Rundowns page in the top right.
 7. Download and import [this demo Rundown](https://github.com/SuperFlyTV/sofie-automation-rundown-editor/raw/main/demo-rundown.json) (right click and "Save link as...")
@@ -72,14 +72,16 @@ yarn workspace @sofie-rundown-editor/backend test
 
 ## SPRÁVY v3 / ingest contract
 
-Bundled manifests and the smoke rundown live in [`assets/`](assets/):
+Type manifests and the smoke rundown live in the **sofie megarepo**
+([`tojemoc/sofie` → `assets/`](https://github.com/tojemoc/sofie/tree/main/assets)):
 
 - `sofie-rundown-editor-piece-types.json`
 - `sofie-rundown-editor-part-types.json`
 - `sofie-rundown-editor-segment-types.json`
 - `spravy-v3-smoke-rundown.json` (external id `spravy-v3-smoke`)
 
-These should stay aligned with [`sofie-demo-blueprints/assets/`](https://github.com/SuperFlyTV/sofie-demo-blueprints/tree/main/assets). This repo is the source of truth for SPRÁVY v3 types; copy updated JSON into blueprints when publishing.
+Edit them there only. When this repo is nested as `sofie/rundown-editor/`, the backend
+loads them automatically; otherwise set `SOFIE_MEGAREPO_ASSETS`.
 
 **After upgrading**, open **Settings → Connection** and click **Reload type manifests from assets** to upsert built-in piece/part/segment types without removing custom types.
 

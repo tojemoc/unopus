@@ -13,15 +13,25 @@ export const defaultRundownManifest: TypeManifest = {
 
 function resolveManifestPath(filename: string): string {
 	const candidates = [
+		// Nested in tojemoc/sofie megarepo: rundown-editor/backend/{src|dist}/background → ../../../../assets
+		join(__dirname, '../../../../assets', filename),
+		// Explicit override (standalone checkout / CI)
+		process.env.SOFIE_MEGAREPO_ASSETS
+			? join(process.env.SOFIE_MEGAREPO_ASSETS, filename)
+			: '',
+		// Legacy in-repo / packaged paths (removed from git; may exist in older deploys)
 		join(__dirname, '../assets', filename),
 		join(__dirname, '../../../assets', filename)
-	]
+	].filter(Boolean)
 
 	for (const filePath of candidates) {
 		if (existsSync(filePath)) return filePath
 	}
 
-	throw new Error(`Manifest file not found: ${filename}`)
+	throw new Error(
+		`Manifest file not found: ${filename}. Canonical copy lives in the sofie megarepo at assets/. ` +
+			`Set SOFIE_MEGAREPO_ASSETS or run nested under sofie/rundown-editor/.`
+	)
 }
 
 function loadManifestJson(filename: string): TypeManifest[] {

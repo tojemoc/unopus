@@ -41,3 +41,18 @@ No automated test suite exists in this repo.
 ### Pre-commit hooks
 
 Husky runs `lint-staged` on commit, which applies Prettier to `*.{js,css,json,md,scss}` and runs `yarn lint-fix` on `*.{ts,tsx,cts}`.
+
+### Shared type manifests & smoke rundown (not in this repo)
+
+**Canonical home:** [`tojemoc/sofie` → `assets/`](https://github.com/tojemoc/sofie/tree/main/assets)
+
+| File | Purpose |
+|------|---------|
+| `sofie-rundown-editor-piece-types.json` | Piece types + GFX preview templates |
+| `sofie-rundown-editor-part-types.json` | Part presets |
+| `sofie-rundown-editor-segment-types.json` | Segment presets |
+| `spravy-v3-smoke-rundown.json` | Smoke rundown (`spravy-v3-smoke`) |
+
+Do **not** reintroduce these under `assets/` in this repo. Backend `manifest.ts` resolves them
+from the megarepo when this clone is nested as `sofie/rundown-editor/`, or via
+`SOFIE_MEGAREPO_ASSETS`. Reload in the UI: **Settings → Connection → Reload type manifests**.
