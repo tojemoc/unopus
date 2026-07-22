@@ -17,7 +17,9 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 	const toasts = useToasts()
 
 	const manifest = useAppSelector((state) =>
-		state.typeManifests.manifests?.find((p) => p.id === piece.pieceType)
+		state.typeManifests.manifests?.find(
+			(p) => p.id === piece.pieceType && p.entityType === 'piece'
+		)
 	)
 
 	const form = useForm({

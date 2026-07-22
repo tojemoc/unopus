@@ -74,7 +74,7 @@ function PieceRow({
 	const toasts = useToasts()
 
 	const manifest = useAppSelector((state) =>
-		findTypeManifest(state.typeManifests.manifests, piece.pieceType)
+		findTypeManifest(state.typeManifests.manifests, piece.pieceType, TypeManifestEntity.Piece)
 	)
 
 	const pieceReadiness = getPieceReadinessState(piece.id, readiness)
@@ -147,29 +147,32 @@ function NewPieceButtons({ part, existingPieces }: { part: Part; existingPieces:
 
 	const typeManifests = useAppSelector((state) => state.typeManifests.manifests)
 	const pieceManifests = toolbarManifests(typeManifests, TypeManifestEntity.Piece)
-	const partManifest = findTypeManifest(typeManifests, part.partType)
+	const partManifest = findTypeManifest(typeManifests, part.partType, TypeManifestEntity.Part)
 
 	const addablePieceTypes = useMemo(() => {
 		const existingPieceTypes = new Set(
-			existingPieces.map((p) => normalizeTypeId(typeManifests, p.pieceType))
+			existingPieces.map((p) => normalizeTypeId(typeManifests, p.pieceType, TypeManifestEntity.Piece))
 		)
 
 		if (part.fromPreset && partManifest?.defaultPieces?.length) {
 			const presetTypes = new Set(
 				partManifest.defaultPieces
 					.filter((t) => !t.optional)
-					.map((t) => normalizeTypeId(typeManifests, t.pieceType))
+					.map((t) => normalizeTypeId(typeManifests, t.pieceType, TypeManifestEntity.Piece))
 			)
 			const optionalTypes = partManifest.defaultPieces
 				.filter(
 					(t) =>
-						t.optional && !existingPieceTypes.has(normalizeTypeId(typeManifests, t.pieceType))
+						t.optional &&
+						!existingPieceTypes.has(normalizeTypeId(typeManifests, t.pieceType, TypeManifestEntity.Piece))
 				)
-				.map((t) => normalizeTypeId(typeManifests, t.pieceType))
+				.map((t) => normalizeTypeId(typeManifests, t.pieceType, TypeManifestEntity.Piece))
 
 			const extras = pieceManifests
 				.filter(
-					(m) => !presetTypes.has(m.id) && !existingPieceTypes.has(normalizeTypeId(typeManifests, m.id))
+					(m) =>
+						!presetTypes.has(m.id) &&
+						!existingPieceTypes.has(normalizeTypeId(typeManifests, m.id, TypeManifestEntity.Piece))
 				)
 				.map((m) => m.id)
 
@@ -177,18 +180,19 @@ function NewPieceButtons({ part, existingPieces }: { part: Part; existingPieces:
 		}
 
 		return pieceManifests
-			.filter((m) => !existingPieceTypes.has(normalizeTypeId(typeManifests, m.id)))
+			.filter((m) => !existingPieceTypes.has(normalizeTypeId(typeManifests, m.id, TypeManifestEntity.Piece)))
 			.map((m) => m.id)
 	}, [part.fromPreset, partManifest, pieceManifests, existingPieces, typeManifests])
 
 	if (!addablePieceTypes.length) return null
 
 	const performCreatePiece = (pieceType: string) => {
-		const resolvedPieceType = normalizeTypeId(typeManifests, pieceType)
-		const manifest = findTypeManifest(typeManifests, resolvedPieceType)
+		const resolvedPieceType = normalizeTypeId(typeManifests, pieceType, TypeManifestEntity.Piece)
+		const manifest = findTypeManifest(typeManifests, resolvedPieceType, TypeManifestEntity.Piece)
 		const defaultPayload =
 			partManifest?.defaultPieces?.find(
-				(t) => normalizeTypeId(typeManifests, t.pieceType) === resolvedPieceType
+				(t) =>
+					normalizeTypeId(typeManifests, t.pieceType, TypeManifestEntity.Piece) === resolvedPieceType
 			)?.payload ?? {}
 
 		dispatch(
@@ -226,7 +230,7 @@ function NewPieceButtons({ part, existingPieces }: { part: Part; existingPieces:
 	return (
 		<div className="piece-add-buttons">
 			{addablePieceTypes.map((pieceType) => {
-				const manifest = findTypeManifest(typeManifests, pieceType)
+				const manifest = findTypeManifest(typeManifests, pieceType, TypeManifestEntity.Piece)
 				return (
 					<button
 						key={pieceType}

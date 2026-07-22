@@ -12,6 +12,7 @@ export interface UpdateTypeManifestPayload {
 }
 export interface RemoveTypeManifestPayload {
 	id: string
+	entityType: TypeManifestEntity
 }
 
 export const addNewTypeManifest = createAppAsyncThunk(
@@ -104,9 +105,17 @@ const typeManifestSlice = createSlice({
 			.addCase(updateTypeManifest.fulfilled, (state, action) => {
 				if (!state.manifests) throw new Error('Manifest is not loaded')
 
-				let index = state.manifests.findIndex((setting) => setting.id === action.payload.newDoc.id)
+				let index = state.manifests.findIndex(
+					(setting) =>
+						setting.id === action.payload.newDoc.id &&
+						setting.entityType === action.payload.newDoc.entityType
+				)
 				if (index === -1) {
-					index = state.manifests.findIndex((setting) => setting.id === action.payload.oldId)
+					index = state.manifests.findIndex(
+						(setting) =>
+							setting.id === action.payload.oldId &&
+							setting.entityType === action.payload.newDoc.entityType
+					)
 				}
 
 				if (index !== -1) {
@@ -116,7 +125,10 @@ const typeManifestSlice = createSlice({
 			.addCase(removeTypeManifest.fulfilled, (state, action) => {
 				if (!state.manifests) throw new Error('Manifest is not loaded')
 
-				const index = state.manifests.findIndex((setting) => setting.id === action.payload.id)
+				const index = state.manifests.findIndex(
+					(setting) =>
+						setting.id === action.payload.id && setting.entityType === action.payload.entityType
+				)
 				if (index !== -1) {
 					state.manifests.splice(index, 1)
 				}

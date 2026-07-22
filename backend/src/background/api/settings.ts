@@ -150,7 +150,7 @@ async function deleteAllTypeManifests(): Promise<void> {
 	if (!Array.isArray(result)) return
 
 	for (const manifest of result) {
-		await typeManifestMutations.delete({ id: manifest.id })
+		await typeManifestMutations.delete({ id: manifest.id, entityType: manifest.entityType })
 	}
 }
 
@@ -162,19 +162,24 @@ async function seedDefaultTypeManifests(): Promise<void> {
 	})
 
 	for (const typeManifest of TYPE_MANIFESTS) {
-		await typeManifestMutations.create(typeManifest)
+		const { error } = await typeManifestMutations.create(typeManifest)
+		if (error) {
+			console.error(`Failed to seed typeManifest ${typeManifest.entityType}/${typeManifest.id}:`, error)
+			throw error
+		}
 	}
 }
 
 async function upsertTypeManifestsFromAssets(): Promise<void> {
 	const { result: existingManifests } = await typeManifestMutations.read({})
 	const existingList = Array.isArray(existingManifests) ? existingManifests : []
-	const existingIds = new Set(existingList.map((manifest) => manifest.id))
+	const existingKeys = new Set(existingList.map((manifest) => `${manifest.entityType}:${manifest.id}`))
 
-	const rundownExists = existingIds.has(defaultRundownManifest.id)
-	if (rundownExists) {
+	const rundownKey = `${TypeManifestEntity.Rundown}:${defaultRundownManifest.id}`
+	if (existingKeys.has(rundownKey)) {
 		await typeManifestMutations.update({
 			id: defaultRundownManifest.id,
+			entityType: TypeManifestEntity.Rundown,
 			update: defaultRundownManifest
 		})
 	} else {
@@ -186,13 +191,23 @@ async function upsertTypeManifestsFromAssets(): Promise<void> {
 	}
 
 	for (const typeManifest of TYPE_MANIFESTS) {
-		if (existingIds.has(typeManifest.id)) {
-			await typeManifestMutations.update({
+		const key = `${typeManifest.entityType}:${typeManifest.id}`
+		if (existingKeys.has(key)) {
+			const { error } = await typeManifestMutations.update({
 				id: typeManifest.id,
+				entityType: typeManifest.entityType,
 				update: typeManifest
 			})
+			if (error) {
+				console.error(`Failed to update typeManifest ${key}:`, error)
+				throw error
+			}
 		} else {
-			await typeManifestMutations.create(typeManifest)
+			const { error } = await typeManifestMutations.create(typeManifest)
+			if (error) {
+				console.error(`Failed to create typeManifest ${key}:`, error)
+				throw error
+			}
 		}
 	}
 }

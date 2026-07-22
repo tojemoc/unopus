@@ -1,6 +1,7 @@
 import { useNavigate, useMatchRoute } from '@tanstack/react-router'
 import { useAppSelector } from '~/store/app'
 import type { Part, PieceReadiness, RundownReadiness } from '~backend/background/interfaces'
+import { TypeManifestEntity } from '~backend/background/interfaces'
 import { findTypeManifest } from '~/util/typeManifest'
 import { displayTime } from './displayTime'
 import { ReadinessBadge, getPieceReadinessTooltip } from '../readinessBadge'
@@ -55,7 +56,7 @@ export function SidebarPartRow({
 	const matchRoute = useMatchRoute()
 
 	const partTypeManifest = useAppSelector((state) =>
-		findTypeManifest(state.typeManifests.manifests, part.partType)
+		findTypeManifest(state.typeManifests.manifests, part.partType, TypeManifestEntity.Part)
 	)
 
 	const isActive = Boolean(

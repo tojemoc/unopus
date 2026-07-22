@@ -2,9 +2,11 @@ import {
 	DBTypeManifest,
 	IpcOperationType,
 	MutationTypeManifestCreate,
+	MutationTypeManifestDelete,
 	MutationTypeManifestRead,
 	MutationTypeManifestUpdate,
-	TypeManifest
+	TypeManifest,
+	TypeManifestEntity
 } from '../interfaces'
 import { db } from '../db'
 import { v4 as uuid } from 'uuid'
@@ -19,6 +21,14 @@ export function resolveManifestId(
 
 	const normalized = requestedId.toLowerCase()
 	return manifests.find((m) => m.id.toLowerCase() === normalized)?.id
+}
+
+function mapRow(document: DBTypeManifest): TypeManifest {
+	return {
+		...JSON.parse(document.document),
+		id: document.id,
+		entityType: document.entityType
+	}
 }
 
 export const mutations = {
@@ -37,34 +47,31 @@ export const mutations = {
 			const result = stmt.run(id, JSON.stringify(document), payload.entityType)
 			if (result.changes === 0) throw new Error('No rows were inserted')
 
-			return this.readOne(id)
+			return this.readOne(id, payload.entityType)
 		} catch (e) {
 			console.error(e)
 			return { error: e as Error }
 		}
 	},
 
-	async readOne(id: string): Promise<{ result?: TypeManifest; error?: Error }> {
+	async readOne(
+		id: string,
+		entityType: TypeManifestEntity
+	): Promise<{ result?: TypeManifest; error?: Error }> {
 		try {
 			const stmt = db.prepare(`
 				SELECT *
 				FROM typeManifests
-				WHERE id = ?
+				WHERE id = ? AND entityType = ?
 				LIMIT 1;
 			`)
 
-			const document = stmt.get(id) as DBTypeManifest | undefined
+			const document = stmt.get(id, entityType) as DBTypeManifest | undefined
 			if (!document) {
-				return { error: new Error(`TypeManifest with id ${id} not found`) }
+				return { error: new Error(`TypeManifest with id ${id} (${entityType}) not found`) }
 			}
 
-			return {
-				result: {
-					...JSON.parse(document.document),
-					id: document.id,
-					entityType: document.entityType
-				}
-			}
+			return { result: mapRow(document) }
 		} catch (e) {
 			console.error(e)
 			return { error: e as Error }
@@ -74,8 +81,8 @@ export const mutations = {
 	async read(
 		payload: Partial<MutationTypeManifestRead>
 	): Promise<{ result?: TypeManifest | TypeManifest[]; error?: Error }> {
-		if (payload && payload.id) {
-			return this.readOne(payload.id)
+		if (payload && payload.id && payload.entityType) {
+			return this.readOne(payload.id, payload.entityType)
 		} else if (payload && payload.entityType) {
 			try {
 				const stmt = db.prepare(`
@@ -87,10 +94,7 @@ export const mutations = {
 				const documents = stmt.all(payload.entityType) as unknown as DBTypeManifest[]
 
 				return {
-					result: documents.map((d) => ({
-						...JSON.parse(d.document),
-						id: d.id
-					}))
+					result: documents.map(mapRow)
 				}
 			} catch (e) {
 				console.error(e)
@@ -106,10 +110,7 @@ export const mutations = {
 				const documents = stmt.all() as unknown as DBTypeManifest[]
 
 				return {
-					result: documents.map((d) => ({
-						...JSON.parse(d.document),
-						id: d.id
-					}))
+					result: documents.map(mapRow)
 				}
 			} catch (e) {
 				console.error(e)
@@ -122,32 +123,36 @@ export const mutations = {
 		payload: MutationTypeManifestUpdate
 	): Promise<{ result?: TypeManifest; error?: Error }> {
 		const update = { ...payload.update }
+		const entityType = payload.entityType ?? update.entityType
+		if (!entityType) {
+			return { error: new Error('Missing entityType for typeManifest update') }
+		}
 
 		try {
 			const stmt = db.prepare(`
 			UPDATE typeManifests
 			SET document = json_patch(document, json(?))
-			WHERE id = ?;
+			WHERE id = ? AND entityType = ?;
 		`)
 
-			const result = stmt.run(JSON.stringify(update), payload.id)
+			const result = stmt.run(JSON.stringify(update), payload.id, entityType)
 			if (result.changes === 0) throw new Error('No rows were updated')
 
-			return this.readOne(payload.update.id)
+			return this.readOne(payload.update.id ?? payload.id, entityType)
 		} catch (e) {
 			console.error(e)
 			return { error: e as Error }
 		}
 	},
 
-	async delete(payload: Pick<MutationTypeManifestRead, 'id'>): Promise<{ error?: Error }> {
+	async delete(payload: MutationTypeManifestDelete): Promise<{ error?: Error }> {
 		try {
 			const stmt = db.prepare(`
 				DELETE FROM typeManifests
-				WHERE id = ?;
+				WHERE id = ? AND entityType = ?;
 			`)
 
-			stmt.run(payload.id)
+			stmt.run(payload.id, payload.entityType)
 			return {}
 		} catch (e) {
 			console.error(e)

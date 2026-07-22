@@ -10,6 +10,36 @@ console.log('Database location:', dbFile)
 
 let db: sqlite.DatabaseSync
 
+/**
+ * Part + piece manifests may share the same logical id (e.g. both `intro`).
+ * Legacy schema used `id` alone as PRIMARY KEY, so only one could exist and
+ * seed/import of the other silently failed. Migrate to (id, entityType).
+ */
+function migrateTypeManifestsToCompositePrimaryKey(database: sqlite.DatabaseSync): void {
+	const tableInfo = database
+		.prepare(`SELECT sql FROM sqlite_master WHERE type='table' AND name='typeManifests'`)
+		.get() as { sql: string } | undefined
+	if (!tableInfo?.sql) return
+
+	// Already composite when PRIMARY KEY lists both columns.
+	if (/PRIMARY KEY\s*\(\s*id\s*,\s*entityType\s*\)/i.test(tableInfo.sql)) return
+
+	console.log('Migrating typeManifests primary key to (id, entityType)...')
+	database.exec(`
+		CREATE TABLE typeManifests_v2 (
+			id TEXT NOT NULL,
+			document JSON NOT NULL,
+			entityType TEXT NOT NULL CHECK(entityType IN ('rundown','segment','part','piece')),
+			PRIMARY KEY (id, entityType)
+		);
+		INSERT INTO typeManifests_v2 (id, document, entityType)
+		SELECT id, document, entityType FROM typeManifests;
+		DROP TABLE typeManifests;
+		ALTER TABLE typeManifests_v2 RENAME TO typeManifests;
+	`)
+	console.log('typeManifests primary key migration complete.')
+}
+
 try {
 	db = new sqlite.DatabaseSync(dbFile)
 
@@ -85,7 +115,7 @@ try {
         );
     `)
 
-	// Ensure the new general typeManifests table exists
+	// Ensure the new general typeManifests table exists (legacy single-column PK).
 	db.exec(`
     CREATE TABLE IF NOT EXISTS typeManifests (
         id TEXT PRIMARY KEY,
@@ -93,6 +123,8 @@ try {
         entityType TEXT NOT NULL CHECK(entityType IN ('rundown','segment','part','piece'))
     );
 `)
+
+	migrateTypeManifestsToCompositePrimaryKey(db)
 
 	// Check if the old pieceTypeManifests table exists
 	const tableExistsRow = db

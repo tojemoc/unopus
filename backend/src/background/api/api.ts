@@ -49,7 +49,7 @@ export interface BackendApi {
 	getTypeManifests: () => Promise<TypeManifest[]>
 	addNewTypeManifest: (manifest: TypeManifest) => Promise<TypeManifest>
 	updateTypeManifest: (id: string, manifest: TypeManifest) => Promise<TypeManifest>
-	removeTypeManifest: (id: string) => Promise<void>
+	removeTypeManifest: (id: string, entityType: TypeManifest['entityType']) => Promise<void>
 
 	getPlaylists: () => Promise<Playlist[]>
 

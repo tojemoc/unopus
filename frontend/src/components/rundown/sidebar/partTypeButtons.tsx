@@ -41,7 +41,7 @@ export function PartTypeButtons(props: PartTypeButtonsProps) {
 		}
 
 		const { segment, rank: insertRank } = props
-		const manifest = findTypeManifest(allManifests, partType)
+		const manifest = findTypeManifest(allManifests, partType, TypeManifestEntity.Part)
 		const name = manifest?.buttonLabel ?? manifest?.name ?? `Part ${insertRank + 1}`
 
 		dispatch(

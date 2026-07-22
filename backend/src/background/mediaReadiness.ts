@@ -3,6 +3,7 @@ import path from 'path'
 import type { CorePieceContentStatus } from './coreContentStatus'
 import {
 	ManifestFieldType,
+	TypeManifestEntity,
 	type MediaRequirement,
 	type Piece,
 	type PieceReadiness,
@@ -220,7 +221,7 @@ export async function evaluatePieceReadiness(
 	pathLookup: PathLookupContext,
 	coreStatus?: CorePieceContentStatus
 ): Promise<PieceReadiness> {
-	const manifest = findTypeManifest(manifests, piece.pieceType)
+	const manifest = findTypeManifest(manifests, piece.pieceType, TypeManifestEntity.Piece)
 
 	if (!manifest) {
 		return {

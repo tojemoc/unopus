@@ -58,6 +58,10 @@ from the megarepo when this clone is nested as `sofie/rundown-editor/`, or via
 `SOFIE_MEGAREPO_ASSETS` (set by `scripts/fetch-sofie-megarepo-assets.sh` in CI / Docker).
 Reload in the UI: **Settings → Connection → Reload type manifests**.
 
+**Part/piece id collision:** Part type `intro` and piece type `intro` share the same id by
+design. The DB primary key is `(id, entityType)` so both can coexist. After upgrading, use
+**Reload type manifests** so the missing Intro overlay piece type is inserted.
+
 #### Fetch trust model (CI / Docker)
 
 `scripts/fetch-sofie-megarepo-assets.sh` must **not** use mutable refs (`main`, `cursor/…`).

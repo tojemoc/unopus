@@ -382,12 +382,12 @@ export type MutationTypeManifestCreate = Pick<TypeManifest, 'id' | 'entityType'>
 
 export type MutationTypeManifestRead = Pick<DBTypeManifest, 'id' | 'entityType'>
 
-export type MutationTypeManifestUpdate = Pick<TypeManifest, 'id'> & {
+export type MutationTypeManifestUpdate = Pick<TypeManifest, 'id' | 'entityType'> & {
 	update: Pick<TypeManifest, 'name' | 'shortName' | 'colour' | 'includeTypeInName' | 'id'> &
 		Partial<TypeManifest>
 }
 
-export type MutationTypeManifestDelete = Pick<TypeManifest, 'id'>
+export type MutationTypeManifestDelete = Pick<TypeManifest, 'id' | 'entityType'>
 
 export type MutationRundownCreate = SetOptional<Rundown, 'id'>
 

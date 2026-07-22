@@ -42,7 +42,7 @@ export function TypeManifestForm({
 	}
 
 	const deleteType = () => {
-		dispatch(removeTypeManifest({ id: manifest.id })).catch((e) => {
+		dispatch(removeTypeManifest({ id: manifest.id, entityType: manifest.entityType })).catch((e) => {
 			console.error(e)
 			toasts.show({ headerContent: 'Deleting type', bodyContent: 'Unexpected error' })
 		})

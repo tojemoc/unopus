@@ -63,10 +63,14 @@ export const ipcAPI: BackendApi = {
 		return getSocket().emitWithAck('typeManifests', 'create', manifest)
 	},
 	updateTypeManifest: (id: string, manifest: TypeManifest) => {
-		return getSocket().emitWithAck('typeManifests', 'update', { update: manifest, id: id })
+		return getSocket().emitWithAck('typeManifests', 'update', {
+			update: manifest,
+			id: id,
+			entityType: manifest.entityType
+		})
 	},
-	removeTypeManifest: (id: string) => {
-		return getSocket().emitWithAck('typeManifests', 'delete', { id })
+	removeTypeManifest: (id: string, entityType: TypeManifest['entityType']) => {
+		return getSocket().emitWithAck('typeManifests', 'delete', { id, entityType })
 	},
 
 	getPlaylists: () => {
