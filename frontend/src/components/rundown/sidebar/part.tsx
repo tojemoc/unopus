@@ -10,6 +10,7 @@ import { DeletePartButton } from '../deletePartButton'
 import type { ButtonProps } from 'react-bootstrap'
 import { HoverIconButton } from '~/components/rundownList/hoverIconButton'
 import { findTypeManifest } from '~/util/typeManifest'
+import { TypeManifestEntity } from '~backend/background/interfaces'
 
 export function SidebarPart({
 	part,
@@ -26,7 +27,7 @@ export function SidebarPart({
 	const navigate = useNavigate()
 	const toasts = useToasts()
 	const partTypeManifest = useAppSelector((state) =>
-		findTypeManifest(state.typeManifests.manifests, part.partType)
+		findTypeManifest(state.typeManifests.manifests, part.partType, TypeManifestEntity.Part)
 	)
 
 	const handleCopyPart = () =>

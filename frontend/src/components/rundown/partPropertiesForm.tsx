@@ -5,6 +5,7 @@ import { FieldInfo } from '../form'
 import { useEffect, useState } from 'react'
 import { friendlyLabel } from '~/util/fieldLabels'
 import { findTypeManifest } from '~/util/typeManifest'
+import { TypeManifestEntity } from '~backend/background/interfaces'
 import { fetchEntityEdit } from '~/lib/authApi'
 import { useNavigate } from '@tanstack/react-router'
 import { useAppDispatch, useAppSelector } from '~/store/app'
@@ -140,8 +141,8 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 					<Form.Group className="mb-3">
 						<Form.Text>
 							Part type:{' '}
-							{findTypeManifest(manifests, part.partType)?.buttonLabel ??
-								findTypeManifest(manifests, part.partType)?.name ??
+							{findTypeManifest(manifests, part.partType, TypeManifestEntity.Part)?.buttonLabel ??
+								findTypeManifest(manifests, part.partType, TypeManifestEntity.Part)?.name ??
 								part.partType}
 						</Form.Text>
 					</Form.Group>
@@ -186,7 +187,7 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 
 				<form.Subscribe selector={(state) => state.values.partType}>
 					{(partType) => {
-						const manifest = findTypeManifest(manifests, partType)
+						const manifest = findTypeManifest(manifests, partType, TypeManifestEntity.Part)
 
 						if (!manifest) {
 							return (

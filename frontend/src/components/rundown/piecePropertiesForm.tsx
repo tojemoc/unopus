@@ -1,7 +1,7 @@
 import { useForm } from '@tanstack/react-form'
 import { Button, ButtonGroup, Form, Modal } from 'react-bootstrap'
 import type { Piece } from '~backend/background/interfaces'
-import { ManifestFieldType } from '~backend/background/interfaces'
+import { ManifestFieldType, TypeManifestEntity } from '~backend/background/interfaces'
 import { FieldInfo } from '../form'
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
@@ -17,7 +17,9 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 	const toasts = useToasts()
 
 	const manifest = useAppSelector((state) =>
-		state.typeManifests.manifests?.find((p) => p.id === piece.pieceType)
+		state.typeManifests.manifests?.find(
+			(p) => p.id === piece.pieceType && p.entityType === TypeManifestEntity.Piece
+		)
 	)
 
 	const form = useForm({

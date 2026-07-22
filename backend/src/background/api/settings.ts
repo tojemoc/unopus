@@ -150,49 +150,76 @@ async function deleteAllTypeManifests(): Promise<void> {
 	if (!Array.isArray(result)) return
 
 	for (const manifest of result) {
-		await typeManifestMutations.delete({ id: manifest.id })
+		await typeManifestMutations.delete({ id: manifest.id, entityType: manifest.entityType })
 	}
 }
 
 async function seedDefaultTypeManifests(): Promise<void> {
-	await typeManifestMutations.create({
+	const { error: rundownError } = await typeManifestMutations.create({
 		id: 'rundown',
 		entityType: TypeManifestEntity.Rundown,
 		payload: defaultRundownManifest.payload
 	})
+	if (rundownError) {
+		console.error('Failed to seed rundown typeManifest:', rundownError)
+		throw rundownError
+	}
 
 	for (const typeManifest of TYPE_MANIFESTS) {
-		await typeManifestMutations.create(typeManifest)
+		const { error } = await typeManifestMutations.create(typeManifest)
+		if (error) {
+			console.error(`Failed to seed typeManifest ${typeManifest.entityType}/${typeManifest.id}:`, error)
+			throw error
+		}
 	}
 }
 
 async function upsertTypeManifestsFromAssets(): Promise<void> {
 	const { result: existingManifests } = await typeManifestMutations.read({})
 	const existingList = Array.isArray(existingManifests) ? existingManifests : []
-	const existingIds = new Set(existingList.map((manifest) => manifest.id))
+	const existingKeys = new Set(existingList.map((manifest) => `${manifest.entityType}:${manifest.id}`))
 
-	const rundownExists = existingIds.has(defaultRundownManifest.id)
-	if (rundownExists) {
-		await typeManifestMutations.update({
+	const rundownKey = `${TypeManifestEntity.Rundown}:${defaultRundownManifest.id}`
+	if (existingKeys.has(rundownKey)) {
+		const { error: rundownUpdateError } = await typeManifestMutations.update({
 			id: defaultRundownManifest.id,
+			entityType: TypeManifestEntity.Rundown,
 			update: defaultRundownManifest
 		})
+		if (rundownUpdateError) {
+			console.error('Failed to update rundown typeManifest:', rundownUpdateError)
+			throw rundownUpdateError
+		}
 	} else {
-		await typeManifestMutations.create({
+		const { error: rundownCreateError } = await typeManifestMutations.create({
 			id: defaultRundownManifest.id,
 			entityType: TypeManifestEntity.Rundown,
 			payload: defaultRundownManifest.payload
 		})
+		if (rundownCreateError) {
+			console.error('Failed to create rundown typeManifest:', rundownCreateError)
+			throw rundownCreateError
+		}
 	}
 
 	for (const typeManifest of TYPE_MANIFESTS) {
-		if (existingIds.has(typeManifest.id)) {
-			await typeManifestMutations.update({
+		const key = `${typeManifest.entityType}:${typeManifest.id}`
+		if (existingKeys.has(key)) {
+			const { error } = await typeManifestMutations.update({
 				id: typeManifest.id,
+				entityType: typeManifest.entityType,
 				update: typeManifest
 			})
+			if (error) {
+				console.error(`Failed to update typeManifest ${key}:`, error)
+				throw error
+			}
 		} else {
-			await typeManifestMutations.create(typeManifest)
+			const { error } = await typeManifestMutations.create(typeManifest)
+			if (error) {
+				console.error(`Failed to create typeManifest ${key}:`, error)
+				throw error
+			}
 		}
 	}
 }
