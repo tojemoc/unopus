@@ -47,7 +47,7 @@ export const updateTypeManifest = createAppAsyncThunk(
 export const removeTypeManifest = createAppAsyncThunk(
 	'typeManifest/removeTypeManifest',
 	async (payload: RemoveTypeManifestPayload) => {
-		await ipcAPI.removeTypeManifest(payload.id)
+		await ipcAPI.removeTypeManifest(payload.id, payload.entityType)
 		return payload
 	}
 )
