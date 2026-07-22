@@ -55,5 +55,22 @@ Husky runs `lint-staged` on commit, which applies Prettier to `*.{js,css,json,md
 
 Do **not** reintroduce these under `assets/` in this repo. Backend `manifest.ts` resolves them
 from the megarepo when this clone is nested as `sofie/rundown-editor/`, or via
-`SOFIE_MEGAREPO_ASSETS` (set by `scripts/fetch-sofie-megarepo-assets.sh` in CI). Reload in the UI:
-**Settings → Connection → Reload type manifests**.
+`SOFIE_MEGAREPO_ASSETS` (set by `scripts/fetch-sofie-megarepo-assets.sh` in CI / Docker).
+Reload in the UI: **Settings → Connection → Reload type manifests**.
+
+#### Fetch trust model (CI / Docker)
+
+`scripts/fetch-sofie-megarepo-assets.sh` must **not** use mutable refs (`main`, `cursor/…`).
+It pins `tojemoc/sofie` to an immutable commit SHA and verifies each file’s SHA-256 before
+exporting `SOFIE_MEGAREPO_ASSETS`. Mismatch → exit 1 and delete partial downloads.
+
+| Knob | Purpose |
+|------|---------|
+| Default `SOFIE_ASSETS_REF` | Pinned sofie commit (currently `cdc2d3b6…`, assets from sofie #13) |
+| `EXPECTED_SHA256` map | Per-file integrity for that pin |
+| `$GITHUB_ENV` | CI persistence of `SOFIE_MEGAREPO_ASSETS` |
+
+**Bump procedure** (when megarepo `assets/` changes): update `SOFIE_ASSETS_REF` **and** every
+checksum in the same commit (`git show <sha>:assets/<file> \| sha256sum`). Do not bump the
+ref alone. Megarepo contract:
+[MEGAREPO-ASSETS-FETCH.md](https://github.com/tojemoc/sofie/blob/main/docs/integration/MEGAREPO-ASSETS-FETCH.md).
