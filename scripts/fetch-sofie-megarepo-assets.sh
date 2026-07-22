@@ -15,6 +15,7 @@ set -euo pipefail
 
 DEST="${1:-${GITHUB_WORKSPACE:-.}/.sofie-assets}"
 mkdir -p "$DEST"
+DEST="$(cd "$DEST" && pwd)"
 
 # Immutable pin: tojemoc/sofie@cdc2d3b6 (assets landed via #13). Bump SHA + checksums together.
 SOFIE_ASSETS_REF="${SOFIE_ASSETS_REF:-cdc2d3b66407e920159a1f5772c616d0056ca990}"
@@ -35,19 +36,20 @@ FILES=(
 	sofie-rundown-editor-segment-types.json
 )
 
+# Stage under DEST so a failed/interrupted fetch never clobbers a prior valid set.
+STAGE="$(mktemp -d "${DEST}/.fetch-XXXXXX")"
 cleanup_partial() {
-	for f in "${FILES[@]}"; do
-		rm -f "$DEST/$f"
-	done
+	rm -rf "${STAGE}"
 }
+trap 'cleanup_partial' EXIT INT TERM
 
 for f in "${FILES[@]}"; do
-	if ! curl -fsSL -o "$DEST/$f" "$BASE/$f"; then
+	if ! curl -fsSL --connect-timeout 15 --max-time 120 -o "$STAGE/$f" "$BASE/$f"; then
 		echo "Failed to download $f from sofie@${SOFIE_ASSETS_REF}" >&2
 		cleanup_partial
 		exit 1
 	fi
-	actual="$(sha256sum "$DEST/$f" | awk '{print $1}')"
+	actual="$(sha256sum "$STAGE/$f" | awk '{print $1}')"
 	expected="${EXPECTED_SHA256[$f]}"
 	if [[ "$actual" != "$expected" ]]; then
 		echo "Checksum mismatch for $f (sofie@${SOFIE_ASSETS_REF})" >&2
@@ -57,6 +59,13 @@ for f in "${FILES[@]}"; do
 		exit 1
 	fi
 done
+
+for f in "${FILES[@]}"; do
+	mv -f "$STAGE/$f" "$DEST/$f"
+done
+
+trap - EXIT INT TERM
+cleanup_partial
 
 if [ -n "${GITHUB_ENV:-}" ]; then
 	echo "SOFIE_MEGAREPO_ASSETS=$DEST" >>"$GITHUB_ENV"
