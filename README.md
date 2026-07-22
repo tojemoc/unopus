@@ -83,6 +83,11 @@ Type manifests and the smoke rundown live in the **sofie megarepo**
 Edit them there only. When this repo is nested as `sofie/rundown-editor/`, the backend
 loads them automatically; otherwise set `SOFIE_MEGAREPO_ASSETS`.
 
+Standalone CI and Docker run `bash scripts/fetch-sofie-megarepo-assets.sh`, which pins an
+immutable sofie commit SHA and verifies SHA-256 checksums (not mutable `main` /
+`cursor/…` refs). Override with `SOFIE_ASSETS_REF` only when updating checksums in lockstep.
+See [sofie MEGAREPO-ASSETS-FETCH.md](https://github.com/tojemoc/sofie/blob/main/docs/integration/MEGAREPO-ASSETS-FETCH.md).
+
 **After upgrading**, open **Settings → Connection** and click **Reload type manifests from assets** to upsert built-in piece/part/segment types without removing custom types.
 
 ### Media ingest layout

@@ -1,7 +1,16 @@
 #!/usr/bin/env bash
 # Fetch canonical sofie megarepo assets/ for standalone CI / local use.
-# Pins an immutable commit SHA and verifies SHA-256 checksums before export.
-# Writes SOFIE_MEGAREPO_ASSETS to $GITHUB_ENV when present.
+#
+# Trust model (do not regress to mutable refs):
+#   - Pin downloads to an immutable tojemoc/sofie commit SHA (never main / cursor/…).
+#   - Verify each file's SHA-256 against EXPECTED_SHA256 before exporting.
+#   - On download or checksum failure: delete partial files and exit 1.
+#
+# Bump: set SOFIE_ASSETS_REF default + every EXPECTED_SHA256 entry in the same commit.
+#   git show <sha>:assets/<file>.json | sha256sum
+# Contract: https://github.com/tojemoc/sofie/blob/main/docs/integration/MEGAREPO-ASSETS-FETCH.md
+#
+# Writes SOFIE_MEGAREPO_ASSETS to $GITHUB_ENV when present; also exports in this shell.
 set -euo pipefail
 
 DEST="${1:-${GITHUB_WORKSPACE:-.}/.sofie-assets}"
