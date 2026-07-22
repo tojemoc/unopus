@@ -31,7 +31,7 @@ describe('findTypeManifest entityType scoping', () => {
 			ingestType: 'Intro'
 		}),
 		manifest({
-			id: 'cam',
+			id: 'cameraPart',
 			entityType: TypeManifestEntity.Part,
 			name: 'Cam',
 			ingestType: 'Cam'
@@ -66,7 +66,7 @@ describe('findTypeManifest entityType scoping', () => {
 	it('scopes ingestType matches by entityType', () => {
 		const part = findTypeManifest(manifests, 'Cam', TypeManifestEntity.Part)
 		const piece = findTypeManifest(manifests, 'Cam', TypeManifestEntity.Piece)
-		assert.equal(part?.id, 'cam')
+		assert.equal(part?.id, 'cameraPart')
 		assert.equal(piece?.id, 'camera')
 	})
 
