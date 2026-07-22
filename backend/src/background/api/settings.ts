@@ -155,11 +155,15 @@ async function deleteAllTypeManifests(): Promise<void> {
 }
 
 async function seedDefaultTypeManifests(): Promise<void> {
-	await typeManifestMutations.create({
+	const { error: rundownError } = await typeManifestMutations.create({
 		id: 'rundown',
 		entityType: TypeManifestEntity.Rundown,
 		payload: defaultRundownManifest.payload
 	})
+	if (rundownError) {
+		console.error('Failed to seed rundown typeManifest:', rundownError)
+		throw rundownError
+	}
 
 	for (const typeManifest of TYPE_MANIFESTS) {
 		const { error } = await typeManifestMutations.create(typeManifest)
@@ -177,17 +181,25 @@ async function upsertTypeManifestsFromAssets(): Promise<void> {
 
 	const rundownKey = `${TypeManifestEntity.Rundown}:${defaultRundownManifest.id}`
 	if (existingKeys.has(rundownKey)) {
-		await typeManifestMutations.update({
+		const { error: rundownUpdateError } = await typeManifestMutations.update({
 			id: defaultRundownManifest.id,
 			entityType: TypeManifestEntity.Rundown,
 			update: defaultRundownManifest
 		})
+		if (rundownUpdateError) {
+			console.error('Failed to update rundown typeManifest:', rundownUpdateError)
+			throw rundownUpdateError
+		}
 	} else {
-		await typeManifestMutations.create({
+		const { error: rundownCreateError } = await typeManifestMutations.create({
 			id: defaultRundownManifest.id,
 			entityType: TypeManifestEntity.Rundown,
 			payload: defaultRundownManifest.payload
 		})
+		if (rundownCreateError) {
+			console.error('Failed to create rundown typeManifest:', rundownCreateError)
+			throw rundownCreateError
+		}
 	}
 
 	for (const typeManifest of TYPE_MANIFESTS) {

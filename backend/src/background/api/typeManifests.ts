@@ -81,6 +81,9 @@ export const mutations = {
 	async read(
 		payload: Partial<MutationTypeManifestRead>
 	): Promise<{ result?: TypeManifest | TypeManifest[]; error?: Error }> {
+		if (payload?.id && !payload.entityType) {
+			return { error: new Error('Missing entityType for typeManifest read by id') }
+		}
 		if (payload && payload.id && payload.entityType) {
 			return this.readOne(payload.id, payload.entityType)
 		} else if (payload && payload.entityType) {
@@ -123,22 +126,33 @@ export const mutations = {
 		payload: MutationTypeManifestUpdate
 	): Promise<{ result?: TypeManifest; error?: Error }> {
 		const update = { ...payload.update }
-		const entityType = payload.entityType ?? update.entityType
-		if (!entityType) {
+		const currentEntityType = payload.entityType ?? update.entityType
+		if (!currentEntityType) {
 			return { error: new Error('Missing entityType for typeManifest update') }
 		}
+
+		const nextId = update.id ?? payload.id
+		const nextEntityType = update.entityType ?? currentEntityType
 
 		try {
 			const stmt = db.prepare(`
 			UPDATE typeManifests
-			SET document = json_patch(document, json(?))
+			SET document = json_patch(document, json(?)),
+			    id = ?,
+			    entityType = ?
 			WHERE id = ? AND entityType = ?;
 		`)
 
-			const result = stmt.run(JSON.stringify(update), payload.id, entityType)
+			const result = stmt.run(
+				JSON.stringify(update),
+				nextId,
+				nextEntityType,
+				payload.id,
+				currentEntityType
+			)
 			if (result.changes === 0) throw new Error('No rows were updated')
 
-			return this.readOne(payload.update.id ?? payload.id, entityType)
+			return this.readOne(nextId, nextEntityType)
 		} catch (e) {
 			console.error(e)
 			return { error: e as Error }

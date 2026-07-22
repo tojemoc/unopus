@@ -25,18 +25,29 @@ function migrateTypeManifestsToCompositePrimaryKey(database: sqlite.DatabaseSync
 	if (/PRIMARY KEY\s*\(\s*id\s*,\s*entityType\s*\)/i.test(tableInfo.sql)) return
 
 	console.log('Migrating typeManifests primary key to (id, entityType)...')
-	database.exec(`
-		CREATE TABLE typeManifests_v2 (
-			id TEXT NOT NULL,
-			document JSON NOT NULL,
-			entityType TEXT NOT NULL CHECK(entityType IN ('rundown','segment','part','piece')),
-			PRIMARY KEY (id, entityType)
-		);
-		INSERT INTO typeManifests_v2 (id, document, entityType)
-		SELECT id, document, entityType FROM typeManifests;
-		DROP TABLE typeManifests;
-		ALTER TABLE typeManifests_v2 RENAME TO typeManifests;
-	`)
+	try {
+		database.exec('BEGIN')
+		database.exec(`
+			CREATE TABLE typeManifests_v2 (
+				id TEXT NOT NULL,
+				document JSON NOT NULL,
+				entityType TEXT NOT NULL CHECK(entityType IN ('rundown','segment','part','piece')),
+				PRIMARY KEY (id, entityType)
+			);
+			INSERT INTO typeManifests_v2 (id, document, entityType)
+			SELECT id, document, entityType FROM typeManifests;
+			DROP TABLE typeManifests;
+			ALTER TABLE typeManifests_v2 RENAME TO typeManifests;
+		`)
+		database.exec('COMMIT')
+	} catch (error) {
+		try {
+			database.exec('ROLLBACK')
+		} catch {
+			// ignore rollback errors when no transaction is open
+		}
+		throw error
+	}
 	console.log('typeManifests primary key migration complete.')
 }
 
