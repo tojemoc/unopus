@@ -18,7 +18,13 @@ mkdir -p "$DEST"
 DEST="$(cd "$DEST" && pwd)"
 
 # Immutable pin: tojemoc/sofie@7c67e3a8 (ILU prerendered/bypass). Bump SHA + checksums together.
-SOFIE_ASSETS_REF="${SOFIE_ASSETS_REF:-7c67e3a83f4856c827a5a22b742d8d7d03d04a89}"
+# Reject mutable overrides (main, tags, short SHAs). Only a full 40-char commit SHA is allowed.
+PINNED_SOFIE_ASSETS_REF="7c67e3a83f4856c827a5a22b742d8d7d03d04a89"
+SOFIE_ASSETS_REF="${SOFIE_ASSETS_REF:-$PINNED_SOFIE_ASSETS_REF}"
+if [[ ! "$SOFIE_ASSETS_REF" =~ ^[0-9a-f]{40}$ ]]; then
+	echo "SOFIE_ASSETS_REF must be a full 40-char lowercase commit SHA (got: ${SOFIE_ASSETS_REF})" >&2
+	exit 1
+fi
 BASE="https://raw.githubusercontent.com/tojemoc/sofie/${SOFIE_ASSETS_REF}/assets"
 
 # filename → expected sha256 (of the pinned commit's assets/)

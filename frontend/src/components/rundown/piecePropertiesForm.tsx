@@ -3,7 +3,7 @@ import { Button, ButtonGroup, Form, Modal } from 'react-bootstrap'
 import type { Piece } from '~backend/background/interfaces'
 import { ManifestFieldType, TypeManifestEntity } from '~backend/background/interfaces'
 import { FieldInfo } from '../form'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useAppDispatch, useAppSelector } from '~/store/app'
 import { removePiece, updatePiece } from '~/store/pieces'
@@ -23,22 +23,33 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 		)
 	)
 	const parentPart = useAppSelector((state) => state.parts.parts?.find((p) => p.id === piece.partId))
+	const durationFromMediaRef = useRef(false)
 
 	const form = useForm({
 		defaultValues: piece,
 		onSubmit: async (values) => {
 			try {
 				await dispatch(updatePiece({ piece: values.value })).unwrap()
+			} catch (e) {
+				console.error(e)
+				toasts.show({
+					headerContent: 'Saving piece',
+					bodyContent: 'Encountered an unexpected error'
+				})
+				return
+			}
 
-				// Keep the story/part duration in sync when the clip duration was pulled in.
-				const nextDuration = values.value.duration
-				if (
-					parentPart &&
-					typeof nextDuration === 'number' &&
-					Number.isFinite(nextDuration) &&
-					nextDuration > 0 &&
-					parentPart.duration !== nextDuration
-				) {
+			// Keep the story/part duration in sync only when the clip duration was media-derived.
+			const nextDuration = values.value.duration
+			if (
+				durationFromMediaRef.current &&
+				parentPart &&
+				typeof nextDuration === 'number' &&
+				Number.isFinite(nextDuration) &&
+				nextDuration > 0 &&
+				parentPart.duration !== nextDuration
+			) {
+				try {
 					await dispatch(
 						updatePart({
 							part: {
@@ -47,17 +58,21 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 							}
 						})
 					).unwrap()
+					durationFromMediaRef.current = false
+				} catch (e) {
+					console.error(e)
+					toasts.show({
+						headerContent: 'Updating part duration',
+						bodyContent: 'Piece saved, but part duration could not be synchronized'
+					})
+					// Preserve the successful piece save even when part sync fails.
+					form.reset()
+					return
 				}
-
-				// Mark as pristine
-				form.reset()
-			} catch (e) {
-				console.error(e)
-				toasts.show({
-					headerContent: 'Saving piece',
-					bodyContent: 'Encountered an unexpected error'
-				})
 			}
+
+			// Mark as pristine
+			form.reset()
 		}
 	})
 
@@ -316,15 +331,18 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 													) {
 														return
 													}
+													// Only the primary media field drives piece/part duration.
+													if (fieldInfo.id !== 'fileName') {
+														return
+													}
 													// Piece duration is stored in seconds in the editor.
 													form.setFieldValue('duration', durationSeconds)
 													// Softie sourceDuration is milliseconds (video pieces).
-													if (fieldInfo.id === 'fileName') {
-														form.setFieldValue(
-															'payload.sourceDuration',
-															Math.round(durationSeconds * 1000)
-														)
-													}
+													form.setFieldValue(
+														'payload.sourceDuration',
+														Math.round(durationSeconds * 1000)
+													)
+													durationFromMediaRef.current = true
 												}}
 											/>
 										)}

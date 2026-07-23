@@ -100,3 +100,45 @@ describe('evaluatePieceReadiness hybrid Core status', () => {
 		assert.equal(result.ready, true)
 	})
 })
+
+describe('evaluatePieceReadiness master-only filesystem path', () => {
+	it('treats media as ready when the master file exists even if a former CEF .webm sibling is absent', async () => {
+		const checked: string[] = []
+
+		const result = await evaluatePieceReadiness(
+			PIECE_WITH_MEDIA,
+			[VIDEO_MANIFEST],
+			{
+				checkFile: async (absolutePath) => {
+					checked.push(absolutePath)
+					if (absolutePath.endsWith('.webm')) {
+						return false
+					}
+					return absolutePath.endsWith('clips/foo.mp4') || absolutePath.includes('foo.mp4')
+				}
+			}
+		)
+
+		assert.equal(result.ready, true)
+		assert.equal(result.requirements.length, 1)
+		assert.equal(result.requirements[0]?.ready, true)
+		assert.equal(
+			checked.some((p) => p.endsWith('.webm')),
+			false,
+			'former CEF .webm sibling must not be required for readiness'
+		)
+	})
+
+	it('reports not ready when the master media file is missing', async () => {
+		const result = await evaluatePieceReadiness(
+			PIECE_WITH_MEDIA,
+			[VIDEO_MANIFEST],
+			{
+				checkFile: async () => false
+			}
+		)
+
+		assert.equal(result.ready, false)
+		assert.match(result.requirements[0]?.reason ?? '', /missing/i)
+	})
+})

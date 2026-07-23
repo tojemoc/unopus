@@ -37,6 +37,7 @@ export function MediaPickerField({
 	const [error, setError] = useState<string | null>(null)
 	const [ingestMediaRoot, setIngestMediaRoot] = useState<string | null>(null)
 	const requestIdRef = useRef(0)
+	const durationRequestIdRef = useRef(0)
 	const datalistId = useId()
 
 	useEffect(() => {
@@ -117,6 +118,7 @@ export function MediaPickerField({
 			if (!onDurationSeconds) {
 				return
 			}
+			const requestId = ++durationRequestIdRef.current
 			if (typeof knownSeconds === 'number' && Number.isFinite(knownSeconds) && knownSeconds > 0) {
 				onDurationSeconds(knownSeconds)
 				return
@@ -127,8 +129,14 @@ export function MediaPickerField({
 			}
 			try {
 				const seconds = await fetchMediaDurationSeconds(mediaPath.trim())
+				if (requestId !== durationRequestIdRef.current) {
+					return
+				}
 				onDurationSeconds(seconds)
 			} catch {
+				if (requestId !== durationRequestIdRef.current) {
+					return
+				}
 				onDurationSeconds(undefined)
 			}
 		},
