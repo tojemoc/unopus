@@ -74,3 +74,12 @@ export async function fetchAppConfig(): Promise<{
 		ingestMediaRoot: data.ingestMediaRoot
 	}
 }
+
+/** Probe clip duration (seconds) for a path relative to the ingest media root. */
+export async function fetchMediaDurationSeconds(mediaPath: string): Promise<number | undefined> {
+	const params = new URLSearchParams({ path: mediaPath })
+	const data = await request<{ path: string; durationSeconds: number | null }>(
+		`/api/media/duration?${params}`
+	)
+	return data.durationSeconds ?? undefined
+}

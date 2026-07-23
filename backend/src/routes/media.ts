@@ -1,6 +1,10 @@
 import type { Application, Request, Response } from 'express'
 import { getUserFromSession, parseSessionCookie } from '../background/auth/authStore'
-import { ensureRundownMediaFolder, listRundownMedia } from '../background/media'
+import {
+	ensureRundownMediaFolder,
+	listRundownMedia,
+	probeRelativeMediaDurationSeconds
+} from '../background/media'
 
 function getSessionUser(req: Request) {
 	const sessionId = parseSessionCookie(req.headers.cookie)
@@ -20,6 +24,27 @@ export function registerMediaRoutes(app: Application): void {
 		try {
 			const listing = await listRundownMedia(rundownId, subdir)
 			res.json(listing)
+		} catch (error) {
+			console.error(error)
+			res.status(400).json({ error: (error as Error).message })
+		}
+	})
+
+	app.get('/api/media/duration', async (req: Request, res: Response) => {
+		if (!getSessionUser(req)) {
+			res.status(401).json({ error: 'Not authenticated' })
+			return
+		}
+
+		const mediaPath = typeof req.query.path === 'string' ? req.query.path.trim() : ''
+		if (!mediaPath) {
+			res.status(400).json({ error: 'Missing path query parameter' })
+			return
+		}
+
+		try {
+			const durationSeconds = await probeRelativeMediaDurationSeconds(mediaPath)
+			res.json({ path: mediaPath, durationSeconds: durationSeconds ?? null })
 		} catch (error) {
 			console.error(error)
 			res.status(400).json({ error: (error as Error).message })

@@ -208,6 +208,8 @@ export interface MediaFileEntry {
 	path: string
 	size?: number
 	mtime?: number
+	/** Clip duration in seconds when ffprobe succeeds. */
+	durationSeconds?: number
 }
 
 /** Single media field readiness (MOS-style clip status). */
@@ -216,8 +218,6 @@ export interface MediaRequirement {
 	path: string
 	ready: boolean
 	reason?: string
-	/** ILU / template video needs a WebM sibling for Caspar CEF playback. */
-	requiresCefWebm?: boolean
 }
 
 export interface PieceReadiness {
