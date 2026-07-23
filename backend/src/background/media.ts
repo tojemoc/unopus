@@ -62,15 +62,122 @@ export function resolveMediaAbsolutePath(relativePath: string): string {
 }
 
 const FFPROBE_TIMEOUT_MS = 10_000
+const FFPROBE_CONCURRENCY = 4
+const DURATION_CACHE_MAX = 512
+const DURATION_CACHE_TTL_MS = 30 * 60 * 1000
 
 type DurationCacheEntry = {
 	mtime: number
 	size: number
 	durationSeconds: number | undefined
+	cachedAt: number
 }
 
 /** Cache probed durations across listRundownMedia polls (keyed by ingest-relative path). */
 const durationSecondsCache = new Map<string, DurationCacheEntry>()
+/** In-flight probes so overlapping polls reuse the same ffprobe for a path. */
+const inFlightDurationProbes = new Map<string, Promise<number | undefined>>()
+
+let activeProbeCount = 0
+const probeWaitQueue: Array<() => void> = []
+
+async function withFfprobeSlot<T>(run: () => Promise<T>): Promise<T> {
+	if (activeProbeCount >= FFPROBE_CONCURRENCY) {
+		await new Promise<void>((resolve) => {
+			probeWaitQueue.push(resolve)
+		})
+	}
+	activeProbeCount++
+	try {
+		return await run()
+	} finally {
+		activeProbeCount--
+		const next = probeWaitQueue.shift()
+		if (next) {
+			next()
+		}
+	}
+}
+
+function setDurationCacheEntry(relativePath: string, entry: DurationCacheEntry): void {
+	// LRU: re-insert so the entry becomes the newest.
+	durationSecondsCache.delete(relativePath)
+	durationSecondsCache.set(relativePath, entry)
+	while (durationSecondsCache.size > DURATION_CACHE_MAX) {
+		const oldest = durationSecondsCache.keys().next().value
+		if (oldest === undefined) {
+			break
+		}
+		durationSecondsCache.delete(oldest)
+	}
+}
+
+function readDurationCacheEntry(
+	relativePath: string,
+	mtime: number,
+	size: number
+): DurationCacheEntry | undefined {
+	const cached = durationSecondsCache.get(relativePath)
+	if (!cached) {
+		return undefined
+	}
+	if (Date.now() - cached.cachedAt > DURATION_CACHE_TTL_MS) {
+		durationSecondsCache.delete(relativePath)
+		return undefined
+	}
+	if (cached.mtime !== mtime || cached.size !== size) {
+		return undefined
+	}
+	setDurationCacheEntry(relativePath, cached)
+	return cached
+}
+
+function pruneDurationCache(liveRelativePaths: Set<string>, folderPrefix: string): void {
+	const folderRoot = folderPrefix.endsWith('/') ? folderPrefix : `${folderPrefix}/`
+	const now = Date.now()
+	for (const [key, entry] of durationSecondsCache) {
+		const expired = now - entry.cachedAt > DURATION_CACHE_TTL_MS
+		const inThisFolder = key.startsWith(folderRoot)
+		const removed = inThisFolder && !liveRelativePaths.has(key)
+		if (expired || removed) {
+			durationSecondsCache.delete(key)
+		}
+	}
+}
+
+async function probeDurationCached(
+	relativePath: string,
+	filePath: string,
+	mtime: number,
+	size: number
+): Promise<number | undefined> {
+	const cached = readDurationCacheEntry(relativePath, mtime, size)
+	if (cached) {
+		return cached.durationSeconds
+	}
+
+	const existing = inFlightDurationProbes.get(relativePath)
+	if (existing) {
+		return existing
+	}
+
+	const probePromise = withFfprobeSlot(() => probeMediaDurationSeconds(filePath))
+		.then((durationSeconds) => {
+			setDurationCacheEntry(relativePath, {
+				mtime,
+				size,
+				durationSeconds,
+				cachedAt: Date.now()
+			})
+			return durationSeconds
+		})
+		.finally(() => {
+			inFlightDurationProbes.delete(relativePath)
+		})
+
+	inFlightDurationProbes.set(relativePath, probePromise)
+	return probePromise
+}
 
 /**
  * Probe clip duration in seconds via ffprobe. Returns undefined when unavailable.
@@ -210,20 +317,17 @@ export async function listRundownMedia(
 		})
 	}
 
+	const liveRelativePaths = new Set(fileInfos.map((info) => info.relativePath))
+	pruneDurationCache(liveRelativePaths, relativeFolderPath)
+
 	const files: MediaFileEntry[] = await Promise.all(
 		fileInfos.map(async (info) => {
-			const cached = durationSecondsCache.get(info.relativePath)
-			let durationSeconds: number | undefined
-			if (cached && cached.mtime === info.mtime && cached.size === info.size) {
-				durationSeconds = cached.durationSeconds
-			} else {
-				durationSeconds = await probeMediaDurationSeconds(info.filePath)
-				durationSecondsCache.set(info.relativePath, {
-					mtime: info.mtime,
-					size: info.size,
-					durationSeconds
-				})
-			}
+			const durationSeconds = await probeDurationCached(
+				info.relativePath,
+				info.filePath,
+				info.mtime,
+				info.size
+			)
 
 			return {
 				name: info.name,
