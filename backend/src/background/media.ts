@@ -61,6 +61,17 @@ export function resolveMediaAbsolutePath(relativePath: string): string {
 	return absolute
 }
 
+const FFPROBE_TIMEOUT_MS = 10_000
+
+type DurationCacheEntry = {
+	mtime: number
+	size: number
+	durationSeconds: number | undefined
+}
+
+/** Cache probed durations across listRundownMedia polls (keyed by ingest-relative path). */
+const durationSecondsCache = new Map<string, DurationCacheEntry>()
+
 /**
  * Probe clip duration in seconds via ffprobe. Returns undefined when unavailable.
  */
@@ -70,6 +81,19 @@ export async function probeMediaDurationSeconds(absolutePath: string): Promise<n
 	}
 
 	return new Promise((resolve) => {
+		let settled = false
+		let timer: ReturnType<typeof setTimeout> | undefined
+		const finish = (value: number | undefined) => {
+			if (settled) {
+				return
+			}
+			settled = true
+			if (timer !== undefined) {
+				clearTimeout(timer)
+			}
+			resolve(value)
+		}
+
 		const child = spawn(
 			'ffprobe',
 			[
@@ -84,24 +108,29 @@ export async function probeMediaDurationSeconds(absolutePath: string): Promise<n
 			{ stdio: ['ignore', 'pipe', 'ignore'] }
 		)
 
+		timer = setTimeout(() => {
+			child.kill('SIGKILL')
+			finish(undefined)
+		}, FFPROBE_TIMEOUT_MS)
+
 		let stdout = ''
 		child.stdout.on('data', (chunk: Buffer) => {
 			stdout += chunk.toString('utf8')
 		})
 
-		child.on('error', () => resolve(undefined))
+		child.on('error', () => finish(undefined))
 		child.on('close', (code) => {
 			if (code !== 0) {
-				resolve(undefined)
+				finish(undefined)
 				return
 			}
 			const seconds = Number.parseFloat(stdout.trim())
 			if (!Number.isFinite(seconds) || seconds <= 0) {
-				resolve(undefined)
+				finish(undefined)
 				return
 			}
 			// Round to 0.1s for editor friendliness.
-			resolve(Math.round(seconds * 10) / 10)
+			finish(Math.round(seconds * 10) / 10)
 		})
 	})
 }
@@ -156,7 +185,13 @@ export async function listRundownMedia(
 		throw error
 	}
 
-	const files: MediaFileEntry[] = []
+	const fileInfos: Array<{
+		name: string
+		relativePath: string
+		filePath: string
+		size: number
+		mtime: number
+	}> = []
 
 	for (const entry of entries) {
 		if (!entry.isFile()) {
@@ -166,16 +201,39 @@ export async function listRundownMedia(
 		const filePath = path.join(mediaDir, entry.name)
 		const stats = await fs.stat(filePath)
 		const relativePath = path.posix.join(relativeFolderPath, entry.name)
-		const durationSeconds = await probeMediaDurationSeconds(filePath)
-
-		files.push({
+		fileInfos.push({
 			name: entry.name,
-			path: relativePath,
+			relativePath,
+			filePath,
 			size: stats.size,
-			mtime: stats.mtimeMs,
-			durationSeconds,
+			mtime: stats.mtimeMs
 		})
 	}
+
+	const files: MediaFileEntry[] = await Promise.all(
+		fileInfos.map(async (info) => {
+			const cached = durationSecondsCache.get(info.relativePath)
+			let durationSeconds: number | undefined
+			if (cached && cached.mtime === info.mtime && cached.size === info.size) {
+				durationSeconds = cached.durationSeconds
+			} else {
+				durationSeconds = await probeMediaDurationSeconds(info.filePath)
+				durationSecondsCache.set(info.relativePath, {
+					mtime: info.mtime,
+					size: info.size,
+					durationSeconds
+				})
+			}
+
+			return {
+				name: info.name,
+				path: info.relativePath,
+				size: info.size,
+				mtime: info.mtime,
+				durationSeconds
+			}
+		})
+	)
 
 	files.sort((a, b) => a.name.localeCompare(b.name))
 
