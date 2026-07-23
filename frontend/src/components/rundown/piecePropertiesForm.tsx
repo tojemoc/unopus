@@ -58,7 +58,6 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 							}
 						})
 					).unwrap()
-					durationFromMediaRef.current = false
 				} catch (e) {
 					console.error(e)
 					toasts.show({
@@ -71,6 +70,8 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 				}
 			}
 
+			// Clear after a successful piece save path (retry keeps the flag when part sync fails).
+			durationFromMediaRef.current = false
 			// Mark as pristine
 			form.reset()
 		}
