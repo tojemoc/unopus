@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { Button, Form, InputGroup } from 'react-bootstrap'
-import { ensureRundownMediaFolder, fetchAppConfig, fetchRundownMedia } from '~/lib/mediaApi'
+import {
+	ensureRundownMediaFolder,
+	fetchAppConfig,
+	fetchMediaDurationSeconds,
+	fetchRundownMedia
+} from '~/lib/mediaApi'
 import type { MediaFileEntry } from '~backend/background/interfaces'
 
 const MEDIA_POLL_MS = 10_000
@@ -11,7 +16,8 @@ export function MediaPickerField({
 	value,
 	onChange,
 	onBlur,
-	name
+	name,
+	onDurationSeconds
 }: {
 	rundownId: string
 	subdir?: string
@@ -19,6 +25,8 @@ export function MediaPickerField({
 	onChange: (value: string) => void
 	onBlur: () => void
 	name: string
+	/** Fired when a clip is selected and ffprobe reports a duration (seconds). */
+	onDurationSeconds?: (durationSeconds: number | undefined) => void
 }) {
 	const [files, setFiles] = useState<MediaFileEntry[]>([])
 	const [folderPath, setFolderPath] = useState<string | null>(null)
@@ -49,18 +57,15 @@ export function MediaPickerField({
 		}
 	}, [])
 
-	const applyListing = useCallback(
-		(listing: Awaited<ReturnType<typeof fetchRundownMedia>>) => {
-			setFiles(listing.files)
-			setFolderPath(listing.folderPath)
-			setAbsoluteFolderPath(listing.absoluteFolderPath)
-			setFolderExists(listing.folderExists)
-			if (listing.ingestMediaRoot) {
-				setIngestMediaRoot(listing.ingestMediaRoot)
-			}
-		},
-		[]
-	)
+	const applyListing = useCallback((listing: Awaited<ReturnType<typeof fetchRundownMedia>>) => {
+		setFiles(listing.files)
+		setFolderPath(listing.folderPath)
+		setAbsoluteFolderPath(listing.absoluteFolderPath)
+		setFolderExists(listing.folderExists)
+		if (listing.ingestMediaRoot) {
+			setIngestMediaRoot(listing.ingestMediaRoot)
+		}
+	}, [])
 
 	const loadMedia = useCallback(
 		async (options?: { showInitialLoading?: boolean }) => {
@@ -107,6 +112,39 @@ export function MediaPickerField({
 		}
 	}, [loadMedia])
 
+	const emitDurationForPath = useCallback(
+		async (mediaPath: string, knownSeconds?: number) => {
+			if (!onDurationSeconds) {
+				return
+			}
+			if (typeof knownSeconds === 'number' && Number.isFinite(knownSeconds) && knownSeconds > 0) {
+				onDurationSeconds(knownSeconds)
+				return
+			}
+			if (!mediaPath.trim()) {
+				onDurationSeconds(undefined)
+				return
+			}
+			try {
+				const seconds = await fetchMediaDurationSeconds(mediaPath.trim())
+				onDurationSeconds(seconds)
+			} catch {
+				onDurationSeconds(undefined)
+			}
+		},
+		[onDurationSeconds]
+	)
+
+	const handlePathChange = useCallback(
+		(nextPath: string, knownSeconds?: number, probeNow = false) => {
+			onChange(nextPath)
+			if (probeNow || typeof knownSeconds === 'number') {
+				void emitDurationForPath(nextPath, knownSeconds)
+			}
+		},
+		[emitDurationForPath, onChange]
+	)
+
 	const handleCreateFolder = useCallback(async () => {
 		setCreatingFolder(true)
 		setError(null)
@@ -134,8 +172,11 @@ export function MediaPickerField({
 					value={value ?? ''}
 					placeholder="e.g. spravy/my-rundown/clips/clip.mp4"
 					disabled={initialLoading}
-					onBlur={onBlur}
-					onChange={(e) => onChange(e.target.value.trimStart())}
+					onBlur={() => {
+						onBlur()
+						void emitDurationForPath(value ?? '')
+					}}
+					onChange={(e) => handlePathChange(e.target.value.trimStart())}
 					autoComplete="off"
 				/>
 				<Button
@@ -151,6 +192,7 @@ export function MediaPickerField({
 				{files.map((file) => (
 					<option key={file.path} value={file.path}>
 						{file.name}
+						{file.durationSeconds ? ` (${file.durationSeconds}s)` : ''}
 					</option>
 				))}
 			</datalist>
@@ -160,12 +202,16 @@ export function MediaPickerField({
 					aria-label="Pick a scanned clip"
 					value={files.some((f) => f.path === value) ? (value ?? '') : ''}
 					onBlur={onBlur}
-					onChange={(e) => onChange(e.target.value)}
+					onChange={(e) => {
+						const selected = files.find((f) => f.path === e.target.value)
+						handlePathChange(e.target.value, selected?.durationSeconds, true)
+					}}
 				>
 					<option value="">— Or pick from scanned folder —</option>
 					{files.map((file) => (
 						<option key={file.path} value={file.path}>
 							{file.name}
+							{file.durationSeconds ? ` (${file.durationSeconds}s)` : ''}
 						</option>
 					))}
 				</Form.Select>

@@ -61,6 +61,7 @@ export function GfxPreview({
 		const previewPayload = { ...payload }
 		delete previewPayload.sourceEnabled
 		delete previewPayload.iluFallback
+		delete previewPayload.iluPrerendered
 
 		const sourceText = trimSourceText(payload.source)
 		const sourceEnabled = resolveSourceEnabled(payload.sourceEnabled, sourceText)

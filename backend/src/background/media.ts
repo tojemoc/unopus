@@ -1,3 +1,4 @@
+import { spawn } from 'node:child_process'
 import fs from 'fs/promises'
 import path from 'path'
 import process from 'node:process'
@@ -7,6 +8,7 @@ import { normalizeBaseUrl, readApplicationSettingsSync } from './settingsResolve
 const DEFAULT_INGEST_MEDIA_ROOT = '../ingest'
 const DEFAULT_SUBDIR = 'clips'
 const DEFAULT_PREVIEW_BASE_URL = 'http://localhost:3010/demo-assets'
+const VIDEO_EXTENSIONS = /\.(mp4|mov|mxf|mkv|webm|m4v|avi)$/i
 
 export function getIngestMediaRoot(): string {
 	const settings = readApplicationSettingsSync()
@@ -45,6 +47,78 @@ function getRundownMediaFolder(rundownId: string, subdir: string = DEFAULT_SUBDI
 function getRelativeRundownMediaFolder(rundownId: string, subdir: string): string {
 	const safeSubdir = subdir.replace(/[/\\]/g, '')
 	return path.posix.join('spravy', rundownId, safeSubdir)
+}
+
+export function resolveMediaAbsolutePath(relativePath: string): string {
+	const ingestRoot = path.resolve(getIngestMediaRoot())
+	const normalized = relativePath.replace(/^\/+/, '').replace(/\\/g, '/')
+	const absolute = path.resolve(ingestRoot, normalized)
+
+	if (!absolute.startsWith(ingestRoot + path.sep) && absolute !== ingestRoot) {
+		throw new Error(`Invalid media path: ${relativePath}`)
+	}
+
+	return absolute
+}
+
+/**
+ * Probe clip duration in seconds via ffprobe. Returns undefined when unavailable.
+ */
+export async function probeMediaDurationSeconds(absolutePath: string): Promise<number | undefined> {
+	if (!VIDEO_EXTENSIONS.test(absolutePath)) {
+		return undefined
+	}
+
+	return new Promise((resolve) => {
+		const child = spawn(
+			'ffprobe',
+			[
+				'-v',
+				'error',
+				'-show_entries',
+				'format=duration',
+				'-of',
+				'default=noprint_wrappers=1:nokey=1',
+				absolutePath
+			],
+			{ stdio: ['ignore', 'pipe', 'ignore'] }
+		)
+
+		let stdout = ''
+		child.stdout.on('data', (chunk: Buffer) => {
+			stdout += chunk.toString('utf8')
+		})
+
+		child.on('error', () => resolve(undefined))
+		child.on('close', (code) => {
+			if (code !== 0) {
+				resolve(undefined)
+				return
+			}
+			const seconds = Number.parseFloat(stdout.trim())
+			if (!Number.isFinite(seconds) || seconds <= 0) {
+				resolve(undefined)
+				return
+			}
+			// Round to 0.1s for editor friendliness.
+			resolve(Math.round(seconds * 10) / 10)
+		})
+	})
+}
+
+export async function probeRelativeMediaDurationSeconds(
+	relativePath: string
+): Promise<number | undefined> {
+	const absolute = resolveMediaAbsolutePath(relativePath)
+	try {
+		const stats = await fs.stat(absolute)
+		if (!stats.isFile()) {
+			return undefined
+		}
+	} catch {
+		return undefined
+	}
+	return probeMediaDurationSeconds(absolute)
 }
 
 export interface RundownMediaListing {
@@ -92,12 +166,14 @@ export async function listRundownMedia(
 		const filePath = path.join(mediaDir, entry.name)
 		const stats = await fs.stat(filePath)
 		const relativePath = path.posix.join(relativeFolderPath, entry.name)
+		const durationSeconds = await probeMediaDurationSeconds(filePath)
 
 		files.push({
 			name: entry.name,
 			path: relativePath,
 			size: stats.size,
-			mtime: stats.mtimeMs
+			mtime: stats.mtimeMs,
+			durationSeconds,
 		})
 	}
 

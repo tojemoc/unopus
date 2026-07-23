@@ -7,6 +7,7 @@ import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useAppDispatch, useAppSelector } from '~/store/app'
 import { removePiece, updatePiece } from '~/store/pieces'
+import { updatePart } from '~/store/parts'
 import { useToasts } from '../toasts/useToasts'
 import { MediaPickerField } from './mediaPickerField'
 import { GfxPreview } from './gfxPreview'
@@ -21,12 +22,32 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 			(p) => p.id === piece.pieceType && p.entityType === TypeManifestEntity.Piece
 		)
 	)
+	const parentPart = useAppSelector((state) => state.parts.parts?.find((p) => p.id === piece.partId))
 
 	const form = useForm({
 		defaultValues: piece,
 		onSubmit: async (values) => {
 			try {
 				await dispatch(updatePiece({ piece: values.value })).unwrap()
+
+				// Keep the story/part duration in sync when the clip duration was pulled in.
+				const nextDuration = values.value.duration
+				if (
+					parentPart &&
+					typeof nextDuration === 'number' &&
+					Number.isFinite(nextDuration) &&
+					nextDuration > 0 &&
+					parentPart.duration !== nextDuration
+				) {
+					await dispatch(
+						updatePart({
+							part: {
+								...parentPart,
+								duration: nextDuration
+							}
+						})
+					).unwrap()
+				}
 
 				// Mark as pristine
 				form.reset()
@@ -287,6 +308,24 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 												value={field.state.value as string | undefined}
 												onBlur={field.handleBlur}
 												onChange={(value) => field.handleChange(value)}
+												onDurationSeconds={(durationSeconds) => {
+													if (
+														typeof durationSeconds !== 'number' ||
+														!Number.isFinite(durationSeconds) ||
+														durationSeconds <= 0
+													) {
+														return
+													}
+													// Piece duration is stored in seconds in the editor.
+													form.setFieldValue('duration', durationSeconds)
+													// Softie sourceDuration is milliseconds (video pieces).
+													if (fieldInfo.id === 'fileName') {
+														form.setFieldValue(
+															'payload.sourceDuration',
+															Math.round(durationSeconds * 1000)
+														)
+													}
+												}}
 											/>
 										)}
 									</Form.Group>

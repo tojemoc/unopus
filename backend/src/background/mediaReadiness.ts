@@ -14,7 +14,6 @@ import { getIngestMediaRoot } from './media'
 import { findTypeManifest } from './manifestMaterialize'
 import { resolveSourceEnabled, trimSourceText } from './sourcePayload'
 
-const CEF_TEMPLATE_VIDEO = /\.(mp4|mov|m4v|mxf)$/i
 const PATH_LOOKUP_CONCURRENCY = 8
 
 function resolveMediaAbsolutePath(relativePath: string): string {
@@ -129,8 +128,7 @@ function collectMediaRequirements(
 		requirements.push({
 			fieldId: field.id,
 			path: mediaPath,
-			ready: false,
-			requiresCefWebm: field.id === 'iluFile'
+			ready: false
 		})
 	}
 
@@ -185,19 +183,6 @@ async function evaluateRequirement(
 				...requirement,
 				ready: false,
 				reason: 'File missing on ingest'
-			}
-		}
-
-		if (requirement.requiresCefWebm && CEF_TEMPLATE_VIDEO.test(requirement.path)) {
-			const webmPath = masterPath.replace(CEF_TEMPLATE_VIDEO, '.webm')
-			const webmExists = await pathLookup.checkFile(webmPath)
-
-			if (!webmExists) {
-				return {
-					...requirement,
-					ready: false,
-					reason: 'WebM sibling missing for template playback'
-				}
 			}
 		}
 
