@@ -136,13 +136,13 @@ export function CoreConnectionSettingsForm({ settings }: { settings: Application
 								<Form.Text className="text-muted">
 									Clips are listed from{' '}
 									<code>
-										&lt;ingest root&gt;/spravy/&lt;rundownId&gt;/clips/
-									</code>
-									. File name / ILU clip fields also accept any path typed relative to this
-									root (same layout Softie Package Manager expects). Overrides{' '}
-									<code>INGEST_MEDIA_ROOT</code> in backend <code>.env</code> when set. In Docker
-									this is often <code>/app/ingest</code> — mount your media tree there or change
-									this setting.
+										&lt;ingest root&gt;/clips/
+									</code>{' '}
+									(also <code>loops/</code>, <code>wipes/</code>). File name / ILU clip fields
+									use two-level paths like <code>clips/foo.mp4</code> — same layout Sofie Package
+									Manager expects. Overrides <code>INGEST_MEDIA_ROOT</code> in backend{' '}
+									<code>.env</code> when set. In Docker this is often <code>/app/ingest</code> —
+									mount your media tree there or change this setting.
 								</Form.Text>
 							</Form.Group>
 							<FieldInfo field={field} />

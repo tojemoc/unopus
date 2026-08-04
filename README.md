@@ -92,13 +92,15 @@ See [sofie MEGAREPO-ASSETS-FETCH.md](https://github.com/tojemoc/sofie/blob/main/
 
 ### Media ingest layout
 
-Stage clips under:
+Stage media under the ingest/Caspar media root (two levels only):
 
 ```
-<INGEST_MEDIA_ROOT>/spravy/<rundownId>/clips/<file>.mp4
+<INGEST_MEDIA_ROOT>/clips/<file>.mp4
+<INGEST_MEDIA_ROOT>/loops/<file>
+<INGEST_MEDIA_ROOT>/wipes/<file>
 ```
 
-Set `INGEST_MEDIA_ROOT` in `backend/.env`, or override it in **Settings → Connection**. Paths in piece payloads use POSIX form: `spravy/<rundownId>/clips/<file>.mp4`.
+Set `INGEST_MEDIA_ROOT` in `backend/.env`, or override it in **Settings → Connection**. Paths in piece payloads use POSIX form: `clips/<file>.mp4`.
 
 ### GFX preview
 

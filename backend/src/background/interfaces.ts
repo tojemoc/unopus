@@ -195,7 +195,7 @@ export interface PayloadManifest {
 	label: string
 	type: ManifestFieldType
 	includeInName?: boolean
-	/** Subfolder under spravy/<rundownId>/ for mediaPick fields (default: clips) */
+	/** Subfolder under the ingest/media root for mediaPick fields (default: clips) */
 	subdir?: string
 	/** Fixed choices for string fields (rendered as radio buttons when set) */
 	options?: string[]

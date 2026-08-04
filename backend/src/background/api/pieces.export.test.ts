@@ -49,7 +49,7 @@ describe('mutatePieceForExport', () => {
 			makePiece({
 				pieceType: 'video',
 				start: 12,
-				payload: { fileName: 'spravy/demo/clips/vo.mp4' }
+				payload: { fileName: 'clips/vo.mp4' }
 			})
 		)
 
