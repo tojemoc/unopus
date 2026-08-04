@@ -94,7 +94,7 @@ See [sofie MEGAREPO-ASSETS-FETCH.md](https://github.com/tojemoc/sofie/blob/main/
 
 Stage media under the ingest/Caspar media root (two levels only):
 
-```
+```text
 <INGEST_MEDIA_ROOT>/clips/<file>.mp4
 <INGEST_MEDIA_ROOT>/loops/<file>
 <INGEST_MEDIA_ROOT>/wipes/<file>
