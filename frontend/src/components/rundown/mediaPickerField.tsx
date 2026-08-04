@@ -166,7 +166,7 @@ export function MediaPickerField({
 		}
 	}, [applyListing, rundownId, subdir])
 
-	const logicalFolderPath = folderPath ?? `spravy/${rundownId}/${subdir}`
+	const logicalFolderPath = folderPath ?? subdir
 	const absolutePath =
 		absoluteFolderPath ??
 		(ingestMediaRoot ? `${ingestMediaRoot.replace(/[/\\]+$/, '')}/${logicalFolderPath}` : null)
@@ -178,7 +178,7 @@ export function MediaPickerField({
 					name={name}
 					list={datalistId}
 					value={value ?? ''}
-					placeholder="e.g. spravy/my-rundown/clips/clip.mp4"
+					placeholder={`e.g. ${subdir}/clip.mp4`}
 					disabled={initialLoading}
 					onBlur={() => {
 						onBlur()
@@ -244,7 +244,7 @@ export function MediaPickerField({
 								at <code>{logicalFolderPath}</code>
 							</>
 						)}
-						. Paths are relative to the ingest root (same tree Softie Package Manager uses). You can
+						. Paths are relative to the ingest root (same tree Sofie Package Manager uses). You can
 						still type a path above.
 					</Form.Text>
 					<Button

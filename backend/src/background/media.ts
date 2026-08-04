@@ -28,9 +28,10 @@ export function getPreviewBaseUrl(): string {
 	return DEFAULT_PREVIEW_BASE_URL
 }
 
-function resolveIngestSubdir(rundownId: string, subdir: string): string {
+function resolveIngestSubdir(subdir: string): string {
 	const ingestRoot = path.resolve(getIngestMediaRoot())
-	const targetDir = path.resolve(ingestRoot, 'spravy', rundownId, subdir)
+	const safeSubdir = subdir.replace(/[/\\]/g, '')
+	const targetDir = path.resolve(ingestRoot, safeSubdir)
 
 	if (!targetDir.startsWith(ingestRoot + path.sep) && targetDir !== ingestRoot) {
 		throw new Error('Invalid media path')
@@ -39,14 +40,13 @@ function resolveIngestSubdir(rundownId: string, subdir: string): string {
 	return targetDir
 }
 
-function getRundownMediaFolder(rundownId: string, subdir: string = DEFAULT_SUBDIR): string {
-	const safeSubdir = subdir.replace(/[/\\]/g, '')
-	return resolveIngestSubdir(rundownId, safeSubdir)
+function getRundownMediaFolder(_rundownId: string, subdir: string = DEFAULT_SUBDIR): string {
+	return resolveIngestSubdir(subdir)
 }
 
-function getRelativeRundownMediaFolder(rundownId: string, subdir: string): string {
+function getRelativeRundownMediaFolder(_rundownId: string, subdir: string): string {
 	const safeSubdir = subdir.replace(/[/\\]/g, '')
-	return path.posix.join('spravy', rundownId, safeSubdir)
+	return safeSubdir
 }
 
 export function resolveMediaAbsolutePath(relativePath: string): string {
@@ -259,9 +259,9 @@ export async function probeRelativeMediaDurationSeconds(
 
 export interface RundownMediaListing {
 	files: MediaFileEntry[]
-	/** Path relative to ingest root, e.g. spravy/<rundownId>/clips */
+	/** Path relative to ingest root, e.g. clips */
 	folderPath: string
-	/** Absolute filesystem path for the rundown clips folder */
+	/** Absolute filesystem path for the media subfolder */
 	absoluteFolderPath: string
 	folderExists: boolean
 	ingestMediaRoot: string
