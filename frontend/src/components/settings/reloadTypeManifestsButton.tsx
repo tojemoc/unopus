@@ -6,10 +6,11 @@ import { useToasts } from '../toasts/useToasts'
 export function ReloadTypeManifestsButton() {
 	const [showConfirm, setShowConfirm] = useState(false)
 	const [loading, setLoading] = useState(false)
-	const [removeOrphans, setRemoveOrphans] = useState(true)
+	const [removeOrphans, setRemoveOrphans] = useState(false)
 	const toasts = useToasts()
 
 	const performReload = async () => {
+		if (loading) return
 		setLoading(true)
 		try {
 			await ipcAPI.reloadTypeManifests({ removeOrphans })
@@ -17,8 +18,8 @@ export function ReloadTypeManifestsButton() {
 			toasts.show({
 				headerContent: 'Type manifests reloaded',
 				bodyContent: removeOrphans
-					? 'Types from /assets/ were fully replaced by id; extras not in assets were removed.'
-					: 'Types from /assets/ were fully replaced by id; custom extras were kept.'
+					? 'Types from /assets/ were fully replaced by entity type and id; extras not in assets were removed.'
+					: 'Types from /assets/ were fully replaced by entity type and id; custom extras were kept.'
 			})
 			window.location.reload()
 		} catch (error) {
@@ -34,7 +35,12 @@ export function ReloadTypeManifestsButton() {
 
 	return (
 		<>
-			<Button onClick={() => setShowConfirm(true)} variant="outline-secondary" className="me-2">
+			<Button
+				onClick={() => setShowConfirm(true)}
+				variant="outline-secondary"
+				className="me-2"
+				disabled={loading}
+			>
 				Reload type manifests from assets
 			</Button>
 
@@ -45,8 +51,8 @@ export function ReloadTypeManifestsButton() {
 				<Modal.Body>
 					<p>
 						Fully replace piece, part, and segment type definitions from <code>/assets/</code> by
-						id. You do <strong>not</strong> need to delete types one-by-one first — matching ids are
-						overwritten completely (including removed fields).
+						entity type and id. You do <strong>not</strong> need to delete types one-by-one first —
+						matching entity type + id pairs are overwritten completely (including removed fields).
 					</p>
 					<Form.Check
 						type="checkbox"

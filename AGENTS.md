@@ -56,9 +56,9 @@ Husky runs `lint-staged` on commit, which applies Prettier to `*.{js,css,json,md
 Do **not** reintroduce these under `assets/` in this repo. Backend `manifest.ts` resolves them
 from the megarepo when this clone is nested as `sofie/rundown-editor/`, or via
 `SOFIE_MEGAREPO_ASSETS` (set by `scripts/fetch-sofie-megarepo-assets.sh` in CI / Docker).
-Reload in the UI: **Settings → Connection → Reload type manifests** (fully replaces by id;
-optionally remove types not in assets). Per-page **Delete all** is also available under
-Settings → Piece/Part/Segment Types.
+Reload in the UI: **Settings → Connection → Reload type manifests** (fully replaces by
+entity type + id; optionally remove types not in assets). Per-page **Delete all** is also
+available under Settings → Piece/Part/Segment Types.
 
 **Part/piece id collision:** Part type `intro` and piece type `intro` share the same id by
 design. The DB primary key is `(id, entityType)` so both can coexist. After upgrading, use

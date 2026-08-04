@@ -164,7 +164,12 @@ export function TypeManifestsForm({
 						))}
 			</Accordion>
 
-			<Modal show={showDeleteAll} onHide={() => setShowDeleteAll(false)}>
+			<Modal
+				show={showDeleteAll}
+				onHide={() => {
+					if (!deletingAll) setShowDeleteAll(false)
+				}}
+			>
 				<Modal.Header closeButton>
 					<Modal.Title>Delete all {title.toLowerCase()}</Modal.Title>
 				</Modal.Header>
