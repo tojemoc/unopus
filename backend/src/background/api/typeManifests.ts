@@ -133,18 +133,28 @@ export const mutations = {
 
 		const nextId = update.id ?? payload.id
 		const nextEntityType = update.entityType ?? currentEntityType
+		// Full replace (not json_patch) so removed fields / payload entries actually disappear.
+		const document: TypeManifest = {
+			...(update as TypeManifest),
+			id: nextId,
+			entityType: nextEntityType,
+			name: update.name ?? '',
+			shortName: update.shortName ?? '',
+			colour: update.colour ?? '#000000',
+			payload: update.payload ?? []
+		}
 
 		try {
 			const stmt = db.prepare(`
 			UPDATE typeManifests
-			SET document = json_patch(document, json(?)),
+			SET document = json(?),
 			    id = ?,
 			    entityType = ?
 			WHERE id = ? AND entityType = ?;
 		`)
 
 			const result = stmt.run(
-				JSON.stringify(update),
+				JSON.stringify(document),
 				nextId,
 				nextEntityType,
 				payload.id,
@@ -167,6 +177,21 @@ export const mutations = {
 			`)
 
 			stmt.run(payload.id, payload.entityType)
+			return {}
+		} catch (e) {
+			console.error(e)
+			return { error: e as Error }
+		}
+	},
+
+	async deleteByEntityType(entityType: TypeManifestEntity): Promise<{ error?: Error }> {
+		try {
+			const stmt = db.prepare(`
+				DELETE FROM typeManifests
+				WHERE entityType = ?;
+			`)
+
+			stmt.run(entityType)
 			return {}
 		} catch (e) {
 			console.error(e)
@@ -199,6 +224,12 @@ export function registerTypeManifestsHandlers(socket: Socket, _io: Server) {
 			case IpcOperationType.Delete:
 				{
 					const { error } = await mutations.delete(payload)
+					callback(error || true)
+				}
+				break
+			case 'deleteByEntityType':
+				{
+					const { error } = await mutations.deleteByEntityType(payload.entityType)
 					callback(error || true)
 				}
 				break

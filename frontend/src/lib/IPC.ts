@@ -46,8 +46,8 @@ export const ipcAPI: BackendApi = {
 	resetSettings: () => {
 		return getSocket().emitWithAck('settings', 'reset', undefined)
 	},
-	reloadTypeManifests: () => {
-		return getSocket().emitWithAck('settings', 'reloadManifests', undefined)
+	reloadTypeManifests: (options) => {
+		return getSocket().emitWithAck('settings', 'reloadManifests', options)
 	},
 	getSettings: () => {
 		return getSocket().emitWithAck('settings', 'read', undefined)
@@ -71,6 +71,9 @@ export const ipcAPI: BackendApi = {
 	},
 	removeTypeManifest: (id: string, entityType: TypeManifest['entityType']) => {
 		return getSocket().emitWithAck('typeManifests', 'delete', { id, entityType })
+	},
+	removeTypeManifestsByEntityType: (entityType: TypeManifest['entityType']) => {
+		return getSocket().emitWithAck('typeManifests', 'deleteByEntityType', { entityType })
 	},
 
 	getPlaylists: () => {

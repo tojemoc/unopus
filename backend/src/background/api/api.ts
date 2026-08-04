@@ -42,7 +42,7 @@ export interface BackendApi {
 	getCoreConnectionInfo: () => Promise<CoreConnectionInfo>
 
 	resetSettings: () => Promise<void>
-	reloadTypeManifests: () => Promise<ApplicationSettings>
+	reloadTypeManifests: (options?: { removeOrphans?: boolean }) => Promise<ApplicationSettings>
 	getSettings: () => Promise<ApplicationSettings>
 	updateSettings: (settings: ApplicationSettings) => Promise<ApplicationSettings>
 
@@ -50,6 +50,7 @@ export interface BackendApi {
 	addNewTypeManifest: (manifest: TypeManifest) => Promise<TypeManifest>
 	updateTypeManifest: (id: string, manifest: TypeManifest) => Promise<TypeManifest>
 	removeTypeManifest: (id: string, entityType: TypeManifest['entityType']) => Promise<void>
+	removeTypeManifestsByEntityType: (entityType: TypeManifest['entityType']) => Promise<void>
 
 	getPlaylists: () => Promise<Playlist[]>
 
