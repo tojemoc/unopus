@@ -95,10 +95,17 @@ export const mutations = {
 
 		return await this.read()
 	},
-	async reloadManifestsFromAssets(): Promise<{ result?: ApplicationSettings; error?: Error }> {
-		await upsertTypeManifestsFromAssets()
+	async reloadManifestsFromAssets(
+		options?: ReloadTypeManifestsOptions
+	): Promise<{ result?: ApplicationSettings; error?: Error }> {
+		await upsertTypeManifestsFromAssets(options)
 		return await this.read()
 	}
+}
+
+export interface ReloadTypeManifestsOptions {
+	/** When true, delete piece/part/segment types that are not present in /assets/ */
+	removeOrphans?: boolean
 }
 
 export function registerSettingsHandlers(socket: Socket, _io: Server) {
@@ -130,7 +137,9 @@ export function registerSettingsHandlers(socket: Socket, _io: Server) {
 				break
 			case 'reloadManifests':
 				{
-					const { result, error } = await mutations.reloadManifestsFromAssets()
+					const { result, error } = await mutations.reloadManifestsFromAssets(
+						payload as ReloadTypeManifestsOptions | undefined
+					)
 					callback(result || error)
 				}
 				break
@@ -174,10 +183,17 @@ async function seedDefaultTypeManifests(): Promise<void> {
 	}
 }
 
-async function upsertTypeManifestsFromAssets(): Promise<void> {
+async function upsertTypeManifestsFromAssets(
+	options?: ReloadTypeManifestsOptions
+): Promise<void> {
 	const { result: existingManifests } = await typeManifestMutations.read({})
 	const existingList = Array.isArray(existingManifests) ? existingManifests : []
 	const existingKeys = new Set(existingList.map((manifest) => `${manifest.entityType}:${manifest.id}`))
+
+	const assetKeys = new Set<string>([
+		`${TypeManifestEntity.Rundown}:${defaultRundownManifest.id}`,
+		...TYPE_MANIFESTS.map((manifest) => `${manifest.entityType}:${manifest.id}`)
+	])
 
 	const rundownKey = `${TypeManifestEntity.Rundown}:${defaultRundownManifest.id}`
 	if (existingKeys.has(rundownKey)) {
@@ -218,6 +234,21 @@ async function upsertTypeManifestsFromAssets(): Promise<void> {
 			const { error } = await typeManifestMutations.create(typeManifest)
 			if (error) {
 				console.error(`Failed to create typeManifest ${key}:`, error)
+				throw error
+			}
+		}
+	}
+
+	if (options?.removeOrphans) {
+		for (const existing of existingList) {
+			const key = `${existing.entityType}:${existing.id}`
+			if (assetKeys.has(key)) continue
+			const { error } = await typeManifestMutations.delete({
+				id: existing.id,
+				entityType: existing.entityType
+			})
+			if (error) {
+				console.error(`Failed to delete orphan typeManifest ${key}:`, error)
 				throw error
 			}
 		}

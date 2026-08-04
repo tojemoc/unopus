@@ -14,6 +14,9 @@ export interface RemoveTypeManifestPayload {
 	id: string
 	entityType: TypeManifestEntity
 }
+export interface RemoveTypeManifestsByEntityTypePayload {
+	entityType: TypeManifestEntity
+}
 
 export const addNewTypeManifest = createAppAsyncThunk(
 	'typeManifest/addNewTypeManifest',
@@ -48,6 +51,13 @@ export const removeTypeManifest = createAppAsyncThunk(
 	'typeManifest/removeTypeManifest',
 	async (payload: RemoveTypeManifestPayload) => {
 		await ipcAPI.removeTypeManifest(payload.id, payload.entityType)
+		return payload
+	}
+)
+export const removeTypeManifestsByEntityType = createAppAsyncThunk(
+	'typeManifest/removeTypeManifestsByEntityType',
+	async (payload: RemoveTypeManifestsByEntityTypePayload) => {
+		await ipcAPI.removeTypeManifestsByEntityType(payload.entityType)
 		return payload
 	}
 )
@@ -132,6 +142,11 @@ const typeManifestSlice = createSlice({
 				if (index !== -1) {
 					state.manifests.splice(index, 1)
 				}
+			})
+			.addCase(removeTypeManifestsByEntityType.fulfilled, (state, action) => {
+				if (!state.manifests) throw new Error('Manifest is not loaded')
+
+				state.manifests = state.manifests.filter((m) => m.entityType !== action.payload.entityType)
 			})
 	}
 })

@@ -35,8 +35,8 @@ export function ResetToDefaults() {
 					<Modal.Title>Reset to defaults</Modal.Title>
 				</Modal.Header>
 				<Modal.Body>
-					Are you sure you want to reset all settings and piece types to their defaults? This action
-					cannot be undone.
+					Are you sure you want to wipe all piece/part/segment types and reseed them from{' '}
+					<code>/assets/</code>? Connection settings are kept. This cannot be undone.
 				</Modal.Body>
 				<Modal.Footer>
 					<Button variant="secondary" onClick={handleDeleteClose}>

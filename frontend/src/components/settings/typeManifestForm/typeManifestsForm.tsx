@@ -1,6 +1,12 @@
-import { Accordion, Button, ButtonGroup } from 'react-bootstrap'
+import { Accordion, Button, ButtonGroup, Modal } from 'react-bootstrap'
+import { useState } from 'react'
 import { useAppDispatch } from '~/store/app'
-import { addNewTypeManifest, importTypeManifest, updateTypeManifest } from '~/store/typeManifest'
+import {
+	addNewTypeManifest,
+	importTypeManifest,
+	removeTypeManifestsByEntityType,
+	updateTypeManifest
+} from '~/store/typeManifest'
 import { ipcAPI } from '~/lib/IPC'
 import { TypeManifestEntity } from '~backend/background/interfaces'
 import type { TypeManifest } from '~backend/background/interfaces'
@@ -20,6 +26,8 @@ export function TypeManifestsForm({
 }) {
 	const dispatch = useAppDispatch()
 	const toasts = useToasts()
+	const [showDeleteAll, setShowDeleteAll] = useState(false)
+	const [deletingAll, setDeletingAll] = useState(false)
 
 	// Add new type
 	const addType = () => {
@@ -88,11 +96,39 @@ export function TypeManifestsForm({
 		await importFromData(imported)
 	}
 
+	const deleteAll = async () => {
+		setDeletingAll(true)
+		try {
+			await dispatch(removeTypeManifestsByEntityType({ entityType })).unwrap()
+			setShowDeleteAll(false)
+			toasts.show({
+				headerContent: `Delete ${title}`,
+				bodyContent: `Removed ${typeManifests.length} type${typeManifests.length === 1 ? '' : 's'}`
+			})
+		} catch (e) {
+			console.error(e)
+			toasts.show({
+				headerContent: `Delete ${title}`,
+				bodyContent: e instanceof Error ? e.message : 'Delete failed'
+			})
+		} finally {
+			setDeletingAll(false)
+		}
+	}
+
 	return (
 		<>
 			<h2>
 				{title}
 				<ButtonGroup className="float-end">
+					<Button
+						size="sm"
+						variant="outline-danger"
+						disabled={typeManifests.length === 0}
+						onClick={() => setShowDeleteAll(true)}
+					>
+						Delete all
+					</Button>
 					<Button size="sm" variant="secondary" onClick={() => void importTypes()}>
 						Import
 					</Button>
@@ -127,6 +163,32 @@ export function TypeManifestsForm({
 							</Accordion.Item>
 						))}
 			</Accordion>
+
+			<Modal show={showDeleteAll} onHide={() => setShowDeleteAll(false)}>
+				<Modal.Header closeButton>
+					<Modal.Title>Delete all {title.toLowerCase()}</Modal.Title>
+				</Modal.Header>
+				<Modal.Body>
+					Delete all {typeManifests.length} {title.toLowerCase()}? This cannot be undone.
+					<br />
+					<br />
+					Tip: to replace with bundled definitions, use{' '}
+					<strong>Settings → Connection → Reload type manifests from assets</strong> instead
+					(optionally with “Remove types not in assets”).
+				</Modal.Body>
+				<Modal.Footer>
+					<Button
+						variant="secondary"
+						onClick={() => setShowDeleteAll(false)}
+						disabled={deletingAll}
+					>
+						Cancel
+					</Button>
+					<Button variant="danger" onClick={() => void deleteAll()} disabled={deletingAll}>
+						{deletingAll ? 'Deleting…' : 'Delete all'}
+					</Button>
+				</Modal.Footer>
+			</Modal>
 		</>
 	)
 }
