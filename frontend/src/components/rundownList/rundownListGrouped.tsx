@@ -80,7 +80,7 @@ export function RundownListGrouped({ rundowns }: RundownListGroupedProps) {
 		}
 	}, [hasTemplates])
 
-	const { generate, generatingId } = useGenerateDailyRundown(async () => {
+	const { generate, isGenerating } = useGenerateDailyRundown(async () => {
 		await refreshStatuses()
 	})
 
@@ -191,10 +191,10 @@ export function RundownListGrouped({ rundowns }: RundownListGroupedProps) {
 														<Button
 															size="sm"
 															variant="outline-secondary"
-															disabled={generatingId === rundown.id}
+															disabled={isGenerating(rundown.id)}
 															onClick={() => void generate(rundown.id)}
 														>
-															{generatingId === rundown.id ? 'Generating…' : 'Generate now'}
+															{isGenerating(rundown.id) ? 'Generating…' : 'Generate now'}
 														</Button>
 													</div>
 												</div>

@@ -12,13 +12,33 @@ export function useGenerateDailyRundown(
 	const dispatch = useAppDispatch()
 	const navigate = useNavigate()
 	const toasts = useToasts()
-	const [generatingId, setGeneratingId] = useState<string | null>(null)
+	const [pendingByTemplate, setPendingByTemplate] = useState<Record<string, number>>({})
 	const onAfterSuccessRef = useRef(onAfterSuccess)
 	onAfterSuccessRef.current = onAfterSuccess
 
+	const beginPending = useCallback((templateId: string) => {
+		setPendingByTemplate((prev) => ({
+			...prev,
+			[templateId]: (prev[templateId] ?? 0) + 1
+		}))
+	}, [])
+
+	const endPending = useCallback((templateId: string) => {
+		setPendingByTemplate((prev) => {
+			const next = { ...prev }
+			const count = (next[templateId] ?? 0) - 1
+			if (count <= 0) {
+				delete next[templateId]
+			} else {
+				next[templateId] = count
+			}
+			return next
+		})
+	}, [])
+
 	const generate = useCallback(
 		async (templateId: string) => {
-			setGeneratingId(templateId)
+			beginPending(templateId)
 			try {
 				const result = await generateDailyRundownNow(templateId)
 				if (result.rundown) {
@@ -53,16 +73,17 @@ export function useGenerateDailyRundown(
 				})
 				return null
 			} finally {
-				setGeneratingId(null)
+				endPending(templateId)
 			}
 		},
-		[dispatch, navigate, toasts]
+		[beginPending, dispatch, endPending, navigate, toasts]
 	)
 
 	return {
 		generate,
-		generatingId,
 		isGenerating: (templateId?: string) =>
-			templateId ? generatingId === templateId : generatingId !== null
+			templateId
+				? (pendingByTemplate[templateId] ?? 0) > 0
+				: Object.keys(pendingByTemplate).length > 0
 	}
 }

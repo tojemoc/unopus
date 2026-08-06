@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Alert, Button, Form, Stack, Table } from 'react-bootstrap'
 import {
 	ManifestFieldType,
@@ -72,6 +72,10 @@ function DailyRewritePage() {
 	const [rowState, setRowState] = useState<Record<string, RowSaveState>>({})
 	const [rowErrors, setRowErrors] = useState<Record<string, string>>({})
 	const [savingAll, setSavingAll] = useState(false)
+	const [pieceSavingIds, setPieceSavingIds] = useState<Record<string, number>>({})
+	const pieceSaveTailRef = useRef<Map<string, Promise<void>>>(new Map())
+	const draftsRef = useRef(drafts)
+	draftsRef.current = drafts
 
 	const structure = useMemo(() => {
 		return segments.map((segment) => {
@@ -129,61 +133,87 @@ function DailyRewritePage() {
 		setRowState((prev) => ({ ...prev, [key]: 'idle' }))
 	}
 
-	const clearDraftKeys = (keys: string[]) => {
+	const clearDraftKeysIfUnchanged = (snapshots: Record<string, string>) => {
 		setDrafts((prev) => {
 			const next = { ...prev }
-			for (const key of keys) delete next[key]
+			for (const [key, snapshot] of Object.entries(snapshots)) {
+				if (next[key] === snapshot) {
+					delete next[key]
+				}
+			}
 			return next
 		})
 	}
 
-	const saveRow = async (row: EditableRow): Promise<boolean> => {
-		setRowState((prev) => ({ ...prev, [row.key]: 'saving' }))
-		setRowErrors((prev) => {
+	const collectPieceRows = (pieceId: string): EditablePieceField[] => {
+		const rows: EditablePieceField[] = []
+		for (const group of structure) {
+			for (const partGroup of group.parts) {
+				for (const row of partGroup.rows) {
+					if (row.kind === 'piece' && row.piece.id === pieceId) {
+						rows.push(row)
+					}
+				}
+			}
+		}
+		return rows
+	}
+
+	const beginPieceSaving = (pieceId: string) => {
+		setPieceSavingIds((prev) => ({
+			...prev,
+			[pieceId]: (prev[pieceId] ?? 0) + 1
+		}))
+	}
+
+	const endPieceSaving = (pieceId: string) => {
+		setPieceSavingIds((prev) => {
 			const next = { ...prev }
-			delete next[row.key]
+			const count = (next[pieceId] ?? 0) - 1
+			if (count <= 0) {
+				delete next[pieceId]
+			} else {
+				next[pieceId] = count
+			}
 			return next
 		})
+	}
+
+	const enqueuePieceSave = async (
+		pieceId: string,
+		work: () => Promise<boolean>
+	): Promise<boolean> => {
+		const previous = pieceSaveTailRef.current.get(pieceId) ?? Promise.resolve()
+		let release!: () => void
+		const current = new Promise<void>((resolve) => {
+			release = resolve
+		})
+		pieceSaveTailRef.current.set(
+			pieceId,
+			previous.catch(() => undefined).then(() => current)
+		)
+
+		await previous.catch(() => undefined)
+		beginPieceSaving(pieceId)
 		try {
-			const value = getValue(row)
-			if (row.kind === 'partScript') {
-				await dispatch(
-					updatePart({
-						part: {
-							...row.part,
-							script: value
-						}
-					})
-				).unwrap()
-			} else {
-				const nextPayload = {
-					...(row.piece.payload ?? {}),
-					[row.field.id]: coerceFieldValue(row.field, value)
-				}
-				await dispatch(
-					updatePiece({
-						piece: {
-							...row.piece,
-							payload: nextPayload
-						}
-					})
-				).unwrap()
-			}
-			setRowState((prev) => ({ ...prev, [row.key]: 'saved' }))
-			clearDraftKeys([row.key])
-			return true
-		} catch (error) {
-			setRowState((prev) => ({ ...prev, [row.key]: 'error' }))
-			setRowErrors((prev) => ({
-				...prev,
-				[row.key]: error instanceof Error ? error.message : 'Save failed'
-			}))
-			return false
+			return await work()
+		} finally {
+			endPieceSaving(pieceId)
+			release()
 		}
 	}
 
 	const savePieceGroup = async (groupRows: EditablePieceField[]): Promise<boolean> => {
+		if (groupRows.length === 0) return true
 		const keys = groupRows.map((row) => row.key)
+		const snapshots: Record<string, string> = {}
+		for (const row of groupRows) {
+			snapshots[row.key] =
+				draftsRef.current[row.key] !== undefined
+					? draftsRef.current[row.key]
+					: getValue(row)
+		}
+
 		setRowState((prev) => {
 			const next = { ...prev }
 			for (const key of keys) next[key] = 'saving'
@@ -198,7 +228,7 @@ function DailyRewritePage() {
 			const piece = groupRows[0].piece
 			const nextPayload = { ...(piece.payload ?? {}) }
 			for (const row of groupRows) {
-				nextPayload[row.field.id] = coerceFieldValue(row.field, getValue(row))
+				nextPayload[row.field.id] = coerceFieldValue(row.field, snapshots[row.key])
 			}
 			await dispatch(
 				updatePiece({
@@ -213,7 +243,7 @@ function DailyRewritePage() {
 				for (const key of keys) next[key] = 'saved'
 				return next
 			})
-			clearDraftKeys(keys)
+			clearDraftKeysIfUnchanged(snapshots)
 			return true
 		} catch (error) {
 			const message = error instanceof Error ? error.message : 'Save failed'
@@ -227,6 +257,52 @@ function DailyRewritePage() {
 				for (const key of keys) next[key] = message
 				return next
 			})
+			return false
+		}
+	}
+
+	const saveRow = async (row: EditableRow): Promise<boolean> => {
+		if (row.kind === 'piece') {
+			return enqueuePieceSave(row.piece.id, async () => {
+				const siblings = collectPieceRows(row.piece.id)
+				const group = siblings.filter(
+					(candidate) =>
+						candidate.key === row.key || draftsRef.current[candidate.key] !== undefined
+				)
+				return savePieceGroup(group.length > 0 ? group : [row])
+			})
+		}
+
+		const snapshot = {
+			[row.key]:
+				draftsRef.current[row.key] !== undefined
+					? draftsRef.current[row.key]
+					: getValue(row)
+		}
+		setRowState((prev) => ({ ...prev, [row.key]: 'saving' }))
+		setRowErrors((prev) => {
+			const next = { ...prev }
+			delete next[row.key]
+			return next
+		})
+		try {
+			await dispatch(
+				updatePart({
+					part: {
+						...row.part,
+						script: snapshot[row.key]
+					}
+				})
+			).unwrap()
+			setRowState((prev) => ({ ...prev, [row.key]: 'saved' }))
+			clearDraftKeysIfUnchanged(snapshot)
+			return true
+		} catch (error) {
+			setRowState((prev) => ({ ...prev, [row.key]: 'error' }))
+			setRowErrors((prev) => ({
+				...prev,
+				[row.key]: error instanceof Error ? error.message : 'Save failed'
+			}))
 			return false
 		}
 	}
@@ -245,8 +321,8 @@ function DailyRewritePage() {
 			list.push(row)
 			byPieceId.set(row.piece.id, list)
 		}
-		for (const group of byPieceId.values()) {
-			await savePieceGroup(group)
+		for (const [pieceId, group] of byPieceId) {
+			await enqueuePieceSave(pieceId, () => savePieceGroup(group))
 		}
 	}
 
@@ -364,6 +440,9 @@ function DailyRewritePage() {
 											state={rowState[row.key] ?? 'idle'}
 											error={rowErrors[row.key]}
 											rundownId={rundownId}
+											saveDisabled={
+												row.kind === 'piece' && (pieceSavingIds[row.piece.id] ?? 0) > 0
+											}
 											onChange={(value) => setValue(row.key, value)}
 											onSave={() => void saveRow(row)}
 										/>
@@ -384,6 +463,7 @@ function RewriteRow({
 	state,
 	error,
 	rundownId,
+	saveDisabled,
 	onChange,
 	onSave
 }: {
@@ -392,6 +472,7 @@ function RewriteRow({
 	state: RowSaveState
 	error?: string
 	rundownId: string
+	saveDisabled?: boolean
 	onChange: (value: string) => void
 	onSave: () => void
 }) {
@@ -459,7 +540,7 @@ function RewriteRow({
 				<Button
 					size="sm"
 					variant={state === 'error' ? 'outline-danger' : 'outline-primary'}
-					disabled={state === 'saving'}
+					disabled={state === 'saving' || Boolean(saveDisabled)}
 					onClick={onSave}
 				>
 					{state === 'error' ? 'Retry' : 'Save'}
