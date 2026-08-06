@@ -18,7 +18,7 @@
 		"build:main": "run -T tsc -p tsconfig.json",
 		"watch-types": "run -T tsc -p tsconfig.json --watch --noEmit",
 		"start": "dotenv -e .env -- node ./dist/main.js",
-		"test": "node --import tsx --test src/background/api/pieces.export.test.ts src/background/mediaReadiness.test.ts src/background/manifestMaterialize.test.ts",
+		"test": "mkdir -p /tmp/re-test-data && DATA_DIR=/tmp/re-test-data SOFIE_MEGAREPO_ASSETS=${SOFIE_MEGAREPO_ASSETS:-/workspace/.sofie-assets} node --import tsx --test --test-concurrency=1 src/background/api/pieces.export.test.ts src/background/mediaReadiness.test.ts src/background/manifestMaterialize.test.ts src/background/dailyGenerationTime.test.ts src/background/mediaPathKey.test.ts src/background/api/dailyGeneration.idempotency.test.ts",
 		"lint": "run -T eslint ."
 	},
 	"main": "dist/main.js",

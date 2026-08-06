@@ -19,6 +19,7 @@ import { registerEditsRoutes } from './routes/edits'
 import { registerMediaRoutes } from './routes/media'
 import { registerReadinessRoutes } from './routes/readiness'
 import { registerConfigRoutes } from './routes/config'
+import { registerDailyGenerationRoutes } from './routes/dailyGeneration'
 
 const frontendPath = path.resolve(__dirname, '../../frontend/dist')
 const demoAssetsInDist = path.join(frontendPath, 'demo-assets')
@@ -80,6 +81,7 @@ export async function initSocketServer(port: number = 3010) {
 	registerMediaRoutes(app)
 	registerReadinessRoutes(app)
 	registerConfigRoutes(app)
+	registerDailyGenerationRoutes(app)
 
 	if (io) {
 		type SocketIOHandler = (socket: Socket, io: Server) => void

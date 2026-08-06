@@ -104,7 +104,9 @@ export const mutations = {
 							fromTemplate: sourceRundown.isTemplate
 						}),
 						isTemplate: sourceRundown.isTemplate && (payload.preserveTemplate ?? false),
-						id: undefined
+						id: undefined,
+						attemptId: payload.attemptId,
+						idempotencyKey: payload.idempotencyKey
 					})
 
 					if (!newRundown) {

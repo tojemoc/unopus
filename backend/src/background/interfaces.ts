@@ -39,6 +39,11 @@ export interface Rundown extends IHasPayload {
 	expectedStartTime?: number
 	/** Date of when the rundown is supposed to end */
 	expectedEndTime?: number
+
+	/** Daily-generation attempt id stamped when cloned from the daily template flow. */
+	attemptId?: string
+	/** Durable idempotency key linking this rundown to a dailyGenerations reservation. */
+	idempotencyKey?: string
 }
 export interface Segment extends IHasPayload {
 	/** Id of the segment as reported by the ingest gateway. Must be unique for each segment in the rundown */
@@ -201,7 +206,15 @@ export interface PayloadManifest {
 	options?: string[]
 	/** Helper text shown below option radio buttons */
 	optionsHelperText?: string
+	/**
+	 * When true, this field appears in the Daily rewrite view for bulk day-of editing.
+	 * Set in megarepo piece-type manifests (`sofie-rundown-editor-piece-types.json`).
+	 */
+	dailyEditable?: boolean
 }
+
+/** Core/Package Manager confirmation for a scanned media file (not local fs existence). */
+export type MediaFileReadiness = 'confirmed' | 'not-confirmed' | 'unknown'
 
 export interface MediaFileEntry {
 	name: string
@@ -210,6 +223,13 @@ export interface MediaFileEntry {
 	mtime?: number
 	/** Clip duration in seconds when ffprobe succeeds. */
 	durationSeconds?: number
+	/**
+	 * Package Manager confirmation for this file on the active rundown.
+	 * `'unknown'` when Core has not evaluated this exact path yet — never inferred from local fs.
+	 */
+	readiness?: MediaFileReadiness
+	/** Operator-facing reason when readiness is `not-confirmed` (or optional note for `unknown`). */
+	reason?: string
 }
 
 /** Single media field readiness (MOS-style clip status). */
@@ -250,6 +270,53 @@ export interface ApplicationSettings {
 	ingestMediaRoot?: string
 	/** Overrides PREVIEW_BASE_URL env when set. */
 	previewBaseUrl?: string
+	/**
+	 * Template rundown id used for the daily scheduled clone.
+	 * Must reference an existing rundown with `isTemplate === true`.
+	 * Feature is inert when unset.
+	 */
+	dailyTemplateRundownId?: string
+	/**
+	 * Wall-clock time (`HH:mm`) in `dailyCloneTimezone` after which today's clone may run.
+	 * Feature is inert when unset — no default clone time is invented.
+	 */
+	dailyCloneTime?: string
+	/**
+	 * IANA timezone for daily clone date/time (default `Europe/Bratislava`).
+	 */
+	dailyCloneTimezone?: string
+}
+
+export type DailyGenerationStatus = 'in_progress' | 'completed' | 'failed'
+
+export interface DailyGenerationRow {
+	sourceTemplateId: string
+	generatedDate: string
+	generatingTimezone: string
+	attemptId: string
+	idempotencyKey: string
+	leaseExpiresAt: string
+	rundownId: string | null
+	status: DailyGenerationStatus
+}
+
+export interface DailyGenerationStatusResult {
+	generatedDate: string
+	timezone: string
+	status: DailyGenerationStatus | null
+	rundownId: string | null
+	rundownName?: string
+}
+
+export interface DailyGenerationResult {
+	generatedDate: string
+	timezone: string
+	status: DailyGenerationStatus
+	rundownId: string | null
+	rundown?: Rundown
+	attemptId: string
+	idempotencyKey: string
+	created: boolean
 }
 export interface DBSettings {
 	id: string
@@ -404,7 +471,12 @@ export type MutationSegmentCloneFromRundownToRundown = {
 
 export type MutationRundownRead = Pick<Rundown, 'id'>
 
-export type MutationRundownCopy = Pick<Rundown, 'id'> & MutationCopy
+export type MutationRundownCopy = Pick<Rundown, 'id'> &
+	MutationCopy & {
+		/** Stamped on the cloned rundown for daily-generation reconcile. */
+		attemptId?: string
+		idempotencyKey?: string
+	}
 
 export type MutationRundownCopyResult = {
 	rundown: Rundown

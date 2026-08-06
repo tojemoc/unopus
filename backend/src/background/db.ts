@@ -315,6 +315,20 @@ try {
 		throw new Error('Migration incomplete: payload.type still exists without partType')
 	}
 
+	db.exec(`
+		CREATE TABLE IF NOT EXISTS dailyGenerations (
+			sourceTemplateId TEXT NOT NULL,
+			generatedDate TEXT NOT NULL,
+			generatingTimezone TEXT NOT NULL,
+			attemptId TEXT NOT NULL,
+			idempotencyKey TEXT NOT NULL UNIQUE,
+			leaseExpiresAt TEXT NOT NULL,
+			rundownId TEXT,
+			status TEXT NOT NULL CHECK(status IN ('in_progress', 'completed', 'failed')),
+			PRIMARY KEY (sourceTemplateId, generatedDate, generatingTimezone)
+		);
+	`)
+
 	initAuthTables()
 } catch (error) {
 	console.error(

@@ -5,6 +5,7 @@ import {
 	listRundownMedia,
 	probeRelativeMediaDurationSeconds
 } from '../background/media'
+import { enrichMediaListingWithCoreReadiness } from '../background/mediaListingReadiness'
 
 function getSessionUser(req: Request) {
 	const sessionId = parseSessionCookie(req.headers.cookie)
@@ -23,7 +24,8 @@ export function registerMediaRoutes(app: Application): void {
 
 		try {
 			const listing = await listRundownMedia(rundownId, subdir)
-			res.json(listing)
+			const files = await enrichMediaListingWithCoreReadiness(rundownId, listing.files)
+			res.json({ ...listing, files })
 		} catch (error) {
 			console.error(error)
 			res.status(400).json({ error: (error as Error).message })
@@ -67,7 +69,8 @@ export function registerMediaRoutes(app: Application): void {
 
 		try {
 			const listing = await ensureRundownMediaFolder(rundownId, subdir)
-			res.json(listing)
+			const files = await enrichMediaListingWithCoreReadiness(rundownId, listing.files)
+			res.json({ ...listing, files })
 		} catch (error) {
 			console.error(error)
 			res.status(400).json({ error: (error as Error).message })
