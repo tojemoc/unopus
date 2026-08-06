@@ -136,7 +136,11 @@ export function getPieceReadinessState(
 
 	return {
 		state: pieceReadiness.ready ? 'ready' : 'not-ready',
-		tooltip: getPieceReadinessTooltip(pieceReadiness.requirements)
+		tooltip: getPieceReadinessTooltip(pieceReadiness.requirements, {
+			pieceSource: pieceReadiness.source,
+			coreCallSource: readiness.diagnostics?.coreCallSource,
+			coreCallError: readiness.diagnostics?.coreCallError
+		})
 	}
 }
 

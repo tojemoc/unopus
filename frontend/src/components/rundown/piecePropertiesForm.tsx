@@ -12,6 +12,10 @@ import { useToasts } from '../toasts/useToasts'
 import { MediaPickerField } from './mediaPickerField'
 import { GfxPreview } from './gfxPreview'
 import { resolveSourceEnabled } from '~/util/sourcePayload'
+import {
+	DEFAULT_WIPE_DURATION_SECONDS,
+	getPieceSourceDurationSeconds
+} from '~/util/pieceDuration'
 
 export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 	const dispatch = useAppDispatch()
@@ -147,24 +151,72 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 				/>
 				<form.Field
 					name="duration"
-					children={(field) => (
-						<>
+					children={(field) => {
+						const isWipeDefault =
+							piece.pieceType === 'wipe' &&
+							(field.state.value === undefined ||
+								field.state.value === null ||
+								field.state.value === 0)
+
+						return (
+							<>
+								<Form.Group className="mb-3">
+									<Form.Label htmlFor={field.name}>On air (seconds):</Form.Label>
+									<Form.Control
+										id={field.name}
+										name={field.name}
+										type="number"
+										value={field.state.value ?? ''}
+										placeholder={
+											piece.pieceType === 'wipe'
+												? String(DEFAULT_WIPE_DURATION_SECONDS)
+												: undefined
+										}
+										onBlur={field.handleBlur}
+										onChange={(e) => {
+											const val = e.target.value
+											field.handleChange(val === '' ? undefined : Number(val))
+										}}
+									/>
+									{isWipeDefault ? (
+										<Form.Text muted>
+											Effective on air: {DEFAULT_WIPE_DURATION_SECONDS}s (blueprint
+											DEFAULT_WIPE_DURATION_MS=2500) when left empty.
+										</Form.Text>
+									) : null}
+								</Form.Group>
+								<FieldInfo field={field} />
+							</>
+						)
+					}}
+				/>
+
+				<form.Subscribe
+					selector={(state) => state.values.payload?.sourceDuration}
+					children={(sourceDurationMs) => {
+						const sourceDurationSeconds = getPieceSourceDurationSeconds({
+							payload: { sourceDuration: sourceDurationMs }
+						})
+						if (sourceDurationSeconds === undefined) {
+							return null
+						}
+						const sourceDurationFieldId = 'piece-source-duration'
+						return (
 							<Form.Group className="mb-3">
-								<Form.Label htmlFor={field.name}>Duration (seconds):</Form.Label>
+								<Form.Label htmlFor={sourceDurationFieldId}>Source (seconds):</Form.Label>
 								<Form.Control
-									name={field.name}
+									id={sourceDurationFieldId}
 									type="number"
-									value={field.state.value ?? ''}
-									onBlur={field.handleBlur}
-									onChange={(e) => {
-										const val = e.target.value
-										field.handleChange(val === '' ? undefined : Number(val))
-									}}
+									value={sourceDurationSeconds}
+									readOnly
+									disabled
 								/>
+								<Form.Text muted>
+									Read-only duration from media probe (ffprobe via media picker).
+								</Form.Text>
 							</Form.Group>
-							<FieldInfo field={field} />
-						</>
-					)}
+						)
+					}}
 				/>
 
 				{manifest?.payload?.map((fieldInfo) => {

@@ -7,6 +7,7 @@ import {
 	type MediaRequirement,
 	type Piece,
 	type PieceReadiness,
+	type ReadinessStatusSource,
 	type RundownReadiness,
 	type TypeManifest
 } from './interfaces'
@@ -120,7 +121,8 @@ function collectMediaRequirements(
 				fieldId: field.id,
 				path: '',
 				ready: false,
-				reason: 'No media assigned'
+				reason: 'No media assigned',
+				source: 'fs'
 			})
 			continue
 		}
@@ -140,7 +142,8 @@ function collectMediaRequirements(
 				fieldId: 'source',
 				path: '',
 				ready: false,
-				reason: 'Source is enabled but empty — pill will not show on air'
+				reason: 'Source is enabled but empty — pill will not show on air',
+				source: 'fs'
 			})
 		}
 	}
@@ -159,19 +162,24 @@ async function evaluateRequirement(
 			return {
 				...requirement,
 				ready: true,
-				reason: undefined
+				reason: undefined,
+				source: 'core'
 			}
 		}
 
 		return {
 			...requirement,
 			ready: false,
-			reason: coreStatus.reason ?? 'Not ready on playout system'
+			reason: coreStatus.reason ?? 'Not ready on playout system',
+			source: 'core'
 		}
 	}
 
 	if (!requirement.path) {
-		return requirement
+		return {
+			...requirement,
+			source: requirement.source ?? 'fs'
+		}
 	}
 
 	try {
@@ -182,22 +190,36 @@ async function evaluateRequirement(
 			return {
 				...requirement,
 				ready: false,
-				reason: 'File missing on ingest'
+				reason: 'File missing on ingest',
+				source: 'fs'
 			}
 		}
 
 		return {
 			...requirement,
 			ready: true,
-			reason: undefined
+			reason: undefined,
+			source: 'fs'
 		}
 	} catch (error) {
 		return {
 			...requirement,
 			ready: false,
-			reason: error instanceof Error ? error.message : 'Invalid media path'
+			reason: error instanceof Error ? error.message : 'Invalid media path',
+			source: 'fs'
 		}
 	}
+}
+
+function resolvePieceSource(requirements: MediaRequirement[]): ReadinessStatusSource | undefined {
+	if (!requirements.length) {
+		return undefined
+	}
+	// Prefer 'core' when any assigned-media verdict came from Package Manager.
+	if (requirements.some((item) => item.source === 'core')) {
+		return 'core'
+	}
+	return 'fs'
 }
 
 export async function evaluatePieceReadiness(
@@ -213,12 +235,14 @@ export async function evaluatePieceReadiness(
 			pieceId: piece.id,
 			partId: piece.partId,
 			ready: false,
+			source: 'fs',
 			requirements: [
 				{
 					fieldId: '_manifest',
 					path: '',
 					ready: false,
-					reason: `Piece type manifest not found: ${piece.pieceType}`
+					reason: `Piece type manifest not found: ${piece.pieceType}`,
+					source: 'fs'
 				}
 			]
 		}
@@ -243,7 +267,8 @@ export async function evaluatePieceReadiness(
 		pieceId: piece.id,
 		partId: piece.partId,
 		ready: evaluated.every((item) => item.ready),
-		requirements: evaluated
+		requirements: evaluated,
+		source: resolvePieceSource(evaluated)
 	}
 }
 
@@ -295,4 +320,26 @@ export async function evaluateRundownReadiness(
 			).length
 		}
 	}
+}
+
+/** Count media pieces by provenance for diagnostics. */
+export function countReadinessProvenance(readiness: RundownReadiness): {
+	piecesFromCore: number
+	piecesFromFsFallback: number
+} {
+	let piecesFromCore = 0
+	let piecesFromFsFallback = 0
+
+	for (const piece of Object.values(readiness.pieces)) {
+		if (!piece.requirements.length) {
+			continue
+		}
+		if (piece.source === 'core') {
+			piecesFromCore += 1
+		} else {
+			piecesFromFsFallback += 1
+		}
+	}
+
+	return { piecesFromCore, piecesFromFsFallback }
 }
