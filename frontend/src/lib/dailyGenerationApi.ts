@@ -1,9 +1,7 @@
 import type { DailyGenerationResult, DailyGenerationStatusResult } from '~backend/background/interfaces'
 
-const apiBase = import.meta.env.MODE === 'development' ? '' : ''
-
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-	const response = await fetch(`${apiBase}${path}`, {
+	const response = await fetch(path, {
 		credentials: 'include',
 		headers: {
 			'Content-Type': 'application/json',
@@ -11,11 +9,31 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 		},
 		...init
 	})
-	const body = (await response.json()) as T & { error?: string }
+
 	if (!response.ok) {
-		throw new Error('error' in body && body.error ? body.error : 'Request failed')
+		let message = `Request failed (${response.status})`
+		try {
+			const body: unknown = await response.json()
+			if (body && typeof body === 'object' && 'error' in body) {
+				const errorField = (body as { error?: unknown }).error
+				if (typeof errorField === 'string' && errorField.trim()) {
+					message = errorField
+				}
+			}
+		} catch {
+			// Non-JSON error body — keep status-based message.
+		}
+		throw new Error(message)
 	}
-	return body
+
+	const body: unknown = await response.json()
+	if (body && typeof body === 'object' && 'error' in body) {
+		const errorField = (body as { error?: unknown }).error
+		if (typeof errorField === 'string' && errorField.trim()) {
+			throw new Error(errorField)
+		}
+	}
+	return body as T
 }
 
 export type TemplateDailyStatus = DailyGenerationStatusResult & { templateId: string }

@@ -1413,6 +1413,7 @@ __metadata:
     express: "npm:^5.2.1"
     nodemon: "npm:^3.1.11"
     socket.io: "npm:^4.8.3"
+    tsx: "npm:^4.21.0"
     type-fest: "npm:^4.41.0"
     typescript: "npm:~5.8.3"
     uuid: "npm:^11.1.0"

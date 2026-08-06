@@ -197,6 +197,7 @@ export function CoreConnectionSettingsForm({ settings }: { settings: Application
 									{friendlyLabel('dailyTemplateRundownId')}
 								</Form.Label>
 								<Form.Select
+									id={field.name}
 									name={field.name}
 									value={field.state.value ?? ''}
 									onBlur={field.handleBlur}
@@ -222,6 +223,7 @@ export function CoreConnectionSettingsForm({ settings }: { settings: Application
 							<Form.Group className="mb-3">
 								<Form.Label htmlFor={field.name}>{friendlyLabel('dailyCloneTime')}</Form.Label>
 								<Form.Control
+									id={field.name}
 									name={field.name}
 									type="time"
 									value={field.state.value ?? ''}
@@ -247,6 +249,7 @@ export function CoreConnectionSettingsForm({ settings }: { settings: Application
 									{friendlyLabel('dailyCloneTimezone')}
 								</Form.Label>
 								<Form.Control
+									id={field.name}
 									name={field.name}
 									type="text"
 									value={field.state.value ?? 'Europe/Bratislava'}

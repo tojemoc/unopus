@@ -11,24 +11,18 @@ import type { MediaFileEntry } from '~backend/background/interfaces'
 const MEDIA_POLL_MS = 10_000
 
 function formatMediaOptionLabel(file: MediaFileEntry): string {
-	const parts: string[] = [file.name]
-	if (file.durationSeconds) {
-		parts.push(`${file.durationSeconds}s`)
-	}
 	const readiness = file.readiness ?? 'unknown'
+	let statusText = 'not yet confirmed'
 	if (readiness === 'confirmed') {
-		parts.push('confirmed')
+		statusText = 'confirmed'
 	} else if (readiness === 'not-confirmed') {
 		const reason = file.reason?.trim()
-		parts.push(reason ? `not confirmed: ${reason}` : 'not confirmed')
-	} else {
-		parts.push('not yet confirmed')
+		statusText = reason ? `not confirmed: ${reason}` : 'not confirmed'
 	}
-	// "name (duration) (status)" when duration present; otherwise "name (status)"
 	if (file.durationSeconds) {
-		return `${file.name} (${file.durationSeconds}s) (${parts[parts.length - 1]})`
+		return `${file.name} (${file.durationSeconds}s) (${statusText})`
 	}
-	return `${file.name} (${parts[parts.length - 1]})`
+	return `${file.name} (${statusText})`
 }
 
 export function MediaPickerField({

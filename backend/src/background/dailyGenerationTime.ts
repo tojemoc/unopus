@@ -1,6 +1,10 @@
 export const DEFAULT_DAILY_CLONE_TIMEZONE = 'Europe/Bratislava'
 export const DAILY_CLONE_TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/
 
+/** UTC offset / GMT± forms that are not IANA zone identifiers. */
+const UTC_OFFSET_RE = /^[+-]\d{2}(:?\d{2})?$/i
+const GMT_OFFSET_RE = /^GMT[+-]\d{1,2}(:?\d{2})?$/i
+
 export function isValidDailyCloneTime(value: string | undefined): boolean {
 	if (value === undefined || value === '') return true
 	return DAILY_CLONE_TIME_RE.test(value)
@@ -10,29 +14,17 @@ export function isValidIanaTimeZone(timeZone: string): boolean {
 	if (!timeZone || typeof timeZone !== 'string') {
 		return false
 	}
+	const trimmed = timeZone.trim()
+	if (!trimmed || UTC_OFFSET_RE.test(trimmed) || GMT_OFFSET_RE.test(trimmed)) {
+		return false
+	}
 	try {
 		// Formatter throws RangeError for unknown zones (more reliable than supportedValuesOf alone).
-		new Intl.DateTimeFormat('en-US', { timeZone }).format(new Date())
+		new Intl.DateTimeFormat('en-US', { timeZone: trimmed }).format(new Date())
 		return true
 	} catch {
 		return false
 	}
-}
-
-/**
- * Calendar date `YYYY-MM-DD` in the configured daily-clone timezone.
- * Do not use `toISOString().slice(0, 10)` (UTC) or local `getFullYear`/`getMonth`/`getDate`.
- */
-export function getDailyGeneratedDate(
-	now: Date = new Date(),
-	timeZone: string = DEFAULT_DAILY_CLONE_TIMEZONE
-): string {
-	return new Intl.DateTimeFormat('en-CA', {
-		timeZone,
-		year: 'numeric',
-		month: '2-digit',
-		day: '2-digit'
-	}).format(now)
 }
 
 export function getLocalWallClockParts(
@@ -60,6 +52,17 @@ export function getLocalWallClockParts(
 		minutes: Number(get('minute')),
 		date: `${year}-${month}-${day}`
 	}
+}
+
+/**
+ * Calendar date `YYYY-MM-DD` in the configured daily-clone timezone.
+ * Do not use `toISOString().slice(0, 10)` (UTC) or local `getFullYear`/`getMonth`/`getDate`.
+ */
+export function getDailyGeneratedDate(
+	now: Date = new Date(),
+	timeZone: string = DEFAULT_DAILY_CLONE_TIMEZONE
+): string {
+	return getLocalWallClockParts(now, timeZone).date
 }
 
 /**
