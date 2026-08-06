@@ -133,56 +133,106 @@ function updateDailyGenerationRow(
 		>
 	>
 ): DailyGenerationRow {
-	const existing = readDailyGenerationRow(sourceTemplateId, generatedDate, generatingTimezone)
-	if (!existing) {
-		throw new Error('dailyGenerations row not found for update')
-	}
+	db.exec('BEGIN')
+	try {
+		const existing = readDailyGenerationRow(sourceTemplateId, generatedDate, generatingTimezone)
+		if (!existing) {
+			throw new Error('dailyGenerations row not found for update')
+		}
 
-	const next: DailyGenerationRow = {
-		...existing,
-		...patch
-	}
-	assertStatusCombination(next)
+		const next: DailyGenerationRow = {
+			...existing,
+			...patch
+		}
+		assertStatusCombination(next)
 
-	// Enforce allowed transitions in app code.
-	const from = existing.status
-	const to = next.status
-	const allowed =
-		(from === to && from === 'in_progress') ||
-		(from === 'in_progress' && (to === 'completed' || to === 'failed')) ||
-		(from === 'failed' && (to === 'in_progress' || to === 'completed')) ||
-		(from === 'completed' && to === 'completed')
-	if (!allowed) {
-		throw new Error(`Invalid dailyGenerations transition ${from} → ${to}`)
-	}
-	if (from === 'completed' && to !== 'completed') {
-		throw new Error('completed dailyGenerations rows are immutable')
-	}
+		// Enforce allowed transitions in app code.
+		const from = existing.status
+		const to = next.status
+		const allowed =
+			(from === to && from === 'in_progress') ||
+			(from === 'in_progress' && (to === 'completed' || to === 'failed')) ||
+			(from === 'failed' && (to === 'in_progress' || to === 'completed')) ||
+			(from === 'completed' && to === 'completed')
+		if (!allowed) {
+			throw new Error(`Invalid dailyGenerations transition ${from} → ${to}`)
+		}
+		if (from === 'completed' && to !== 'completed') {
+			throw new Error('completed dailyGenerations rows are immutable')
+		}
 
-	db.prepare(
-		`
-		UPDATE dailyGenerations
-		SET attemptId = ?,
-			idempotencyKey = ?,
-			leaseExpiresAt = ?,
-			rundownId = ?,
-			status = ?
-		WHERE sourceTemplateId = ?
-			AND generatedDate = ?
-			AND generatingTimezone = ?
-	`
-	).run(
-		next.attemptId,
-		next.idempotencyKey,
-		next.leaseExpiresAt,
-		next.rundownId,
-		next.status,
-		sourceTemplateId,
-		generatedDate,
-		generatingTimezone
-	)
+		// Optimistic concurrency: require prior status (and attemptId for lease renewals).
+		const isLeaseRenewal = from === 'in_progress' && to === 'in_progress'
+		const result = isLeaseRenewal
+			? db
+					.prepare(
+						`
+					UPDATE dailyGenerations
+					SET attemptId = ?,
+						idempotencyKey = ?,
+						leaseExpiresAt = ?,
+						rundownId = ?,
+						status = ?
+					WHERE sourceTemplateId = ?
+						AND generatedDate = ?
+						AND generatingTimezone = ?
+						AND status = ?
+						AND attemptId = ?
+				`
+					)
+					.run(
+						next.attemptId,
+						next.idempotencyKey,
+						next.leaseExpiresAt,
+						next.rundownId,
+						next.status,
+						sourceTemplateId,
+						generatedDate,
+						generatingTimezone,
+						existing.status,
+						existing.attemptId
+					)
+			: db
+					.prepare(
+						`
+					UPDATE dailyGenerations
+					SET attemptId = ?,
+						idempotencyKey = ?,
+						leaseExpiresAt = ?,
+						rundownId = ?,
+						status = ?
+					WHERE sourceTemplateId = ?
+						AND generatedDate = ?
+						AND generatingTimezone = ?
+						AND status = ?
+				`
+					)
+					.run(
+						next.attemptId,
+						next.idempotencyKey,
+						next.leaseExpiresAt,
+						next.rundownId,
+						next.status,
+						sourceTemplateId,
+						generatedDate,
+						generatingTimezone,
+						existing.status
+					)
 
-	return next
+		if (result.changes !== 1) {
+			throw new Error('dailyGenerations update conflict: expected exactly one row to change')
+		}
+
+		db.exec('COMMIT')
+		return next
+	} catch (e) {
+		try {
+			db.exec('ROLLBACK')
+		} catch {
+			// ignore rollback errors
+		}
+		throw e
+	}
 }
 
 /**
@@ -200,18 +250,7 @@ export function reconcileDailyGenerationReservation(
 
 	const found = findRundownByIdempotencyKey(row.idempotencyKey)
 	if (found) {
-		if (row.status === 'failed') {
-			// A previous fail left an orphaned clone — recover to completed.
-			return updateDailyGenerationRow(
-				row.sourceTemplateId,
-				row.generatedDate,
-				row.generatingTimezone,
-				{
-					status: 'completed',
-					rundownId: found.id
-				}
-			)
-		}
+		// Orphaned-clone recovery: failed or in_progress with a matching rundown → completed.
 		return updateDailyGenerationRow(row.sourceTemplateId, row.generatedDate, row.generatingTimezone, {
 			status: 'completed',
 			rundownId: found.id
@@ -284,10 +323,9 @@ async function waitForExistingAttempt(
 	sourceTemplateId: string,
 	generatedDate: string,
 	generatingTimezone: string,
-	now: Date,
 	logger: GenerationLogger
 ): Promise<DailyGenerationResult | null> {
-	const deadline = now.getTime() + JOIN_MAX_WAIT_MS
+	const deadline = Date.now() + JOIN_MAX_WAIT_MS
 	while (Date.now() < deadline) {
 		const row = readDailyGenerationRow(sourceTemplateId, generatedDate, generatingTimezone)
 		if (!row) return null
@@ -392,6 +430,24 @@ async function runCloneAttempt(params: {
 		sourceTemplateId: templateId,
 		generatingTimezone
 	})
+
+	const leaseRenewalMs = Math.min(DAILY_GENERATION_LEASE_MS / 3, 60_000)
+	const leaseInterval = setInterval(() => {
+		try {
+			updateDailyGenerationRow(templateId, generatedDate, generatingTimezone, {
+				status: 'in_progress',
+				leaseExpiresAt: new Date(Date.now() + DAILY_GENERATION_LEASE_MS).toISOString()
+			})
+		} catch (renewError) {
+			logger.error('Failed to renew daily generation lease', {
+				attemptId,
+				idempotencyKey,
+				generatedDate,
+				sourceTemplateId: templateId,
+				error: renewError instanceof Error ? renewError.message : String(renewError)
+			})
+		}
+	}, leaseRenewalMs)
 
 	try {
 		const { result, error } = await rundownMutations.createRundownCopy({
@@ -514,6 +570,8 @@ async function runCloneAttempt(params: {
 		})
 
 		throw error instanceof Error ? error : new Error(message)
+	} finally {
+		clearInterval(leaseInterval)
 	}
 }
 
@@ -534,6 +592,8 @@ export type GenerateDailyOptions = {
 	now?: Date
 	settings?: ApplicationSettings
 	logger?: GenerationLogger
+	/** Internal: bounds race-retry recursion. */
+	_retryDepth?: number
 }
 
 /**
@@ -599,7 +659,6 @@ export async function generateDailyRundownIfNeeded(
 					templateId,
 					generatedDate,
 					timezone,
-					now,
 					logger
 				)
 				if (joined) return joined
@@ -648,7 +707,6 @@ export async function generateDailyRundownIfNeeded(
 					templateId,
 					generatedDate,
 					timezone,
-					now,
 					logger
 				)
 				if (joined) return joined
@@ -709,13 +767,21 @@ export async function generateDailyRundownIfNeeded(
 				templateId,
 				generatedDate,
 				timezone,
-				now,
 				logger
 			)
 			if (joined) return joined
 		}
-		// Recurse once into the failed/retry path via re-read.
-		return generateDailyRundownIfNeeded(templateId, { ...options, now: new Date(), settings })
+		const retryDepth = (options._retryDepth ?? 0) + 1
+		if (retryDepth >= 3) {
+			throw new Error('Daily generation race retry limit exceeded')
+		}
+		// Recurse into the failed/retry path via re-read.
+		return generateDailyRundownIfNeeded(templateId, {
+			...options,
+			now: new Date(),
+			settings,
+			_retryDepth: retryDepth
+		})
 	}
 
 	return runCloneAttempt({
@@ -737,7 +803,8 @@ export async function getDailyGenerationStatusForTemplate(
 		options.settings ??
 		(await settingsMutations.read()).result ??
 		({} as ApplicationSettings)
-	const timezone = settings.dailyCloneTimezone?.trim() || DEFAULT_DAILY_CLONE_TIMEZONE
+	const rawTimezone = settings.dailyCloneTimezone?.trim() || DEFAULT_DAILY_CLONE_TIMEZONE
+	const timezone = isValidIanaTimeZone(rawTimezone) ? rawTimezone : DEFAULT_DAILY_CLONE_TIMEZONE
 	const generatedDate = getDailyGeneratedDate(now, timezone)
 	const row = readDailyGenerationRow(templateId, generatedDate, timezone)
 

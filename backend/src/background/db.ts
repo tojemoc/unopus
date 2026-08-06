@@ -325,8 +325,17 @@ try {
 			leaseExpiresAt TEXT NOT NULL,
 			rundownId TEXT,
 			status TEXT NOT NULL CHECK(status IN ('in_progress', 'completed', 'failed')),
-			PRIMARY KEY (sourceTemplateId, generatedDate, generatingTimezone)
+			PRIMARY KEY (sourceTemplateId, generatedDate, generatingTimezone),
+			CHECK (
+				(status = 'completed' AND rundownId IS NOT NULL)
+				OR (status IN ('in_progress', 'failed') AND rundownId IS NULL)
+			)
 		);
+	`)
+
+	db.exec(`
+		CREATE INDEX IF NOT EXISTS idx_rundowns_idempotencyKey
+		ON rundowns(json_extract(document, '$.idempotencyKey'));
 	`)
 
 	initAuthTables()

@@ -97,7 +97,7 @@ export const mutations = {
 			if (rundownReadError || !sourceRundown) returnedError = rundownReadError
 			else {
 				try {
-					const { result: newRundown, error: createError } = await mutations.create({
+					const createArgs = {
 						...sourceRundown,
 						name: getNewRundownName(sourceRundown, {
 							preserveName: false,
@@ -107,7 +107,11 @@ export const mutations = {
 						id: undefined,
 						attemptId: payload.attemptId,
 						idempotencyKey: payload.idempotencyKey
-					})
+					}
+					if (!payload.attemptId) delete createArgs.attemptId
+					if (!payload.idempotencyKey) delete createArgs.idempotencyKey
+
+					const { result: newRundown, error: createError } = await mutations.create(createArgs)
 
 					if (!newRundown) {
 						console.error(createError)

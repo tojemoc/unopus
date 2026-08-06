@@ -4,11 +4,13 @@ import {
 	getDailyGeneratedDate,
 	reconcileForeignTimezoneInProgress
 } from './api/dailyGeneration'
+import type { ApplicationSettings } from './interfaces'
 import { mutations as settingsMutations } from './api/settings'
 
 const TICK_MS = 60_000
 
 let intervalHandle: ReturnType<typeof setInterval> | undefined
+let tickInFlight = false
 
 export function startDailyTemplateScheduler(): void {
 	if (intervalHandle) {
@@ -16,8 +18,15 @@ export function startDailyTemplateScheduler(): void {
 	}
 
 	const tick = async () => {
+		if (tickInFlight) {
+			return
+		}
+		tickInFlight = true
+
+		let settings: ApplicationSettings | undefined
 		try {
-			const { result: settings } = await settingsMutations.read()
+			const { result } = await settingsMutations.read()
+			settings = result
 			const templateId = settings?.dailyTemplateRundownId?.trim()
 			const timezone = settings?.dailyCloneTimezone?.trim() || DEFAULT_DAILY_CLONE_TIMEZONE
 
@@ -26,20 +35,23 @@ export function startDailyTemplateScheduler(): void {
 				reconcileForeignTimezoneInProgress(templateId, timezone)
 			}
 
-			const result = await generateConfiguredDailyRundownIfNeeded({ settings })
-			if (result?.created && result.rundownId) {
+			const generation = await generateConfiguredDailyRundownIfNeeded({ settings })
+			if (generation?.created && generation.rundownId) {
 				console.info('Daily template scheduler generated rundown', {
 					dailyTemplateRundownId: templateId,
-					generatedDate: result.generatedDate,
-					rundownId: result.rundownId,
-					attemptId: result.attemptId,
-					idempotencyKey: result.idempotencyKey
+					generatedDate: generation.generatedDate,
+					rundownId: generation.rundownId,
+					attemptId: generation.attemptId,
+					idempotencyKey: generation.idempotencyKey
 				})
 			}
 		} catch (error) {
-			const { result: settings } = await settingsMutations.read().catch(() => ({
-				result: undefined
-			}))
+			if (!settings) {
+				const fallback = await settingsMutations.read().catch(() => ({
+					result: undefined as ApplicationSettings | undefined
+				}))
+				settings = fallback.result
+			}
 			const timezone = settings?.dailyCloneTimezone?.trim() || DEFAULT_DAILY_CLONE_TIMEZONE
 			const generatedDate = getDailyGeneratedDate(new Date(), timezone)
 			console.error('Daily template scheduler tick failed', {
@@ -48,6 +60,8 @@ export function startDailyTemplateScheduler(): void {
 				error: error instanceof Error ? error.message : String(error),
 				stack: error instanceof Error ? error.stack : undefined
 			})
+		} finally {
+			tickInFlight = false
 		}
 	}
 
