@@ -1,9 +1,13 @@
 import type { Application, Request, Response } from 'express'
 import { getUserFromSession, parseSessionCookie } from '../background/auth/authStore'
 import { fetchCoreContentStatusForRundown } from '../background/coreContentStatus'
-import { evaluateRundownReadiness } from '../background/mediaReadiness'
+import {
+	countReadinessProvenance,
+	evaluateRundownReadiness
+} from '../background/mediaReadiness'
 import { mutations as piecesMutations } from '../background/api/pieces'
 import { mutations as typeManifestMutations } from '../background/api/typeManifests'
+import { coreHandler } from '../background/coreHandler'
 import { TypeManifestEntity } from '../background/interfaces'
 
 function getSessionUser(req: Request) {
@@ -46,13 +50,23 @@ export function registerReadinessRoutes(app: Application): void {
 				(manifest) => manifest.entityType === TypeManifestEntity.Piece
 			)
 
-			const coreStatuses = await fetchCoreContentStatusForRundown(rundownId)
-			const readiness = await evaluateRundownReadiness(
-				pieces,
-				pieceManifests,
-				coreStatuses ?? undefined
-			)
-			res.json(readiness)
+			const coreResult = await fetchCoreContentStatusForRundown(rundownId)
+			const coreStatuses = coreResult.source === 'core' ? coreResult.statuses : undefined
+			const readiness = await evaluateRundownReadiness(pieces, pieceManifests, coreStatuses)
+			const provenance = countReadinessProvenance(readiness)
+
+			res.json({
+				...readiness,
+				diagnostics: {
+					coreConnectionStatus: coreHandler.connectionInfo.status,
+					coreCallSource: coreResult.source,
+					coreCallError: coreResult.source === 'core-error' ? coreResult.error : undefined,
+					corePieceStatusCount: coreResult.source === 'core' ? coreResult.statuses.size : 0,
+					piecesFromCore: provenance.piecesFromCore,
+					piecesFromFsFallback: provenance.piecesFromFsFallback,
+					checkedAt: new Date().toISOString()
+				}
+			})
 		} catch (error) {
 			console.error(error)
 			res.status(400).json({ error: (error as Error).message })

@@ -19,7 +19,7 @@ function RouteComponent() {
 	const selectTab = (path: string | null) => {
 		if (!path) return
 
-		if (path === 'connection' || path === 'rundown' || path === 'users') {
+		if (path === 'connection' || path === 'diagnostics' || path === 'rundown' || path === 'users') {
 			navigate({ to: `/settings/${path}` })
 		} else {
 			navigate({ to: `/settings/type/${path}` })
@@ -29,6 +29,7 @@ function RouteComponent() {
 		<div className="p-4">
 			<Tabs activeKey={subPath} onSelect={selectTab} className="mb-3" transition={false}>
 				<Tab eventKey="connection" title="Connection" />
+				<Tab eventKey="diagnostics" title="Diagnostics" />
 				<Tab eventKey="piece" title="Piece Types" />
 				<Tab eventKey="part" title="Part Types" />
 				<Tab eventKey="segment" title="Segment Types" />

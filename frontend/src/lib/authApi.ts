@@ -105,3 +105,26 @@ export async function fetchRundownReadiness(rundownId: string) {
 		`/api/rundowns/${rundownId}/readiness`
 	)
 }
+
+export type CoreDiagnosticsResponse = {
+	connection: {
+		url?: string
+		port?: number
+		status: string
+	}
+	deviceAuth: {
+		deviceIdConfigured: boolean
+		usingUnsecureToken: boolean
+	}
+	contentStatusProbe: {
+		ok: boolean
+		operatorLabel?: string
+		trafficLight: 'green' | 'yellow' | 'red'
+		summary: string
+		checkedAt: string
+	}
+}
+
+export async function fetchCoreDiagnostics() {
+	return request<CoreDiagnosticsResponse>('/api/core/diagnostics')
+}

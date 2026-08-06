@@ -212,12 +212,17 @@ export interface MediaFileEntry {
 	durationSeconds?: number
 }
 
+/** Which path produced a ready/not-ready verdict for a media requirement. */
+export type ReadinessStatusSource = 'core' | 'fs'
+
 /** Single media field readiness (MOS-style clip status). */
 export interface MediaRequirement {
 	fieldId: string
 	path: string
 	ready: boolean
 	reason?: string
+	/** Path that produced this verdict (Package Manager via Core, or local filesystem). */
+	source?: ReadinessStatusSource
 }
 
 export interface PieceReadiness {
@@ -225,6 +230,24 @@ export interface PieceReadiness {
 	partId: string
 	ready: boolean
 	requirements: MediaRequirement[]
+	/**
+	 * Aggregate provenance for this piece's media verdict.
+	 * `'core'` when Package Manager status was used for any assigned media path;
+	 * `'fs'` when evaluation fell back to local filesystem (or local-only checks).
+	 */
+	source?: ReadinessStatusSource
+}
+
+export interface RundownReadinessDiagnostics {
+	coreConnectionStatus: CoreConnectionStatus
+	coreCallSource: 'core' | 'core-disconnected' | 'core-error'
+	/** Safe operator-facing label only (never raw Core exception text). */
+	coreCallError?: string
+	/** Piece statuses returned by Core; 0 is ambiguous — do not over-interpret. */
+	corePieceStatusCount: number
+	piecesFromCore: number
+	piecesFromFsFallback: number
+	checkedAt: string
 }
 
 export interface RundownReadiness {
@@ -241,6 +264,7 @@ export interface RundownReadiness {
 		totalMediaPieces: number
 		readyMediaPieces: number
 	}
+	diagnostics?: RundownReadinessDiagnostics
 }
 
 export interface ApplicationSettings {

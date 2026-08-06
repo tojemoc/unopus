@@ -1,4 +1,5 @@
 import { OverlayTrigger, Tooltip } from 'react-bootstrap'
+import type { ReadinessStatusSource } from '~backend/background/interfaces'
 import './readinessBadge.scss'
 
 export type ReadinessState = 'ready' | 'not-ready' | 'na'
@@ -51,19 +52,64 @@ export function ReadinessBadge({
 	)
 }
 
+export type ReadinessProvenanceContext = {
+	pieceSource?: ReadinessStatusSource
+	coreCallSource?: 'core' | 'core-disconnected' | 'core-error'
+	/** Safe operator-facing label only. */
+	coreCallError?: string
+}
+
+function formatProvenanceLine(ctx: ReadinessProvenanceContext): string | undefined {
+	const source = ctx.pieceSource
+	if (!source) {
+		return undefined
+	}
+
+	if (source === 'core') {
+		return 'via Package Manager'
+	}
+
+	if (ctx.coreCallSource === 'core-disconnected') {
+		return 'via local scan (Core unreachable)'
+	}
+
+	if (ctx.coreCallSource === 'core-error') {
+		const label = ctx.coreCallError ?? 'Core content-status call failed'
+		return `via local scan (Core: ${label})`
+	}
+
+	if (ctx.coreCallSource === 'core') {
+		return 'via local scan (not reported by Core)'
+	}
+
+	return 'via local scan'
+}
+
 export function getPieceReadinessTooltip(
-	requirements: { fieldId: string; path: string; ready: boolean; reason?: string }[]
+	requirements: {
+		fieldId: string
+		path: string
+		ready: boolean
+		reason?: string
+		source?: ReadinessStatusSource
+	}[],
+	provenance?: ReadinessProvenanceContext
 ): string | undefined {
 	if (!requirements.length) {
 		return 'No media required'
 	}
 
-	return requirements
-		.map((item) => {
-			if (item.ready) {
-				return `${item.fieldId}: ${item.path || '(empty)'}`
-			}
-			return `${item.fieldId}: ${item.reason ?? 'Not ready'}`
-		})
-		.join('\n')
+	const lines = requirements.map((item) => {
+		if (item.ready) {
+			return `${item.fieldId}: ${item.path || '(empty)'}`
+		}
+		return `${item.fieldId}: ${item.reason ?? 'Not ready'}`
+	})
+
+	const provenanceLine = provenance ? formatProvenanceLine(provenance) : undefined
+	if (provenanceLine) {
+		lines.push(provenanceLine)
+	}
+
+	return lines.join('\n')
 }
