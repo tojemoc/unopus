@@ -1,4 +1,6 @@
 import type { Application, Request, Response } from 'express'
+// Import db before authStore so tsx/CJS circular init assigns the DatabaseSync binding first.
+import '../background/db'
 import { getUserFromSession, parseSessionCookie } from '../background/auth/authStore'
 import {
 	CORE_CONTENT_STATUS_METHOD,
@@ -9,10 +11,10 @@ import { toSafeCoreOperatorLabel } from '../background/coreOperatorLabels'
 import { CoreConnectionStatus } from '../background/interfaces'
 
 /** Deliberately nonexistent rundown — probe only proves method reachability + device studio attach. */
-const DIAGNOSTICS_PROBE_RUNDOWN_ID = '__diagnostics_probe__'
+export const DIAGNOSTICS_PROBE_RUNDOWN_ID = '__diagnostics_probe__'
 
 /** Match UI readiness poll cadence so concurrent browsers share one Core round-trip. */
-const PROBE_TTL_MS = 8_000
+export const PROBE_TTL_MS = 8_000
 
 export type CoreDiagnosticsTrafficLight = 'green' | 'yellow' | 'red'
 

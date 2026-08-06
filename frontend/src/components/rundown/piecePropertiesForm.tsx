@@ -163,6 +163,7 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 								<Form.Group className="mb-3">
 									<Form.Label htmlFor={field.name}>On air (seconds):</Form.Label>
 									<Form.Control
+										id={field.name}
 										name={field.name}
 										type="number"
 										value={field.state.value ?? ''}
@@ -199,10 +200,17 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 						if (sourceDurationSeconds === undefined) {
 							return null
 						}
+						const sourceDurationFieldId = 'piece-source-duration'
 						return (
 							<Form.Group className="mb-3">
-								<Form.Label>Source (seconds):</Form.Label>
-								<Form.Control type="number" value={sourceDurationSeconds} readOnly disabled />
+								<Form.Label htmlFor={sourceDurationFieldId}>Source (seconds):</Form.Label>
+								<Form.Control
+									id={sourceDurationFieldId}
+									type="number"
+									value={sourceDurationSeconds}
+									readOnly
+									disabled
+								/>
 								<Form.Text muted>
 									Read-only duration from media probe (ffprobe via media picker).
 								</Form.Text>
