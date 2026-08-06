@@ -87,6 +87,8 @@ describe('settings field validators', () => {
 
 	it('rejects offset-style zone strings', () => {
 		assert.equal(isValidIanaTimeZone('+02:00'), false)
+		assert.equal(isValidIanaTimeZone('+0200'), false)
+		assert.equal(isValidIanaTimeZone('+02'), false)
 		assert.equal(isValidIanaTimeZone('-05:00'), false)
 		assert.equal(isValidIanaTimeZone('GMT+2'), false)
 	})
