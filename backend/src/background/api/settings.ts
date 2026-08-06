@@ -19,19 +19,23 @@ import {
 } from '../dailyGenerationTime'
 
 async function validateDailyTemplateSettings(
-	settings: ApplicationSettings
+	settings: ApplicationSettings,
+	{ strictTemplateId = false }: { strictTemplateId?: boolean } = {}
 ): Promise<{ error?: Error; normalized: ApplicationSettings }> {
 	const normalized: ApplicationSettings = { ...settings }
 
-	if (normalized.dailyCloneTimezone === undefined || normalized.dailyCloneTimezone === '') {
+	const trimmedTimezone = normalized.dailyCloneTimezone?.trim()
+	if (!trimmedTimezone) {
 		normalized.dailyCloneTimezone = DEFAULT_DAILY_CLONE_TIMEZONE
-	} else if (!isValidIanaTimeZone(normalized.dailyCloneTimezone)) {
+	} else if (!isValidIanaTimeZone(trimmedTimezone)) {
 		return {
 			error: new Error(
 				`Invalid dailyCloneTimezone "${normalized.dailyCloneTimezone}" — must be a valid IANA time zone`
 			),
 			normalized
 		}
+	} else {
+		normalized.dailyCloneTimezone = trimmedTimezone
 	}
 
 	if (normalized.dailyCloneTime !== undefined && normalized.dailyCloneTime !== '') {
@@ -52,21 +56,25 @@ async function validateDailyTemplateSettings(
 	const templateId = normalized.dailyTemplateRundownId?.trim()
 	if (templateId) {
 		const { result, error } = await rundownMutations.readOne(templateId)
-		if (error || !result) {
-			return {
-				error: new Error(`dailyTemplateRundownId "${templateId}" does not exist`),
-				normalized
+		if (error || !result || !result.isTemplate) {
+			if (strictTemplateId) {
+				if (error || !result) {
+					return {
+						error: new Error(`dailyTemplateRundownId "${templateId}" does not exist`),
+						normalized
+					}
+				}
+				return {
+					error: new Error(
+						`dailyTemplateRundownId "${templateId}" must reference a template rundown (isTemplate=true)`
+					),
+					normalized
+				}
 			}
+			normalized.dailyTemplateRundownId = undefined
+		} else {
+			normalized.dailyTemplateRundownId = templateId
 		}
-		if (!result.isTemplate) {
-			return {
-				error: new Error(
-					`dailyTemplateRundownId "${templateId}" must reference a template rundown (isTemplate=true)`
-				),
-				normalized
-			}
-		}
-		normalized.dailyTemplateRundownId = templateId
 	} else {
 		normalized.dailyTemplateRundownId = undefined
 	}
@@ -78,7 +86,10 @@ export const mutations = {
 	async create(
 		payload: MutationApplicationSettingsCreate
 	): Promise<{ result?: ApplicationSettings; error?: Error }> {
-		const { error: validationError, normalized } = await validateDailyTemplateSettings(payload)
+		const { error: validationError, normalized } = await validateDailyTemplateSettings(
+			payload,
+			{ strictTemplateId: true }
+		)
 		if (validationError) {
 			return { error: validationError }
 		}
@@ -117,6 +128,7 @@ export const mutations = {
 				const parsed = JSON.parse(result.document) as ApplicationSettings
 				const { error: validationError, normalized } =
 					await validateDailyTemplateSettings(parsed)
+				// Non-strict: dangling template ids are cleared; only time/timezone errors surface.
 				if (validationError) {
 					return { error: validationError }
 				}
@@ -149,7 +161,10 @@ export const mutations = {
 			...payload
 		}
 
-		const { error: validationError, normalized } = await validateDailyTemplateSettings(merged)
+		const { error: validationError, normalized } = await validateDailyTemplateSettings(
+			merged,
+			{ strictTemplateId: true }
+		)
 		if (validationError) {
 			return { error: validationError }
 		}
@@ -175,11 +190,6 @@ export const mutations = {
 		const templateId =
 			normalized.dailyTemplateRundownId?.trim() || existing?.dailyTemplateRundownId?.trim()
 
-		if (templateId && previousTimezone !== nextTimezone) {
-			const { reconcileForeignTimezoneInProgress } = await import('./dailyGeneration')
-			reconcileForeignTimezoneInProgress(templateId, nextTimezone)
-		}
-
 		try {
 			const stmt = db.prepare(`
 				UPDATE settings
@@ -200,6 +210,11 @@ export const mutations = {
 			}
 
 			stmt.run(JSON.stringify(patch))
+
+			if (templateId && previousTimezone !== nextTimezone) {
+				const { reconcileForeignTimezoneInProgress } = await import('./dailyGeneration')
+				reconcileForeignTimezoneInProgress(templateId, nextTimezone)
+			}
 
 			return this.read()
 		} catch (e) {

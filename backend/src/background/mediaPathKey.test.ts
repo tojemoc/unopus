@@ -28,6 +28,19 @@ describe('normalizeMediaMatchKey', () => {
 		assert.equal(normalizeMediaMatchKey('C:/elsewhere/a.mp4', root), null)
 	})
 
+	it('strips POSIX absolute paths under ingest root and rejects outside root', () => {
+		assert.equal(
+			normalizeMediaMatchKey('/mnt/ingest/clips/a.mp4', '/mnt/ingest'),
+			'clips/a.mp4'
+		)
+		assert.equal(
+			normalizeMediaMatchKey('/mnt/ingest/clips/a.mp4', '/mnt/ingest/'),
+			'clips/a.mp4'
+		)
+		assert.equal(normalizeMediaMatchKey('/mnt/ingest', '/mnt/ingest'), null)
+		assert.equal(normalizeMediaMatchKey('/other/clips/a.mp4', '/mnt/ingest'), null)
+	})
+
 	it('strips a single leading slash on relative paths', () => {
 		assert.equal(normalizeMediaMatchKey('/clips/a.mp4'), 'clips/a.mp4')
 	})

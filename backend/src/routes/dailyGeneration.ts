@@ -12,6 +12,14 @@ function getSessionUser(req: Request) {
 	return getUserFromSession(sessionId)
 }
 
+function statusForError(error: unknown): number {
+	const msg = error instanceof Error ? error.message : String(error)
+	if (/still in progress/i.test(msg)) return 409
+	if (/not found|not a template|Invalid dailyClone|No template|Missing templateId|did not run/i.test(msg))
+		return 400
+	return 500
+}
+
 export function registerDailyGenerationRoutes(app: Application): void {
 	app.get('/api/daily-generation/status', async (req: Request, res: Response) => {
 		if (!getSessionUser(req)) {
@@ -31,7 +39,9 @@ export function registerDailyGenerationRoutes(app: Application): void {
 			res.json(status)
 		} catch (error) {
 			console.error(error)
-			res.status(400).json({ error: (error as Error).message })
+			res.status(statusForError(error)).json({
+				error: error instanceof Error ? error.message : String(error)
+			})
 		}
 	})
 
@@ -69,7 +79,9 @@ export function registerDailyGenerationRoutes(app: Application): void {
 			res.json(result)
 		} catch (error) {
 			console.error(error)
-			res.status(400).json({ error: (error as Error).message })
+			res.status(statusForError(error)).json({
+				error: error instanceof Error ? error.message : String(error)
+			})
 		}
 	})
 
@@ -97,7 +109,9 @@ export function registerDailyGenerationRoutes(app: Application): void {
 			res.json({ statuses })
 		} catch (error) {
 			console.error(error)
-			res.status(400).json({ error: (error as Error).message })
+			res.status(statusForError(error)).json({
+				error: error instanceof Error ? error.message : String(error)
+			})
 		}
 	})
 }

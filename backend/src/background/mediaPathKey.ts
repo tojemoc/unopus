@@ -7,8 +7,8 @@
  *   - device/protocol URLs (`dshow://…`, `http(s)://…`, etc.)
  *
  * Then for remaining paths: `\`→`/`, collapse duplicate `/`, drop trailing `/`,
- * lower-case. Drive-letter paths under the ingest root are stripped to a relative
- * key; paths outside the root stay unmatched.
+ * lower-case. Absolute paths (drive-letter or POSIX) under the ingest root are
+ * stripped to a relative key; paths outside the root stay unmatched.
  */
 export function normalizeMediaMatchKey(
 	rawPath: string,
@@ -35,6 +35,9 @@ export function normalizeMediaMatchKey(
 		return null
 	}
 
+	const isDriveAbsolute = /^[a-z]:\//i.test(normalized)
+	const isPosixAbsolute = normalized.startsWith('/')
+
 	if (ingestRoot) {
 		let root = ingestRoot
 			.trim()
@@ -47,26 +50,25 @@ export function normalizeMediaMatchKey(
 			root = `${root}/`
 		}
 
-		if (/^[a-z]:\//i.test(normalized)) {
-			if (normalized === root || normalized.startsWith(root.endsWith('/') ? root : `${root}/`)) {
-				const prefix = root.endsWith('/') ? root : `${root}/`
-				if (normalized === root.replace(/\/$/, '')) {
-					return null
-				}
-				normalized = normalized.startsWith(prefix)
-					? normalized.slice(prefix.length)
-					: normalized === root
-						? ''
-						: normalized
+		const rootWithoutTrailing = root.replace(/\/$/, '')
+		const rootPrefix = root.endsWith('/') ? root : `${root}/`
+
+		if (isDriveAbsolute || isPosixAbsolute) {
+			if (normalized === rootWithoutTrailing) {
+				return null
+			}
+			if (normalized.startsWith(rootPrefix)) {
+				normalized = normalized.slice(rootPrefix.length)
 				if (!normalized) {
 					return null
 				}
 			} else {
-				// Absolute drive path outside ingest root — unmatched.
+				// Absolute path outside ingest root — unmatched.
 				return null
 			}
 		}
-	} else if (/^[a-z]:\//i.test(normalized)) {
+		// Relative paths: leave for leading-slash strip at end.
+	} else if (isDriveAbsolute) {
 		// No ingest root provided — cannot strip drive letter safely.
 		return null
 	}
@@ -93,8 +95,9 @@ export type AggregatedMediaReadiness = {
 
 /**
  * Aggregate Core verdicts for one match key.
- * Any ready===false → not-confirmed; else any ready===true → confirmed; else unknown.
- * Reasons from not-ready verdicts are ordered by pieceExternalId then fieldId.
+ * Any ready===false → not-confirmed; else all ready → confirmed.
+ * Empty verdicts → unknown. Reasons from not-ready verdicts are ordered by
+ * pieceExternalId then fieldId.
  */
 export function aggregateCoreVerdictsForKey(
 	verdicts: CoreVerdictForJoin[]
@@ -123,9 +126,5 @@ export function aggregateCoreVerdictsForKey(
 		}
 	}
 
-	if (verdicts.some((verdict) => verdict.ready)) {
-		return { readiness: 'confirmed' }
-	}
-
-	return { readiness: 'unknown', reason: 'not yet confirmed by Package Manager' }
+	return { readiness: 'confirmed' }
 }

@@ -24,8 +24,8 @@ describe('getDailyGeneratedDate', () => {
 
 	it('does not use process-local getFullYear/getMonth/getDate', () => {
 		const now = new Date('2024-01-15T23:30:00.000Z')
-		const viaHelper = getDailyGeneratedDate(now, 'UTC')
-		assert.equal(viaHelper, '2024-01-15')
+		assert.equal(getDailyGeneratedDate(now, 'UTC'), '2024-01-15')
+		assert.equal(getDailyGeneratedDate(now, 'Europe/Bratislava'), '2024-01-16')
 	})
 })
 
@@ -83,5 +83,11 @@ describe('settings field validators', () => {
 		assert.equal(isValidIanaTimeZone('Europe/Bratislava'), true)
 		assert.equal(isValidIanaTimeZone('UTC'), true)
 		assert.equal(isValidIanaTimeZone('Not/AZone'), false)
+	})
+
+	it('rejects offset-style zone strings', () => {
+		assert.equal(isValidIanaTimeZone('+02:00'), false)
+		assert.equal(isValidIanaTimeZone('-05:00'), false)
+		assert.equal(isValidIanaTimeZone('GMT+2'), false)
 	})
 })

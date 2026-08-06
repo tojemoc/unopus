@@ -34,6 +34,14 @@ function collectPieceMediaPaths(
 	return paths
 }
 
+function unknownReadiness(files: MediaFileEntry[]): MediaFileEntry[] {
+	return files.map((file) => ({
+		...file,
+		readiness: 'unknown' as const,
+		reason: 'not yet confirmed by Package Manager'
+	}))
+}
+
 /**
  * Attach Core/Package Manager readiness to filesystem media listings for the
  * active rundown only. Local fs existence never becomes confirmed/not-confirmed.
@@ -44,19 +52,31 @@ export async function enrichMediaListingWithCoreReadiness(
 ): Promise<MediaFileEntry[]> {
 	const ingestRoot = getIngestMediaRoot()
 
-	const { result: piecesResult } = await piecesMutations.read({ rundownId })
-	const pieces = Array.isArray(piecesResult)
-		? piecesResult
-		: piecesResult
-			? [piecesResult]
-			: []
+	let pieces: Piece[]
+	let manifests: TypeManifest[]
+	let coreResult: Awaited<ReturnType<typeof fetchCoreContentStatusForRundown>>
+	try {
+		const { result: piecesResult } = await piecesMutations.read({ rundownId })
+		pieces = Array.isArray(piecesResult)
+			? piecesResult
+			: piecesResult
+				? [piecesResult]
+				: []
 
-	const { result: manifestsResult } = await typeManifestMutations.read({})
-	const manifests = (
-		Array.isArray(manifestsResult) ? manifestsResult : manifestsResult ? [manifestsResult] : []
-	).filter((manifest) => manifest.entityType === TypeManifestEntity.Piece)
+		const { result: manifestsResult } = await typeManifestMutations.read({})
+		manifests = (
+			Array.isArray(manifestsResult)
+				? manifestsResult
+				: manifestsResult
+					? [manifestsResult]
+					: []
+		).filter((manifest) => manifest.entityType === TypeManifestEntity.Piece)
 
-	const coreResult = await fetchCoreContentStatusForRundown(rundownId)
+		coreResult = await fetchCoreContentStatusForRundown(rundownId)
+	} catch {
+		return unknownReadiness(files)
+	}
+
 	// Only Package Manager answers become confirmed/not-confirmed — never invent from fs.
 	const coreStatuses = coreResult.source === 'core' ? coreResult.statuses : undefined
 
