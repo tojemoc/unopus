@@ -1,16 +1,11 @@
 import { Card, Col, Row, Button } from 'react-bootstrap'
-import { Link, useNavigate } from '@tanstack/react-router'
+import { Link } from '@tanstack/react-router'
 import { useCallback, useEffect, useState } from 'react'
 import type { Rundown } from '~backend/background/interfaces'
-import { useAppDispatch, useAppSelector } from '~/store/app'
+import { useAppSelector } from '~/store/app'
 import { CoreConnectionStatus } from '~backend/background/interfaces'
-import { pushRundown } from '~/store/rundowns'
-import {
-	fetchDailyGenerationStatuses,
-	generateDailyRundownNow,
-	type TemplateDailyStatus
-} from '~/lib/dailyGenerationApi'
-import { useToasts } from '../toasts/useToasts'
+import { fetchDailyGenerationStatuses, type TemplateDailyStatus } from '~/lib/dailyGenerationApi'
+import { useGenerateDailyRundown } from '~/hooks/useGenerateDailyRundown'
 import './rundownListGrouped.scss'
 
 function startOfDay(date: Date): number {
@@ -65,15 +60,11 @@ interface RundownListGroupedProps {
 export function RundownListGrouped({ rundowns }: RundownListGroupedProps) {
 	const parts = useAppSelector((s) => s.parts.parts)
 	const coreStatus = useAppSelector((s) => s.coreConnectionStatus.status)
-	const dispatch = useAppDispatch()
-	const navigate = useNavigate()
-	const toasts = useToasts()
 	const [statuses, setStatuses] = useState<Record<string, TemplateDailyStatus>>({})
-	const [generatingId, setGeneratingId] = useState<string | null>(null)
+	const hasTemplates = rundowns.some((r) => r.isTemplate)
 
 	const refreshStatuses = useCallback(async () => {
-		const templates = rundowns.filter((rundown) => rundown.isTemplate)
-		if (templates.length === 0) {
+		if (!hasTemplates) {
 			setStatuses({})
 			return
 		}
@@ -87,37 +78,15 @@ export function RundownListGrouped({ rundowns }: RundownListGroupedProps) {
 		} catch (error) {
 			console.error(error)
 		}
-	}, [rundowns])
+	}, [hasTemplates])
+
+	const { generate, generatingId } = useGenerateDailyRundown(async () => {
+		await refreshStatuses()
+	})
 
 	useEffect(() => {
 		void refreshStatuses()
 	}, [refreshStatuses])
-
-	const handleGenerateNow = async (templateId: string) => {
-		setGeneratingId(templateId)
-		try {
-			const result = await generateDailyRundownNow(templateId)
-			if (result.rundown) {
-				dispatch(pushRundown(result.rundown))
-			}
-			await refreshStatuses()
-			toasts.show({
-				headerContent: result.created ? "Generated today's rundown" : 'Already generated',
-				bodyContent: result.rundown?.name ?? result.rundownId ?? ''
-			})
-			if (result.created && result.rundownId) {
-				await navigate({ to: `/rundown/${result.rundownId}` })
-			}
-		} catch (error) {
-			console.error(error)
-			toasts.show({
-				headerContent: 'Generate now',
-				bodyContent: error instanceof Error ? error.message : 'Unexpected error'
-			})
-		} finally {
-			setGeneratingId(null)
-		}
-	}
 
 	if (rundowns.length === 0) {
 		return (
@@ -223,7 +192,7 @@ export function RundownListGrouped({ rundowns }: RundownListGroupedProps) {
 															size="sm"
 															variant="outline-secondary"
 															disabled={generatingId === rundown.id}
-															onClick={() => void handleGenerateNow(rundown.id)}
+															onClick={() => void generate(rundown.id)}
 														>
 															{generatingId === rundown.id ? 'Generating…' : 'Generate now'}
 														</Button>

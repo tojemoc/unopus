@@ -1,10 +1,9 @@
-import { describe, it, before } from 'node:test'
+import { describe, it, before, after } from 'node:test'
 import assert from 'node:assert/strict'
 import { db } from '../db.js'
 import {
 	DAILY_GENERATION_LEASE_MS,
 	generateDailyRundownIfNeeded,
-	getDailyGeneratedDate,
 	mintIdempotencyKey,
 	readDailyGenerationRow,
 	reconcileDailyGenerationReservation,
@@ -82,13 +81,17 @@ describe('daily generation idempotency', () => {
 	const timezone = 'Europe/Bratislava'
 
 	before(async () => {
-		db.prepare(`DELETE FROM dailyGenerations`).run()
+		db.prepare(`DELETE FROM dailyGenerations WHERE sourceTemplateId = ?`).run(templateId)
 		await ensureTemplate(templateId, 'Daily Template')
+	})
+
+	after(() => {
+		db.prepare(`DELETE FROM dailyGenerations WHERE sourceTemplateId = ?`).run(templateId)
 	})
 
 	it('same template + same day does not produce two rundowns', async () => {
 		db.prepare(`DELETE FROM dailyGenerations WHERE sourceTemplateId = ?`).run(templateId)
-		const before = countRundownsForTemplate(templateId)
+		const rundownCountBefore = countRundownsForTemplate(templateId)
 		const now = new Date('2024-06-15T10:00:00.000Z') // 12:00 Bratislava
 		const settings = {
 			dailyTemplateRundownId: templateId,
@@ -102,7 +105,7 @@ describe('daily generation idempotency', () => {
 		assert.ok(first?.rundownId)
 		assert.equal(second?.rundownId, first?.rundownId)
 		assert.equal(second?.created, false)
-		assert.equal(countRundownsForTemplate(templateId), before + 1)
+		assert.equal(countRundownsForTemplate(templateId), rundownCountBefore + 1)
 	})
 
 	it('different day produces a new rundown', async () => {
@@ -143,7 +146,24 @@ describe('daily generation idempotency', () => {
 			force: false
 		})
 		assert.ok(result?.created)
-		assert.equal(result?.generatedDate, getDailyGeneratedDate(new Date('2024-06-20T07:05:00.000Z'), timezone))
+		assert.equal(result?.generatedDate, '2024-06-20')
+	})
+
+	it('concurrent generate joins the same reservation', async () => {
+		db.prepare(`DELETE FROM dailyGenerations WHERE sourceTemplateId = ?`).run(templateId)
+		const settings = {
+			dailyTemplateRundownId: templateId,
+			dailyCloneTime: '08:00',
+			dailyCloneTimezone: timezone
+		}
+		const now = new Date('2024-08-01T10:00:00.000Z')
+		const [a, b] = await Promise.all([
+			generateDailyRundownIfNeeded(templateId, { now, settings, force: true }),
+			generateDailyRundownIfNeeded(templateId, { now, settings, force: true })
+		])
+		assert.ok(a?.rundownId)
+		assert.equal(a?.rundownId, b?.rundownId)
+		assert.equal([a?.created, b?.created].filter(Boolean).length, 1)
 	})
 
 	it('does not generate before dailyCloneTime unless forced', async () => {

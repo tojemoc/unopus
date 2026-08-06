@@ -1,19 +1,16 @@
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useCallback, useEffect, useState } from 'react'
 import { Button, ListGroup, Stack, type ButtonProps } from 'react-bootstrap'
-import { useAppDispatch, useAppSelector } from '~/store/app'
-import { copyRundown, pushRundown } from '~/store/rundowns'
+import { useAppDispatch } from '~/store/app'
+import { copyRundown } from '~/store/rundowns'
 import type { Rundown } from '~backend/background/interfaces'
 import { SyncButton } from './syncButton'
 import { HoverIconButton } from './hoverIconButton'
 import { BsArrowRightShort, BsCopy, BsFillTrashFill, BsTrash } from 'react-icons/bs'
 import { DeleteRundownButton } from '../rundown/deleteRundownButton'
 import { useToasts } from '../toasts/useToasts'
-import {
-	fetchDailyGenerationStatus,
-	generateDailyRundownNow,
-	type TemplateDailyStatus
-} from '~/lib/dailyGenerationApi'
+import { fetchDailyGenerationStatus, type TemplateDailyStatus } from '~/lib/dailyGenerationApi'
+import { useGenerateDailyRundown } from '~/hooks/useGenerateDailyRundown'
 
 export function RundownListItem({
 	rundown,
@@ -25,9 +22,7 @@ export function RundownListItem({
 	const dispatch = useAppDispatch()
 	const navigate = useNavigate()
 	const toasts = useToasts()
-	const settings = useAppSelector((state) => state.settings.settings)
 	const [status, setStatus] = useState<TemplateDailyStatus | undefined>(dailyStatus)
-	const [generating, setGenerating] = useState(false)
 
 	useEffect(() => {
 		setStatus(dailyStatus)
@@ -42,6 +37,8 @@ export function RundownListItem({
 			console.error(error)
 		}
 	}, [rundown.id, rundown.isTemplate])
+
+	const { generate, isGenerating } = useGenerateDailyRundown(refreshStatus)
 
 	const handleCopyRundown = (sourceRundown: Rundown, preserveTemplate: boolean = false) => {
 		dispatch(
@@ -65,34 +62,10 @@ export function RundownListItem({
 			})
 	}
 
-	const handleGenerateNow = async (e: React.MouseEvent) => {
+	const handleGenerateNow = (e: React.MouseEvent) => {
 		e.preventDefault()
 		e.stopPropagation()
-		setGenerating(true)
-		try {
-			const result = await generateDailyRundownNow(rundown.id)
-			if (result.rundown) {
-				dispatch(pushRundown(result.rundown))
-			}
-			await refreshStatus()
-			if (result.rundownId) {
-				toasts.show({
-					headerContent: result.created ? 'Generated today\'s rundown' : 'Already generated',
-					bodyContent: result.rundown?.name ?? result.rundownId
-				})
-				if (result.created) {
-					await navigate({ to: `/rundown/${result.rundownId}` })
-				}
-			}
-		} catch (error) {
-			console.error(error)
-			toasts.show({
-				headerContent: 'Generate now',
-				bodyContent: error instanceof Error ? error.message : 'Unexpected error'
-			})
-		} finally {
-			setGenerating(false)
-		}
+		void generate(rundown.id)
 	}
 
 	const handleClick = (e: React.MouseEvent) => {
@@ -100,7 +73,6 @@ export function RundownListItem({
 		navigate({ to: `/rundown/${rundown.id}` })
 	}
 
-	const isConfiguredDailyTemplate = settings?.dailyTemplateRundownId === rundown.id
 	const generatedToday =
 		status?.status === 'completed' && status.rundownId
 			? { id: status.rundownId, name: status.rundownName }
@@ -130,15 +102,15 @@ export function RundownListItem({
 							) : (
 								<span>Not generated today</span>
 							)}
-							{(isConfiguredDailyTemplate || rundown.isTemplate) && (
+							{rundown.isTemplate && (
 								<Button
 									size="sm"
 									variant="outline-secondary"
 									className="ms-2"
-									disabled={generating}
-									onClick={(e) => void handleGenerateNow(e)}
+									disabled={isGenerating(rundown.id)}
+									onClick={(e) => handleGenerateNow(e)}
 								>
-									{generating ? 'Generating…' : 'Generate now'}
+									{isGenerating(rundown.id) ? 'Generating…' : 'Generate now'}
 								</Button>
 							)}
 						</div>

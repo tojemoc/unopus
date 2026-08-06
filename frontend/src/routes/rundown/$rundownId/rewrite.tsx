@@ -34,6 +34,12 @@ type EditablePartScript = {
 
 type EditableRow = EditablePieceField | EditablePartScript
 
+function coerceFieldValue(field: PayloadManifest, value: string) {
+	if (field.type === ManifestFieldType.Number) return value === '' ? undefined : Number(value)
+	if (field.type === ManifestFieldType.Boolean) return value === 'true'
+	return value
+}
+
 function DailyRewritePage() {
 	const { rundownId } = Route.useParams()
 	const dispatch = useAppDispatch()
@@ -123,6 +129,14 @@ function DailyRewritePage() {
 		setRowState((prev) => ({ ...prev, [key]: 'idle' }))
 	}
 
+	const clearDraftKeys = (keys: string[]) => {
+		setDrafts((prev) => {
+			const next = { ...prev }
+			for (const key of keys) delete next[key]
+			return next
+		})
+	}
+
 	const saveRow = async (row: EditableRow): Promise<boolean> => {
 		setRowState((prev) => ({ ...prev, [row.key]: 'saving' }))
 		setRowErrors((prev) => {
@@ -144,14 +158,7 @@ function DailyRewritePage() {
 			} else {
 				const nextPayload = {
 					...(row.piece.payload ?? {}),
-					[row.field.id]:
-						row.field.type === ManifestFieldType.Number
-							? value === ''
-								? undefined
-								: Number(value)
-							: row.field.type === ManifestFieldType.Boolean
-								? value === 'true'
-								: value
+					[row.field.id]: coerceFieldValue(row.field, value)
 				}
 				await dispatch(
 					updatePiece({
@@ -163,6 +170,7 @@ function DailyRewritePage() {
 				).unwrap()
 			}
 			setRowState((prev) => ({ ...prev, [row.key]: 'saved' }))
+			clearDraftKeys([row.key])
 			return true
 		} catch (error) {
 			setRowState((prev) => ({ ...prev, [row.key]: 'error' }))
@@ -171,6 +179,74 @@ function DailyRewritePage() {
 				[row.key]: error instanceof Error ? error.message : 'Save failed'
 			}))
 			return false
+		}
+	}
+
+	const savePieceGroup = async (groupRows: EditablePieceField[]): Promise<boolean> => {
+		const keys = groupRows.map((row) => row.key)
+		setRowState((prev) => {
+			const next = { ...prev }
+			for (const key of keys) next[key] = 'saving'
+			return next
+		})
+		setRowErrors((prev) => {
+			const next = { ...prev }
+			for (const key of keys) delete next[key]
+			return next
+		})
+		try {
+			const piece = groupRows[0].piece
+			const nextPayload = { ...(piece.payload ?? {}) }
+			for (const row of groupRows) {
+				nextPayload[row.field.id] = coerceFieldValue(row.field, getValue(row))
+			}
+			await dispatch(
+				updatePiece({
+					piece: {
+						...piece,
+						payload: nextPayload
+					}
+				})
+			).unwrap()
+			setRowState((prev) => {
+				const next = { ...prev }
+				for (const key of keys) next[key] = 'saved'
+				return next
+			})
+			clearDraftKeys(keys)
+			return true
+		} catch (error) {
+			const message = error instanceof Error ? error.message : 'Save failed'
+			setRowState((prev) => {
+				const next = { ...prev }
+				for (const key of keys) next[key] = 'error'
+				return next
+			})
+			setRowErrors((prev) => {
+				const next = { ...prev }
+				for (const key of keys) next[key] = message
+				return next
+			})
+			return false
+		}
+	}
+
+	const saveRowsGrouped = async (rows: EditableRow[]) => {
+		const partScriptRows = rows.filter((row): row is EditablePartScript => row.kind === 'partScript')
+		const pieceRows = rows.filter((row): row is EditablePieceField => row.kind === 'piece')
+
+		for (const row of partScriptRows) {
+			await saveRow(row)
+		}
+
+		const byPieceId = new Map<string, EditablePieceField[]>()
+		for (const row of pieceRows) {
+			const list = byPieceId.get(row.piece.id) ?? []
+			list.push(row)
+			byPieceId.set(row.piece.id, list)
+		}
+		for (const group of byPieceId.values()) {
+			await savePieceGroup(group)
 		}
 	}
 
@@ -204,17 +280,13 @@ function DailyRewritePage() {
 
 	const saveAllDirty = async () => {
 		setSavingAll(true)
-		for (const row of dirtyRows) {
-			await saveRow(row)
-		}
+		await saveRowsGrouped(dirtyRows)
 		setSavingAll(false)
 	}
 
 	const retryFailed = async () => {
 		setSavingAll(true)
-		for (const row of failedRows) {
-			await saveRow(row)
-		}
+		await saveRowsGrouped(failedRows)
 		setSavingAll(false)
 	}
 

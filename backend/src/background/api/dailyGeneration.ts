@@ -242,7 +242,7 @@ function updateDailyGenerationRow(
  */
 export function reconcileDailyGenerationReservation(
 	row: DailyGenerationRow,
-	now: Date = new Date()
+	_now: Date = new Date()
 ): DailyGenerationRow {
 	if (row.status === 'completed') {
 		return row
@@ -261,7 +261,8 @@ export function reconcileDailyGenerationReservation(
 		return row
 	}
 
-	if (new Date(row.leaseExpiresAt).getTime() > now.getTime()) {
+	// Lease liveness is always wall-clock (not an injected calendar clock).
+	if (new Date(row.leaseExpiresAt).getTime() > Date.now()) {
 		// Unknown outcome with live lease — leave in_progress.
 		return row
 	}
@@ -654,7 +655,7 @@ export async function generateDailyRundownIfNeeded(
 		}
 
 		if (reconciled.status === 'in_progress') {
-			if (new Date(reconciled.leaseExpiresAt).getTime() > now.getTime()) {
+			if (new Date(reconciled.leaseExpiresAt).getTime() > Date.now()) {
 				const joined = await waitForExistingAttempt(
 					templateId,
 					generatedDate,
@@ -664,7 +665,7 @@ export async function generateDailyRundownIfNeeded(
 				if (joined) return joined
 				// Lease may have expired while waiting — fall through to retry path.
 			} else {
-				reconcileDailyGenerationReservation(reconciled, now)
+				reconcileDailyGenerationReservation(reconciled, new Date())
 			}
 		}
 
@@ -715,7 +716,7 @@ export async function generateDailyRundownIfNeeded(
 
 			const attemptId = randomUUID()
 			const idempotencyKey = mintIdempotencyKey(templateId, generatedDate, timezone, attemptId)
-			const leaseExpiresAt = new Date(now.getTime() + DAILY_GENERATION_LEASE_MS).toISOString()
+			const leaseExpiresAt = new Date(Date.now() + DAILY_GENERATION_LEASE_MS).toISOString()
 			updateDailyGenerationRow(templateId, generatedDate, timezone, {
 				status: 'in_progress',
 				attemptId,
@@ -736,7 +737,7 @@ export async function generateDailyRundownIfNeeded(
 
 	const attemptId = randomUUID()
 	const idempotencyKey = mintIdempotencyKey(templateId, generatedDate, timezone, attemptId)
-	const leaseExpiresAt = new Date(now.getTime() + DAILY_GENERATION_LEASE_MS).toISOString()
+	const leaseExpiresAt = new Date(Date.now() + DAILY_GENERATION_LEASE_MS).toISOString()
 
 	const insert = insertInProgressReservation({
 		sourceTemplateId: templateId,
