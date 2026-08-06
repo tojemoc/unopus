@@ -13,6 +13,11 @@ import { findTypeManifest, normalizeTypeId, toolbarManifests } from '~/util/type
 import { useRundownReadinessContext } from '~/hooks/RundownReadinessContext'
 import { ReadinessBadge } from './readinessBadge'
 import { getPieceReadinessState } from './sidebar/partRow'
+import {
+	formatPieceOnAirDuration,
+	formatSourceDurationSeconds,
+	getPieceSourceDurationSeconds
+} from '~/util/pieceDuration'
 
 const selectPiecesByPart = createSelector(
 	[
@@ -35,6 +40,10 @@ export function PiecesList({ part }: { part: Part }) {
 	const pieces = useAppSelector((state) => selectPiecesByPart(state, partIds))
 	const { readiness } = useRundownReadinessContext()
 
+	const showSourceColumn = pieces.some(
+		(piece: Piece) => getPieceSourceDurationSeconds(piece) !== undefined
+	)
+
 	return (
 		<table className="pieces-table rundown-pieces-list">
 			<thead>
@@ -44,16 +53,22 @@ export function PiecesList({ part }: { part: Part }) {
 					<th>Item</th>
 					<th aria-label="Copy" />
 					<th>Start</th>
-					<th>Dur</th>
+					<th>On air</th>
+					{showSourceColumn ? <th>Source</th> : null}
 				</tr>
 			</thead>
 			<tbody>
 				{pieces.map((piece: Piece) => (
-					<PieceRow key={piece.id} piece={piece} readiness={readiness} />
+					<PieceRow
+						key={piece.id}
+						piece={piece}
+						readiness={readiness}
+						showSourceColumn={showSourceColumn}
+					/>
 				))}
 
 				<tr>
-					<td colSpan={6}>
+					<td colSpan={showSourceColumn ? 7 : 6}>
 						<NewPieceButtons part={part} existingPieces={pieces} />
 					</td>
 				</tr>
@@ -64,10 +79,12 @@ export function PiecesList({ part }: { part: Part }) {
 
 function PieceRow({
 	piece,
-	readiness
+	readiness,
+	showSourceColumn
 }: {
 	piece: Piece
 	readiness: ReturnType<typeof useRundownReadinessContext>['readiness']
+	showSourceColumn: boolean
 }) {
 	const dispatch = useAppDispatch()
 	const navigate = useNavigate()
@@ -133,9 +150,14 @@ function PieceRow({
 				<IconButton onClick={performCopyPiece} />
 			</td>
 			<td className="piece-start">{piece.start !== undefined ? toTime(piece.start) : ''}</td>
-			<td className="piece-duration">
-				{piece.duration !== undefined ? toTime(piece.duration) : ''}
+			<td className="piece-duration" title="On-air duration">
+				{formatPieceOnAirDuration(piece)}
 			</td>
+			{showSourceColumn ? (
+				<td className="piece-duration" title="Source duration (ffprobe)">
+					{formatSourceDurationSeconds(getPieceSourceDurationSeconds(piece))}
+				</td>
+			) : null}
 		</tr>
 	)
 }

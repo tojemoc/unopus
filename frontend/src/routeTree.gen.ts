@@ -19,6 +19,7 @@ import { Route as RootSettingsIndexRouteImport } from './routes/_root/settings/i
 import { Route as RundownRundownIdRewriteRouteImport } from './routes/rundown/$rundownId/rewrite'
 import { Route as RootSettingsUsersRouteImport } from './routes/_root/settings/users'
 import { Route as RootSettingsRundownRouteImport } from './routes/_root/settings/rundown'
+import { Route as RootSettingsDiagnosticsRouteImport } from './routes/_root/settings/diagnostics'
 import { Route as RootSettingsConnectionRouteImport } from './routes/_root/settings/connection'
 import { Route as RootSettingsTypeTypeRouteImport } from './routes/_root/settings/type/$type'
 import { Route as RundownRundownIdSegmentSegmentIdIndexRouteImport } from './routes/rundown/$rundownId/segment/$segmentId/index'
@@ -74,6 +75,11 @@ const RootSettingsRundownRoute = RootSettingsRundownRouteImport.update({
   path: '/rundown',
   getParentRoute: () => RootSettingsRoute,
 } as any)
+const RootSettingsDiagnosticsRoute = RootSettingsDiagnosticsRouteImport.update({
+  id: '/diagnostics',
+  path: '/diagnostics',
+  getParentRoute: () => RootSettingsRoute,
+} as any)
 const RootSettingsConnectionRoute = RootSettingsConnectionRouteImport.update({
   id: '/connection',
   path: '/connection',
@@ -109,6 +115,7 @@ export interface FileRoutesByFullPath {
   '/rundown/$rundownId': typeof RundownRundownIdRouteWithChildren
   '/': typeof RootIndexRoute
   '/settings/connection': typeof RootSettingsConnectionRoute
+  '/settings/diagnostics': typeof RootSettingsDiagnosticsRoute
   '/settings/rundown': typeof RootSettingsRundownRoute
   '/settings/users': typeof RootSettingsUsersRoute
   '/rundown/$rundownId/rewrite': typeof RundownRundownIdRewriteRoute
@@ -123,6 +130,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/': typeof RootIndexRoute
   '/settings/connection': typeof RootSettingsConnectionRoute
+  '/settings/diagnostics': typeof RootSettingsDiagnosticsRoute
   '/settings/rundown': typeof RootSettingsRundownRoute
   '/settings/users': typeof RootSettingsUsersRoute
   '/rundown/$rundownId/rewrite': typeof RundownRundownIdRewriteRoute
@@ -141,6 +149,7 @@ export interface FileRoutesById {
   '/rundown/$rundownId': typeof RundownRundownIdRouteWithChildren
   '/_root/': typeof RootIndexRoute
   '/_root/settings/connection': typeof RootSettingsConnectionRoute
+  '/_root/settings/diagnostics': typeof RootSettingsDiagnosticsRoute
   '/_root/settings/rundown': typeof RootSettingsRundownRoute
   '/_root/settings/users': typeof RootSettingsUsersRoute
   '/rundown/$rundownId/rewrite': typeof RundownRundownIdRewriteRoute
@@ -159,6 +168,7 @@ export interface FileRouteTypes {
     | '/rundown/$rundownId'
     | '/'
     | '/settings/connection'
+    | '/settings/diagnostics'
     | '/settings/rundown'
     | '/settings/users'
     | '/rundown/$rundownId/rewrite'
@@ -173,6 +183,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/'
     | '/settings/connection'
+    | '/settings/diagnostics'
     | '/settings/rundown'
     | '/settings/users'
     | '/rundown/$rundownId/rewrite'
@@ -190,6 +201,7 @@ export interface FileRouteTypes {
     | '/rundown/$rundownId'
     | '/_root/'
     | '/_root/settings/connection'
+    | '/_root/settings/diagnostics'
     | '/_root/settings/rundown'
     | '/_root/settings/users'
     | '/rundown/$rundownId/rewrite'
@@ -279,6 +291,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RootSettingsRundownRouteImport
       parentRoute: typeof RootSettingsRoute
     }
+    '/_root/settings/diagnostics': {
+      id: '/_root/settings/diagnostics'
+      path: '/diagnostics'
+      fullPath: '/settings/diagnostics'
+      preLoaderRoute: typeof RootSettingsDiagnosticsRouteImport
+      parentRoute: typeof RootSettingsRoute
+    }
     '/_root/settings/connection': {
       id: '/_root/settings/connection'
       path: '/connection'
@@ -319,6 +338,7 @@ declare module '@tanstack/react-router' {
 
 interface RootSettingsRouteChildren {
   RootSettingsConnectionRoute: typeof RootSettingsConnectionRoute
+  RootSettingsDiagnosticsRoute: typeof RootSettingsDiagnosticsRoute
   RootSettingsRundownRoute: typeof RootSettingsRundownRoute
   RootSettingsUsersRoute: typeof RootSettingsUsersRoute
   RootSettingsIndexRoute: typeof RootSettingsIndexRoute
@@ -327,6 +347,7 @@ interface RootSettingsRouteChildren {
 
 const RootSettingsRouteChildren: RootSettingsRouteChildren = {
   RootSettingsConnectionRoute: RootSettingsConnectionRoute,
+  RootSettingsDiagnosticsRoute: RootSettingsDiagnosticsRoute,
   RootSettingsRundownRoute: RootSettingsRundownRoute,
   RootSettingsUsersRoute: RootSettingsUsersRoute,
   RootSettingsIndexRoute: RootSettingsIndexRoute,

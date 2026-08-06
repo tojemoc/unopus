@@ -25,10 +25,20 @@ export interface DeviceConfig {
 	deviceToken: string
 }
 
+export interface CoreDeviceAuthInfo {
+	/** True when a non-empty deviceId was provided (not the built-in SofieRundownEditor default). */
+	deviceIdConfigured: boolean
+	/** True when using the built-in `unsecureToken` rather than a configured deviceToken. */
+	usingUnsecureToken: boolean
+}
+
 export class CoreHandler {
 	public core: CoreConnection
 	public get connectionInfo(): Readonly<CoreConnectionInfo> {
 		return Object.freeze({ ...this._connectionInfo })
+	}
+	public get deviceAuthInfo(): Readonly<CoreDeviceAuthInfo> {
+		return Object.freeze({ ...this._deviceAuthInfo })
 	}
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -38,6 +48,10 @@ export class CoreHandler {
 		url: undefined,
 		port: undefined,
 		status: CoreConnectionStatus.DISCONNECTED
+	}
+	private _deviceAuthInfo: CoreDeviceAuthInfo = {
+		deviceIdConfigured: false,
+		usingUnsecureToken: true
 	}
 
 	constructor() {
@@ -138,21 +152,29 @@ export class CoreHandler {
 			deviceId: protectString('SofieRundownEditor'),
 			deviceToken: 'unsecureToken'
 		}
+		let deviceIdConfigured = false
+		let usingUnsecureToken = true
 
 		if (deviceOptions.deviceId && deviceOptions.deviceToken) {
 			credentials = {
 				deviceId: protectString(deviceOptions.deviceId),
 				deviceToken: deviceOptions.deviceToken
 			}
+			deviceIdConfigured = true
+			usingUnsecureToken = deviceOptions.deviceToken === 'unsecureToken'
 		} else if (deviceOptions.deviceId) {
 			console.warn('Token not set, only id! This might be unsecure!')
 			credentials = {
 				deviceId: protectString(deviceOptions.deviceId + name),
 				deviceToken: 'unsecureToken'
 			}
+			deviceIdConfigured = true
+			usingUnsecureToken = true
 		} else {
 			console.warn('Device ID and token not set, using unsecure defaults!')
 		}
+
+		this._deviceAuthInfo = { deviceIdConfigured, usingUnsecureToken }
 		const options: CoreOptions = {
 			...credentials,
 

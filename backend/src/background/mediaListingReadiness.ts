@@ -56,7 +56,9 @@ export async function enrichMediaListingWithCoreReadiness(
 		Array.isArray(manifestsResult) ? manifestsResult : manifestsResult ? [manifestsResult] : []
 	).filter((manifest) => manifest.entityType === TypeManifestEntity.Piece)
 
-	const coreStatuses = await fetchCoreContentStatusForRundown(rundownId)
+	const coreResult = await fetchCoreContentStatusForRundown(rundownId)
+	// Only Package Manager answers become confirmed/not-confirmed — never invent from fs.
+	const coreStatuses = coreResult.source === 'core' ? coreResult.statuses : undefined
 
 	const verdicts: CoreVerdictForJoin[] = []
 	for (const piece of pieces) {

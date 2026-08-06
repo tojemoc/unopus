@@ -11,6 +11,7 @@ import { useAppSelector } from '~/store/app'
 import { Stack } from 'react-bootstrap'
 import { usePartInsertTarget } from '~/hooks/usePartInsertTarget'
 import { PartTypeButtons } from './sidebar/partTypeButtons'
+import { CoreDiagnosticsChip } from './coreDiagnosticsChip'
 
 export function RundownNavbar({ rundown }: { rundown: Rundown }) {
 	const parts = useAppSelector((state) =>
@@ -43,6 +44,7 @@ export function RundownNavbar({ rundown }: { rundown: Rundown }) {
 		<Navbar expand="lg" className="rundown-navbar">
 			<Container fluid className="rundown-navbar__inner">
 				<Stack className="timing" direction="horizontal" gap={3}>
+					<CoreDiagnosticsChip compact />
 					<Stack>
 						<div className="label">Expected start:</div>
 						<div>{start}</div>
