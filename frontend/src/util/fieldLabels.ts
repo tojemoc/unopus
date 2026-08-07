@@ -16,7 +16,10 @@ const LABELS: Record<string, string> = {
 	previewBaseUrl: 'GFX preview base URL',
 	expectedStartTime: 'Planned start',
 	expectedEndTime: 'Planned end',
-	isTemplate: 'Save as template'
+	isTemplate: 'Save as template',
+	dailyTemplateRundownId: 'Daily template rundown',
+	dailyCloneTime: 'Daily clone time',
+	dailyCloneTimezone: 'Daily clone timezone'
 }
 
 export function friendlyLabel(fieldName: string): string {

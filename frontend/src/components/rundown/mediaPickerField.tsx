@@ -10,6 +10,21 @@ import type { MediaFileEntry } from '~backend/background/interfaces'
 
 const MEDIA_POLL_MS = 10_000
 
+function formatMediaOptionLabel(file: MediaFileEntry): string {
+	const readiness = file.readiness ?? 'unknown'
+	let statusText = 'not yet confirmed'
+	if (readiness === 'confirmed') {
+		statusText = 'confirmed'
+	} else if (readiness === 'not-confirmed') {
+		const reason = file.reason?.trim()
+		statusText = reason ? `not confirmed: ${reason}` : 'not confirmed'
+	}
+	if (file.durationSeconds) {
+		return `${file.name} (${file.durationSeconds}s) (${statusText})`
+	}
+	return `${file.name} (${statusText})`
+}
+
 export function MediaPickerField({
 	rundownId,
 	subdir = 'clips',
@@ -198,9 +213,12 @@ export function MediaPickerField({
 			</InputGroup>
 			<datalist id={datalistId}>
 				{files.map((file) => (
-					<option key={file.path} value={file.path}>
-						{file.name}
-						{file.durationSeconds ? ` (${file.durationSeconds}s)` : ''}
+					<option
+						key={file.path}
+						value={file.path}
+						label={formatMediaOptionLabel(file)}
+					>
+						{formatMediaOptionLabel(file)}
 					</option>
 				))}
 			</datalist>
@@ -218,8 +236,7 @@ export function MediaPickerField({
 					<option value="">— Or pick from scanned folder —</option>
 					{files.map((file) => (
 						<option key={file.path} value={file.path}>
-							{file.name}
-							{file.durationSeconds ? ` (${file.durationSeconds}s)` : ''}
+							{formatMediaOptionLabel(file)}
 						</option>
 					))}
 				</Form.Select>

@@ -21,6 +21,8 @@ export function CoreConnectionSettingsForm({ settings }: { settings: Application
 	const dispatch = useAppDispatch()
 	const toasts = useToasts()
 	const connectionStatus = useAppSelector((s) => s.coreConnectionStatus)
+	const rundowns = useAppSelector((s) => s.rundowns)
+	const templateRundowns = rundowns.filter((rundown) => rundown.isTemplate)
 	const [testMessage, setTestMessage] = useState<string | null>(null)
 	const [testVariant, setTestVariant] = useState<'success' | 'danger'>('success')
 	const [testing, setTesting] = useState(false)
@@ -41,7 +43,7 @@ export function CoreConnectionSettingsForm({ settings }: { settings: Application
 				console.error(e)
 				toasts.show({
 					headerContent: 'Saving settings',
-					bodyContent: 'Encountered an unexpected error'
+					bodyContent: e instanceof Error ? e.message : 'Encountered an unexpected error'
 				})
 			}
 		}
@@ -171,6 +173,92 @@ export function CoreConnectionSettingsForm({ settings }: { settings: Application
 									<code>PREVIEW_BASE_URL</code> in backend <code>.env</code> when set. If you use
 									nginx in front of the app, ensure <code>/demo-assets/</code> is served as static
 									files (see README).
+								</Form.Text>
+							</Form.Group>
+							<FieldInfo field={field} />
+						</>
+					)}
+				/>
+
+				<hr className="my-4" />
+				<h3 className="h5">Daily template clone</h3>
+				<p className="text-muted small">
+					When a template and clone time are set, the backend clones that template once per day
+					after the configured wall-clock time (idempotent — safe to restart). Leave either blank
+					to keep the feature inert.
+				</p>
+
+				<form.Field
+					name="dailyTemplateRundownId"
+					children={(field) => (
+						<>
+							<Form.Group className="mb-3">
+								<Form.Label htmlFor={field.name}>
+									{friendlyLabel('dailyTemplateRundownId')}
+								</Form.Label>
+								<Form.Select
+									id={field.name}
+									name={field.name}
+									value={field.state.value ?? ''}
+									onBlur={field.handleBlur}
+									onChange={(e) => field.handleChange(e.target.value || undefined)}
+								>
+									<option value="">— Not configured —</option>
+									{templateRundowns.map((rundown) => (
+										<option key={rundown.id} value={rundown.id}>
+											{rundown.name}
+										</option>
+									))}
+								</Form.Select>
+							</Form.Group>
+							<FieldInfo field={field} />
+						</>
+					)}
+				/>
+
+				<form.Field
+					name="dailyCloneTime"
+					children={(field) => (
+						<>
+							<Form.Group className="mb-3">
+								<Form.Label htmlFor={field.name}>{friendlyLabel('dailyCloneTime')}</Form.Label>
+								<Form.Control
+									id={field.name}
+									name={field.name}
+									type="time"
+									value={field.state.value ?? ''}
+									onBlur={field.handleBlur}
+									onChange={(e) => field.handleChange(e.target.value || undefined)}
+								/>
+								<Form.Text className="text-muted">
+									Local wall-clock time (<code>HH:mm</code>) in the timezone below. No default —
+									leave empty to disable scheduled cloning.
+								</Form.Text>
+							</Form.Group>
+							<FieldInfo field={field} />
+						</>
+					)}
+				/>
+
+				<form.Field
+					name="dailyCloneTimezone"
+					children={(field) => (
+						<>
+							<Form.Group className="mb-3">
+								<Form.Label htmlFor={field.name}>
+									{friendlyLabel('dailyCloneTimezone')}
+								</Form.Label>
+								<Form.Control
+									id={field.name}
+									name={field.name}
+									type="text"
+									value={field.state.value ?? 'Europe/Bratislava'}
+									onBlur={field.handleBlur}
+									placeholder="Europe/Bratislava"
+									onChange={(e) => field.handleChange(e.target.value)}
+								/>
+								<Form.Text className="text-muted">
+									IANA timezone (default <code>Europe/Bratislava</code>).
 								</Form.Text>
 							</Form.Group>
 							<FieldInfo field={field} />

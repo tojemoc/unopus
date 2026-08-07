@@ -1,8 +1,11 @@
-import { Card, Col, Row } from 'react-bootstrap'
+import { Card, Col, Row, Button } from 'react-bootstrap'
 import { Link } from '@tanstack/react-router'
+import { useCallback, useEffect, useState } from 'react'
 import type { Rundown } from '~backend/background/interfaces'
 import { useAppSelector } from '~/store/app'
 import { CoreConnectionStatus } from '~backend/background/interfaces'
+import { fetchDailyGenerationStatuses, type TemplateDailyStatus } from '~/lib/dailyGenerationApi'
+import { useGenerateDailyRundown } from '~/hooks/useGenerateDailyRundown'
 import './rundownListGrouped.scss'
 
 function startOfDay(date: Date): number {
@@ -57,6 +60,33 @@ interface RundownListGroupedProps {
 export function RundownListGrouped({ rundowns }: RundownListGroupedProps) {
 	const parts = useAppSelector((s) => s.parts.parts)
 	const coreStatus = useAppSelector((s) => s.coreConnectionStatus.status)
+	const [statuses, setStatuses] = useState<Record<string, TemplateDailyStatus>>({})
+	const hasTemplates = rundowns.some((r) => r.isTemplate)
+
+	const refreshStatuses = useCallback(async () => {
+		if (!hasTemplates) {
+			setStatuses({})
+			return
+		}
+		try {
+			const list = await fetchDailyGenerationStatuses()
+			const next: Record<string, TemplateDailyStatus> = {}
+			for (const status of list) {
+				next[status.templateId] = status
+			}
+			setStatuses(next)
+		} catch (error) {
+			console.error(error)
+		}
+	}, [hasTemplates])
+
+	const { generate, isGenerating } = useGenerateDailyRundown(async () => {
+		await refreshStatuses()
+	})
+
+	useEffect(() => {
+		void refreshStatuses()
+	}, [refreshStatuses])
 
 	if (rundowns.length === 0) {
 		return (
@@ -117,6 +147,13 @@ export function RundownListGrouped({ rundowns }: RundownListGroupedProps) {
 					<Row xs={1} md={2} lg={3} className="g-3">
 						{group.rundowns.map((rundown) => {
 							const storyCount = parts.filter((p) => p.rundownId === rundown.id).length
+							const status = statuses[rundown.id]
+							const generatedToday =
+								rundown.isTemplate &&
+								status?.status === 'completed' &&
+								status.rundownId
+									? { id: status.rundownId, name: status.rundownName }
+									: null
 							return (
 								<Col key={rundown.id}>
 									<Card className="rundown-card h-100">
@@ -129,10 +166,39 @@ export function RundownListGrouped({ rundowns }: RundownListGroupedProps) {
 											</Card.Text>
 											<div className="d-flex gap-2 flex-wrap mb-3 small">
 												<span className="badge bg-secondary">{storyCount} stories</span>
-												<span className={syncClass(rundown, coreStatus)}>
-													{syncLabel(rundown, coreStatus)}
-												</span>
+												{!rundown.isTemplate && (
+													<span className={syncClass(rundown, coreStatus)}>
+														{syncLabel(rundown, coreStatus)}
+													</span>
+												)}
 											</div>
+											{rundown.isTemplate && (
+												<div className="small mb-3">
+													{generatedToday ? (
+														<>
+															Generated today ·{' '}
+															<Link
+																to="/rundown/$rundownId"
+																params={{ rundownId: generatedToday.id }}
+															>
+																{generatedToday.name ?? generatedToday.id}
+															</Link>
+														</>
+													) : (
+														<span className="text-muted">Not generated today</span>
+													)}
+													<div className="mt-2">
+														<Button
+															size="sm"
+															variant="outline-secondary"
+															disabled={isGenerating(rundown.id)}
+															onClick={() => void generate(rundown.id)}
+														>
+															{isGenerating(rundown.id) ? 'Generating…' : 'Generate now'}
+														</Button>
+													</div>
+												</div>
+											)}
 											<Link
 												to="/rundown/$rundownId"
 												params={{ rundownId: rundown.id }}

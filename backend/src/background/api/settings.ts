@@ -9,15 +9,93 @@ import {
 import { db } from '../db'
 import { defaultRundownManifest, TYPE_MANIFESTS } from '../manifest'
 import { mutations as typeManifestMutations } from './typeManifests'
+import { mutations as rundownMutations } from './rundowns'
 import { Server, Socket } from 'socket.io'
 import { isValidHttpUrl, normalizeBaseUrl } from '../settingsResolver'
+import {
+	DEFAULT_DAILY_CLONE_TIMEZONE,
+	isValidDailyCloneTime,
+	isValidIanaTimeZone
+} from '../dailyGenerationTime'
+
+async function validateDailyTemplateSettings(
+	settings: ApplicationSettings,
+	{ strictTemplateId = false }: { strictTemplateId?: boolean } = {}
+): Promise<{ error?: Error; normalized: ApplicationSettings }> {
+	const normalized: ApplicationSettings = { ...settings }
+
+	const trimmedTimezone = normalized.dailyCloneTimezone?.trim()
+	if (!trimmedTimezone) {
+		normalized.dailyCloneTimezone = DEFAULT_DAILY_CLONE_TIMEZONE
+	} else if (!isValidIanaTimeZone(trimmedTimezone)) {
+		return {
+			error: new Error(
+				`Invalid dailyCloneTimezone "${normalized.dailyCloneTimezone}" — must be a valid IANA time zone`
+			),
+			normalized
+		}
+	} else {
+		normalized.dailyCloneTimezone = trimmedTimezone
+	}
+
+	if (normalized.dailyCloneTime !== undefined && normalized.dailyCloneTime !== '') {
+		const trimmed = normalized.dailyCloneTime.trim()
+		if (!isValidDailyCloneTime(trimmed)) {
+			return {
+				error: new Error(
+					`Invalid dailyCloneTime "${normalized.dailyCloneTime}" — expected HH:mm (00:00–23:59)`
+				),
+				normalized
+			}
+		}
+		normalized.dailyCloneTime = trimmed
+	} else if (normalized.dailyCloneTime === '') {
+		normalized.dailyCloneTime = undefined
+	}
+
+	const templateId = normalized.dailyTemplateRundownId?.trim()
+	if (templateId) {
+		const { result, error } = await rundownMutations.readOne(templateId)
+		if (error || !result || !result.isTemplate) {
+			if (strictTemplateId) {
+				if (error || !result) {
+					return {
+						error: new Error(`dailyTemplateRundownId "${templateId}" does not exist`),
+						normalized
+					}
+				}
+				return {
+					error: new Error(
+						`dailyTemplateRundownId "${templateId}" must reference a template rundown (isTemplate=true)`
+					),
+					normalized
+				}
+			}
+			normalized.dailyTemplateRundownId = undefined
+		} else {
+			normalized.dailyTemplateRundownId = templateId
+		}
+	} else {
+		normalized.dailyTemplateRundownId = undefined
+	}
+
+	return { normalized }
+}
 
 export const mutations = {
 	async create(
 		payload: MutationApplicationSettingsCreate
 	): Promise<{ result?: ApplicationSettings; error?: Error }> {
+		const { error: validationError, normalized } = await validateDailyTemplateSettings(
+			payload,
+			{ strictTemplateId: true }
+		)
+		if (validationError) {
+			return { error: validationError }
+		}
+
 		const document = {
-			...payload
+			...normalized
 		}
 
 		try {
@@ -47,10 +125,24 @@ export const mutations = {
 			const result = stmt.get() as DBSettings | undefined
 
 			if (result) {
+				const parsed = JSON.parse(result.document) as ApplicationSettings
+				const { error: validationError, normalized } =
+					await validateDailyTemplateSettings(parsed)
+				// Non-strict: dangling template ids are cleared; only time/timezone errors surface.
+				if (validationError) {
+					return { error: validationError }
+				}
+				if (!parsed.dailyCloneTimezone && normalized.dailyCloneTimezone) {
+					db.prepare(
+						`
+						UPDATE settings
+						SET document = (SELECT json_patch(settings.document, json(?)) FROM settings WHERE id = 'settings')
+						WHERE id = 'settings'
+					`
+					).run(JSON.stringify({ dailyCloneTimezone: normalized.dailyCloneTimezone }))
+				}
 				return {
-					result: {
-						...JSON.parse(result.document)
-					}
+					result: normalized
 				}
 			} else {
 				return {}
@@ -63,17 +155,40 @@ export const mutations = {
 	async update(
 		payload: MutationApplicationSettingsUpdate
 	): Promise<{ result?: ApplicationSettings; error?: Error }> {
-		const update = {
+		const { result: existing } = await this.readRaw()
+		const merged: ApplicationSettings = {
+			...(existing ?? {}),
 			...payload
 		}
 
+		const { error: validationError, normalized } = await validateDailyTemplateSettings(
+			merged,
+			{ strictTemplateId: true }
+		)
+		if (validationError) {
+			return { error: validationError }
+		}
+
+		const update: ApplicationSettings = {
+			...payload,
+			dailyCloneTimezone: normalized.dailyCloneTimezone,
+			dailyCloneTime: normalized.dailyCloneTime,
+			dailyTemplateRundownId: normalized.dailyTemplateRundownId
+		}
+
 		if (update.previewBaseUrl !== undefined && update.previewBaseUrl !== '') {
-			const normalized = normalizeBaseUrl(update.previewBaseUrl)
-			if (!isValidHttpUrl(normalized)) {
+			const normalizedUrl = normalizeBaseUrl(update.previewBaseUrl)
+			if (!isValidHttpUrl(normalizedUrl)) {
 				return { error: new Error('Preview base URL must be a valid http or https URL') }
 			}
-			update.previewBaseUrl = normalized
+			update.previewBaseUrl = normalizedUrl
 		}
+
+		const previousTimezone =
+			existing?.dailyCloneTimezone?.trim() || DEFAULT_DAILY_CLONE_TIMEZONE
+		const nextTimezone = normalized.dailyCloneTimezone?.trim() || DEFAULT_DAILY_CLONE_TIMEZONE
+		const templateId =
+			normalized.dailyTemplateRundownId?.trim() || existing?.dailyTemplateRundownId?.trim()
 
 		try {
 			const stmt = db.prepare(`
@@ -82,9 +197,46 @@ export const mutations = {
 				WHERE id = 'settings';
 			`)
 
-			stmt.run(JSON.stringify(update))
+			// json_patch cannot remove keys with undefined — encode clears as JSON null then strip.
+			const patch: Record<string, unknown> = { ...update }
+			for (const key of [
+				'dailyTemplateRundownId',
+				'dailyCloneTime',
+				'dailyCloneTimezone'
+			] as const) {
+				if (key in payload && (payload[key] === undefined || payload[key] === '')) {
+					patch[key] = null
+				}
+			}
+
+			stmt.run(JSON.stringify(patch))
+
+			if (templateId && previousTimezone !== nextTimezone) {
+				const { reconcileForeignTimezoneInProgress } = await import('./dailyGeneration')
+				reconcileForeignTimezoneInProgress(templateId, nextTimezone)
+			}
 
 			return this.read()
+		} catch (e) {
+			console.error(e)
+			return { error: e as Error }
+		}
+	},
+	/** Raw read without validation (avoids recursion from validated read). */
+	async readRaw(): Promise<{ result?: ApplicationSettings; error?: Error }> {
+		try {
+			const stmt = db.prepare(`
+				SELECT *
+				FROM settings
+				WHERE id = 'settings'
+				LIMIT 1;
+			`)
+
+			const result = stmt.get() as DBSettings | undefined
+			if (result) {
+				return { result: JSON.parse(result.document) as ApplicationSettings }
+			}
+			return {}
 		} catch (e) {
 			console.error(e)
 			return { error: e as Error }
@@ -151,7 +303,8 @@ export function registerSettingsHandlers(socket: Socket, _io: Server) {
 
 const DEFAULT_SETTINGS: ApplicationSettings = {
 	coreUrl: '127.0.0.1',
-	corePort: 3000
+	corePort: 3000,
+	dailyCloneTimezone: DEFAULT_DAILY_CLONE_TIMEZONE
 }
 
 async function deleteAllTypeManifests(): Promise<void> {
@@ -177,7 +330,10 @@ async function seedDefaultTypeManifests(): Promise<void> {
 	for (const typeManifest of TYPE_MANIFESTS) {
 		const { error } = await typeManifestMutations.create(typeManifest)
 		if (error) {
-			console.error(`Failed to seed typeManifest ${typeManifest.entityType}/${typeManifest.id}:`, error)
+			console.error(
+				`Failed to seed typeManifest ${typeManifest.entityType}/${typeManifest.id}:`,
+				error
+			)
 			throw error
 		}
 	}
@@ -188,7 +344,9 @@ async function upsertTypeManifestsFromAssets(
 ): Promise<void> {
 	const { result: existingManifests } = await typeManifestMutations.read({})
 	const existingList = Array.isArray(existingManifests) ? existingManifests : []
-	const existingKeys = new Set(existingList.map((manifest) => `${manifest.entityType}:${manifest.id}`))
+	const existingKeys = new Set(
+		existingList.map((manifest) => `${manifest.entityType}:${manifest.id}`)
+	)
 
 	const assetKeys = new Set<string>([
 		`${TypeManifestEntity.Rundown}:${defaultRundownManifest.id}`,
@@ -261,7 +419,7 @@ async function resetTypeManifestsToDefaults(): Promise<void> {
 }
 
 export async function initializeDefaults() {
-	const { result: settings } = await mutations.read()
+	const { result: settings } = await mutations.readRaw()
 	if (!settings) {
 		await mutations.create(DEFAULT_SETTINGS)
 	}
