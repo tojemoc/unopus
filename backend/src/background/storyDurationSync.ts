@@ -9,9 +9,15 @@ import {
 /** Serialize duration sync per story so concurrent saves cannot clobber each other. */
 const syncTailByPartId = new Map<string, Promise<void>>()
 
-const UNSET_DURATION_SQL = `(
-	COALESCE(JSON_EXTRACT(document, '$.duration'), 0) IS NULL
-	OR CAST(COALESCE(JSON_EXTRACT(document, '$.duration'), 0) AS REAL) <= 0
+/**
+ * SQLite equivalent of `!isPositiveDurationSeconds(duration)`:
+ * missing, null, zero, negative, JSON strings, booleans, and other non-numbers
+ * are unset so the conditional UPDATE can repair them.
+ */
+export const UNSET_DURATION_SQL = `(
+	JSON_TYPE(document, '$.duration') IS NULL
+	OR JSON_TYPE(document, '$.duration') NOT IN ('integer', 'real')
+	OR CAST(JSON_EXTRACT(document, '$.duration') AS REAL) <= 0
 )`
 
 function readPartRow(partId: string): Part | undefined {
@@ -153,9 +159,12 @@ async function syncStoryDurationsForPartLocked(partId: string): Promise<void> {
 export function syncStoryDurationsForPart(partId: string): Promise<void> {
 	const previous = syncTailByPartId.get(partId) ?? Promise.resolve()
 	const run = previous.then(() => syncStoryDurationsForPartLocked(partId))
-	syncTailByPartId.set(
-		partId,
-		run.catch(() => undefined)
-	)
+	const tail = run.catch(() => undefined)
+	syncTailByPartId.set(partId, tail)
+	void tail.then(() => {
+		if (syncTailByPartId.get(partId) === tail) {
+			syncTailByPartId.delete(partId)
+		}
+	})
 	return run
 }

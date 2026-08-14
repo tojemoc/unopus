@@ -376,7 +376,10 @@ async function handleCreatePiece(payload: MutationPieceCreate) {
 			}
 		}
 
-		return { result, error: returnedError }
+		const { result: syncedPiece } =
+			result && !returnedError ? await mutations.readOne(result.id) : { result: undefined }
+
+		return { result: syncedPiece ?? result, error: returnedError }
 	}
 }
 
