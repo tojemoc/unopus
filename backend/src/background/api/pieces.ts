@@ -15,6 +15,7 @@ import { db } from '../db'
 import { v4 as uuid } from 'uuid'
 import { sendPartUpdateToCore } from './parts'
 import { mutations as partsMutations } from './parts'
+import { syncStoryDurationsForPart } from '../storyDurationSync'
 import { Server, Socket } from 'socket.io'
 import { mutations as typeManifestMutations, resolveManifestId } from './typeManifests'
 import { resolveSourceEnabled, trimSourceText } from '../sourcePayload'
@@ -360,6 +361,12 @@ async function handleCreatePiece(payload: MutationPieceCreate) {
 
 		if (result) {
 			try {
+				await syncStoryDurationsForPart(result.partId)
+			} catch (error) {
+				console.error('Failed to sync story durations for part', result.partId, error)
+				returnedError = error
+			}
+			try {
 				await sendPartUpdateToCore(result.partId)
 			} catch (error) {
 				console.error(error)
@@ -399,6 +406,12 @@ async function handleUpdatePiece(payload: MutationPieceUpdate) {
 		if (updateError) returnedError = updateError
 
 		if (result) {
+			try {
+				await syncStoryDurationsForPart(result.partId)
+			} catch (error) {
+				console.error('Failed to sync story durations for part', result.partId, error)
+				returnedError = error
+			}
 			try {
 				await sendPartUpdateToCore(result.partId)
 			} catch (error) {

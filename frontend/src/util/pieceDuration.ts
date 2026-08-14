@@ -4,6 +4,13 @@
  * Blueprints `DEFAULT_WIPE_DURATION_MS` = 2500 — used when wipe on-air duration is empty/0
  * so the UI does not look uncontrolled.
  */
+import {
+	resolvePieceOnAirDuration,
+	resolvePartOnAirDuration
+} from '~backend/background/storyDuration'
+
+export { resolvePieceOnAirDuration, resolvePartOnAirDuration }
+
 export const DEFAULT_WIPE_DURATION_SECONDS = 2.5
 
 export function getPieceSourceDurationSeconds(piece: {
@@ -13,16 +20,20 @@ export function getPieceSourceDurationSeconds(piece: {
 	if (typeof raw !== 'number' || !Number.isFinite(raw) || raw <= 0) {
 		return undefined
 	}
-	// Softie sourceDuration is milliseconds.
+	// Sofie sourceDuration is milliseconds.
 	return raw / 1000
 }
 
-export function formatPieceOnAirDuration(piece: {
-	pieceType: string
-	duration?: number
-}): string {
-	if (typeof piece.duration === 'number' && Number.isFinite(piece.duration) && piece.duration > 0) {
-		return formatSecondsClock(piece.duration)
+export function formatPieceOnAirDuration(
+	piece: {
+		pieceType: string
+		duration?: number
+	},
+	partDuration?: number
+): string {
+	const effective = resolvePieceOnAirDuration(piece, partDuration)
+	if (typeof effective === 'number' && Number.isFinite(effective) && effective > 0) {
+		return formatSecondsClock(effective)
 	}
 
 	if (piece.pieceType === 'wipe') {
@@ -33,6 +44,14 @@ export function formatPieceOnAirDuration(piece: {
 	return ''
 }
 
+export function formatPartOnAirDuration(
+	part: { duration?: number },
+	pieces: Array<{ pieceType: string; duration?: number }>
+): string {
+	const effective = resolvePartOnAirDuration(part, pieces)
+	return effective ? formatSecondsClock(effective) : ''
+}
+
 export function formatSourceDurationSeconds(seconds: number | undefined): string {
 	if (typeof seconds !== 'number' || !Number.isFinite(seconds) || seconds <= 0) {
 		return ''
@@ -40,10 +59,10 @@ export function formatSourceDurationSeconds(seconds: number | undefined): string
 	return formatSecondsClock(seconds)
 }
 
-function formatSecondsClock(seconds: number): string {
+export function formatSecondsClock(seconds: number): string {
 	// Keep fractional wipe default readable (2.5s) without breaking mm:ss for whole seconds.
 	if (!Number.isInteger(seconds) && seconds < 60) {
-		const rounded = Math.round(seconds * 10) / 10
+		const rounded = Math.round(seconds * 10) /  10
 		return `${rounded}s`
 	}
 

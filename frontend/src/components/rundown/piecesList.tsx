@@ -62,6 +62,7 @@ export function PiecesList({ part }: { part: Part }) {
 					<PieceRow
 						key={piece.id}
 						piece={piece}
+						part={part}
 						readiness={readiness}
 						showSourceColumn={showSourceColumn}
 					/>
@@ -79,10 +80,12 @@ export function PiecesList({ part }: { part: Part }) {
 
 function PieceRow({
 	piece,
+	part,
 	readiness,
 	showSourceColumn
 }: {
 	piece: Piece
+	part: Part
 	readiness: ReturnType<typeof useRundownReadinessContext>['readiness']
 	showSourceColumn: boolean
 }) {
@@ -151,7 +154,7 @@ function PieceRow({
 			</td>
 			<td className="piece-start">{piece.start !== undefined ? toTime(piece.start) : ''}</td>
 			<td className="piece-duration" title="On-air duration">
-				{formatPieceOnAirDuration(piece)}
+				{formatPieceOnAirDuration(piece, part.duration)}
 			</td>
 			{showSourceColumn ? (
 				<td className="piece-duration" title="Source duration (ffprobe)">
