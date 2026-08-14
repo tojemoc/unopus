@@ -9,6 +9,15 @@ import {
 /** Serialize duration sync per story so concurrent saves cannot clobber each other. */
 const syncTailByPartId = new Map<string, Promise<void>>()
 
+let beforeLocked: ((partId: string) => Promise<void>) | undefined
+
+/** Test-only seam to observe/hold the locked sync path. */
+export function setStoryDurationSyncBeforeLocked(
+	hook: ((partId: string) => Promise<void>) | undefined
+): void {
+	beforeLocked = hook
+}
+
 /**
  * SQLite equivalent of `!isPositiveDurationSeconds(duration)`:
  * missing, null, zero, negative, JSON strings, booleans, and other non-numbers
@@ -97,6 +106,10 @@ function applyPartDurationIfUnset(partId: string, duration: number): void {
 }
 
 async function syncStoryDurationsForPartLocked(partId: string): Promise<void> {
+	if (beforeLocked) {
+		await beforeLocked(partId)
+	}
+
 	const part = readPartRow(partId)
 	if (!part) {
 		return

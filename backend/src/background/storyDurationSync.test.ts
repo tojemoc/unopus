@@ -1,9 +1,13 @@
 import assert from 'node:assert/strict'
-import { describe, it, after } from 'node:test'
+import { describe, it, after, afterEach, beforeEach } from 'node:test'
 import sqlite from 'node:sqlite'
 import { db } from './db.js'
 import { isPositiveDurationSeconds } from './storyDuration.js'
-import { UNSET_DURATION_SQL, syncStoryDurationsForPart } from './storyDurationSync.js'
+import {
+	UNSET_DURATION_SQL,
+	setStoryDurationSyncBeforeLocked,
+	syncStoryDurationsForPart
+} from './storyDurationSync.js'
 
 describe('UNSET_DURATION_SQL', () => {
 	it('matches isPositiveDurationSeconds for JSON duration shapes', () => {
@@ -43,14 +47,7 @@ describe('syncStoryDurationsForPart', () => {
 	const rundownId = 'story-duration-sync-test-rundown'
 	const segmentId = 'story-duration-sync-test-segment'
 
-	after(() => {
-		db.prepare(`DELETE FROM pieces WHERE id = ?`).run(pieceId)
-		db.prepare(`DELETE FROM parts WHERE id = ?`).run(partId)
-		db.prepare(`DELETE FROM segments WHERE id = ?`).run(segmentId)
-		db.prepare(`DELETE FROM rundowns WHERE id = ?`).run(rundownId)
-	})
-
-	it('repairs JSON string piece duration via the unset UPDATE path', async () => {
+	function seedFixture(): void {
 		db.prepare(
 			`INSERT OR REPLACE INTO rundowns (id, playlistId, document) VALUES (?, NULL, ?)`
 		).run(rundownId, JSON.stringify({ name: 'sync-test' }))
@@ -74,25 +71,64 @@ describe('syncStoryDurationsForPart', () => {
 			partId,
 			JSON.stringify({ name: 'mod', pieceType: 'l3d-mod', duration: '8', rank: 0 })
 		)
+	}
 
-		await syncStoryDurationsForPart(partId)
-
+	function readPieceDuration(): unknown {
 		const row = db.prepare(`SELECT document FROM pieces WHERE id = ?`).get(pieceId) as {
 			document: string
 		}
-		const stored = JSON.parse(row.document) as { duration?: unknown }
-		assert.equal(stored.duration, 6)
+		return (JSON.parse(row.document) as { duration?: unknown }).duration
+	}
+
+	beforeEach(() => {
+		seedFixture()
 	})
 
-	it('chains concurrent calls and still settles', async () => {
-		const first = syncStoryDurationsForPart(partId)
-		const second = syncStoryDurationsForPart(partId)
-		await Promise.all([first, second])
+	afterEach(() => {
+		setStoryDurationSyncBeforeLocked(undefined)
+	})
 
-		const row = db.prepare(`SELECT document FROM pieces WHERE id = ?`).get(pieceId) as {
-			document: string
-		}
-		const stored = JSON.parse(row.document) as { duration?: unknown }
-		assert.equal(stored.duration, 6)
+	after(() => {
+		db.prepare(`DELETE FROM pieces WHERE id = ?`).run(pieceId)
+		db.prepare(`DELETE FROM parts WHERE id = ?`).run(partId)
+		db.prepare(`DELETE FROM segments WHERE id = ?`).run(segmentId)
+		db.prepare(`DELETE FROM rundowns WHERE id = ?`).run(rundownId)
+	})
+
+	it('repairs JSON string piece duration via the unset UPDATE path', async () => {
+		await syncStoryDurationsForPart(partId)
+		assert.equal(readPieceDuration(), 6)
+	})
+
+	it('serializes concurrent calls so the second waits for the first locked path', async () => {
+		let enteredLocked = 0
+		let releaseFirst!: () => void
+		const firstHeld = new Promise<void>((resolve) => {
+			releaseFirst = resolve
+		})
+		let signalFirstEntered!: () => void
+		const firstHasEntered = new Promise<void>((resolve) => {
+			signalFirstEntered = resolve
+		})
+
+		setStoryDurationSyncBeforeLocked(async () => {
+			enteredLocked += 1
+			if (enteredLocked === 1) {
+				signalFirstEntered()
+				await firstHeld
+			}
+		})
+
+		const first = syncStoryDurationsForPart(partId)
+		await firstHasEntered
+		const second = syncStoryDurationsForPart(partId)
+		await Promise.resolve()
+		await Promise.resolve()
+		assert.equal(enteredLocked, 1, 'second call must not enter locked sync while the first is held')
+
+		releaseFirst()
+		await Promise.all([first, second])
+		assert.equal(enteredLocked, 2)
+		assert.equal(readPieceDuration(), 6)
 	})
 })
