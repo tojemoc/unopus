@@ -49,11 +49,12 @@ describe('storyDuration', () => {
 			{ duration: 0 },
 			[
 				{ id: 'mod', pieceType: 'l3d-mod', duration: 8 },
+				{ id: 'tema', pieceType: 'l3d-tema' },
 				{ id: 'bug', pieceType: 'logo-bug' }
 			]
 		)
 
 		assert.equal(plan.partDuration, 8)
-		assert.deepEqual(plan.pieceUpdates, [])
+		assert.deepEqual(plan.pieceUpdates, [{ id: 'tema', duration: 8 }])
 	})
 })

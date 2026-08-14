@@ -227,6 +227,7 @@ export const mutations = {
 				await syncStoryDurationsForPart(part.id)
 			} catch (error) {
 				console.error('Failed to sync story durations for new part', part.id, error)
+				return { error: error instanceof Error ? error : new Error(String(error)) }
 			}
 
 			const { result: syncedPart } = await this.readOne(part.id)
@@ -745,13 +746,14 @@ async function handlePartUpdate(
 				await syncStoryDurationsForPart(result.id)
 			} catch (error) {
 				console.error('Failed to sync story durations for part', result.id, error)
-				returnedError = error
+				returnedError = error instanceof Error ? error : new Error(String(error))
 			}
 		}
 
-		const { result: syncedPart } = result ? await mutations.readOne(result.id) : { result: undefined }
+		const { result: syncedPart } =
+			result && !returnedError ? await mutations.readOne(result.id) : { result: undefined }
 
-		if (document && 'id' in document && syncedPart) {
+		if (document && 'id' in document && syncedPart && !returnedError) {
 			try {
 				recordEntityEdit('part', syncedPart.id, editor)
 			} catch (error) {

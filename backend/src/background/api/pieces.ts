@@ -364,13 +364,15 @@ async function handleCreatePiece(payload: MutationPieceCreate) {
 				await syncStoryDurationsForPart(result.partId)
 			} catch (error) {
 				console.error('Failed to sync story durations for part', result.partId, error)
-				returnedError = error
+				returnedError = error instanceof Error ? error : new Error(String(error))
 			}
-			try {
-				await sendPartUpdateToCore(result.partId)
-			} catch (error) {
-				console.error(error)
-				returnedError = error
+			if (!returnedError) {
+				try {
+					await sendPartUpdateToCore(result.partId)
+				} catch (error) {
+					console.error(error)
+					returnedError = error instanceof Error ? error : new Error(String(error))
+				}
 			}
 		}
 
@@ -410,17 +412,22 @@ async function handleUpdatePiece(payload: MutationPieceUpdate) {
 				await syncStoryDurationsForPart(result.partId)
 			} catch (error) {
 				console.error('Failed to sync story durations for part', result.partId, error)
-				returnedError = error
+				returnedError = error instanceof Error ? error : new Error(String(error))
 			}
-			try {
-				await sendPartUpdateToCore(result.partId)
-			} catch (error) {
-				console.error(error)
-				returnedError = error
+			if (!returnedError) {
+				try {
+					await sendPartUpdateToCore(result.partId)
+				} catch (error) {
+					console.error(error)
+					returnedError = error instanceof Error ? error : new Error(String(error))
+				}
 			}
 		}
 
-		return { result, error: returnedError }
+		const { result: syncedPiece } =
+			result && !returnedError ? await mutations.readOne(result.id) : { result: undefined }
+
+		return { result: syncedPiece ?? result, error: returnedError }
 	}
 }
 

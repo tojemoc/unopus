@@ -16,7 +16,8 @@ import { getPieceReadinessState } from './sidebar/partRow'
 import {
 	formatPieceOnAirDuration,
 	formatSourceDurationSeconds,
-	getPieceSourceDurationSeconds
+	getPieceSourceDurationSeconds,
+	resolvePartOnAirDuration
 } from '~/util/pieceDuration'
 
 const selectPiecesByPart = createSelector(
@@ -44,6 +45,18 @@ export function PiecesList({ part }: { part: Part }) {
 		(piece: Piece) => getPieceSourceDurationSeconds(piece) !== undefined
 	)
 
+	const effectivePartDuration = useMemo(
+		() =>
+			resolvePartOnAirDuration(
+				part,
+				pieces.map((piece: Piece) => ({
+					pieceType: piece.pieceType,
+					duration: piece.duration
+				}))
+			),
+		[part, pieces]
+	)
+
 	return (
 		<table className="pieces-table rundown-pieces-list">
 			<thead>
@@ -62,7 +75,7 @@ export function PiecesList({ part }: { part: Part }) {
 					<PieceRow
 						key={piece.id}
 						piece={piece}
-						part={part}
+						effectivePartDuration={effectivePartDuration}
 						readiness={readiness}
 						showSourceColumn={showSourceColumn}
 					/>
@@ -80,12 +93,12 @@ export function PiecesList({ part }: { part: Part }) {
 
 function PieceRow({
 	piece,
-	part,
+	effectivePartDuration,
 	readiness,
 	showSourceColumn
 }: {
 	piece: Piece
-	part: Part
+	effectivePartDuration: number | undefined
 	readiness: ReturnType<typeof useRundownReadinessContext>['readiness']
 	showSourceColumn: boolean
 }) {
@@ -154,7 +167,7 @@ function PieceRow({
 			</td>
 			<td className="piece-start">{piece.start !== undefined ? toTime(piece.start) : ''}</td>
 			<td className="piece-duration" title="On-air duration">
-				{formatPieceOnAirDuration(piece, part.duration)}
+				{formatPieceOnAirDuration(piece, effectivePartDuration)}
 			</td>
 			{showSourceColumn ? (
 				<td className="piece-duration" title="Source duration (ffprobe)">
