@@ -3,8 +3,8 @@ import { useAppSelector } from '~/store/app'
 import type { Part, PieceReadiness, RundownReadiness } from '~backend/background/interfaces'
 import { TypeManifestEntity } from '~backend/background/interfaces'
 import { findTypeManifest } from '~/util/typeManifest'
-import { displayTime } from './displayTime'
 import { ReadinessBadge, getPieceReadinessTooltip } from '../readinessBadge'
+import { formatPartOnAirDuration } from '~/util/pieceDuration'
 
 function getStoryReadiness(
 	partId: string,
@@ -50,7 +50,7 @@ export function SidebarPartRow({
 }: {
 	part: Part
 	readiness: RundownReadiness | null
-	partPieces: { id: string; partId: string }[]
+	partPieces: Array<{ id: string; partId: string; pieceType: string; duration?: number }>
 }) {
 	const navigate = useNavigate()
 	const matchRoute = useMatchRoute()
@@ -114,7 +114,13 @@ export function SidebarPartRow({
 				{part.name}
 			</div>
 			<div className="col-duration">
-				{part.duration ? displayTime(part.duration) : '--:--'}
+				{formatPartOnAirDuration(
+					part,
+					partPieces.map((piece) => ({
+						pieceType: piece.pieceType,
+						duration: piece.duration
+					}))
+				) || '--:--'}
 			</div>
 		</div>
 	)

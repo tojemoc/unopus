@@ -33,6 +33,11 @@ import { mutations as piecesMutations } from './pieces'
 import { Server, Socket } from 'socket.io'
 import { recordEntityEdit } from '../auth/authStore'
 import type { AuthenticatedSocket } from '../auth/socketAuth'
+import {
+	resolvePartOnAirDuration,
+	resolvePieceOnAirDuration
+} from '../storyDuration'
+import { syncStoryDurationsForPart } from '../storyDurationSync'
 
 async function mutatePart(part: Part): Promise<MutatedPart> {
 	const { result: partTypeManifests } = await typeManifestMutations.read({
@@ -41,6 +46,23 @@ async function mutatePart(part: Part): Promise<MutatedPart> {
 	const partManifestList = Array.isArray(partTypeManifests) ? partTypeManifests : []
 	const partManifest = findTypeManifest(partManifestList, part.partType)
 	const ingestType = getPartIngestType(part, partManifest)
+
+	const rawPieces = await getMutatedPiecesFromPart(part.id)
+	const durationPieces = rawPieces.map((piece) => ({
+		duration: piece.duration,
+		pieceType: piece.objectType
+	}))
+	const effectivePartDuration =
+		resolvePartOnAirDuration(part, durationPieces) ?? part.duration
+
+	const pieces = rawPieces.map((piece) => ({
+		...piece,
+		duration:
+			resolvePieceOnAirDuration(
+				{ duration: piece.duration, pieceType: piece.objectType },
+				effectivePartDuration
+			) ?? piece.duration
+	}))
 
 	return {
 		externalId: part.id,
@@ -55,9 +77,9 @@ async function mutatePart(part: Part): Promise<MutatedPart> {
 			type: ingestType,
 			float: part.float,
 			script: part.script,
-			duration: part.duration,
+			duration: effectivePartDuration,
 
-			pieces: await getMutatedPiecesFromPart(part.id)
+			pieces
 		}
 	}
 }
@@ -201,7 +223,15 @@ export const mutations = {
 				}
 			}
 
-			return { result: part }
+			try {
+				await syncStoryDurationsForPart(part.id)
+			} catch (error) {
+				console.error('Failed to sync story durations for new part', part.id, error)
+				return { error: error instanceof Error ? error : new Error(String(error)) }
+			}
+
+			const { result: syncedPart } = await this.readOne(part.id)
+			return { result: syncedPart ?? part }
 		} catch (e) {
 			console.error(e)
 			return { error: e as Error }
@@ -711,21 +741,33 @@ async function handlePartUpdate(
 
 		if (updateError) returnedError = updateError
 
-		if (document && 'id' in document && result) {
+		if (result) {
 			try {
-				recordEntityEdit('part', result.id, editor)
+				await syncStoryDurationsForPart(result.id)
 			} catch (error) {
-				console.error('Failed to record entity edit for part', result.id, error)
+				console.error('Failed to sync story durations for part', result.id, error)
+				returnedError = error instanceof Error ? error : new Error(String(error))
+			}
+		}
+
+		const { result: syncedPart } =
+			result && !returnedError ? await mutations.readOne(result.id) : { result: undefined }
+
+		if (document && 'id' in document && syncedPart && !returnedError) {
+			try {
+				recordEntityEdit('part', syncedPart.id, editor)
+			} catch (error) {
+				console.error('Failed to record entity edit for part', syncedPart.id, error)
 			}
 			try {
-				await sendPartDiffToCore(document, result)
+				await sendPartDiffToCore(document, syncedPart)
 			} catch (error) {
 				console.error(error)
 				returnedError = error
 			}
 		}
 
-		return { result, error: returnedError }
+		return { result: syncedPart ?? result, error: returnedError }
 	}
 }
 async function handlePartMove(payload: MutationPartMove) {
