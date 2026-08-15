@@ -124,9 +124,11 @@ describe('syncStoryDurationsForPart', () => {
 		const second = syncStoryDurationsForPart(partId)
 		await Promise.resolve()
 		await Promise.resolve()
-		assert.equal(enteredLocked, 1, 'second call must not enter locked sync while the first is held')
-
-		releaseFirst()
+		try {
+			assert.equal(enteredLocked, 1, 'second call must not enter locked sync while the first is held')
+		} finally {
+			releaseFirst()
+		}
 		await Promise.all([first, second])
 		assert.equal(enteredLocked, 2)
 		assert.equal(readPieceDuration(), 6)
