@@ -620,7 +620,7 @@ export function registerPartsHandlers(socket: Socket, io: Server) {
 		switch (action) {
 			case IpcOperationType.Create:
 				{
-					const { result, error, materialized } = await handlePartCreate(payload)
+					const { result, error, materialized } = await handlePartCreate(payload, io)
 					if (materialized && result) {
 						const piecesResult = await piecesMutations.read({ rundownId: result.rundownId })
 						io.emit('pieces:update', {
@@ -681,13 +681,17 @@ export function registerPartsHandlers(socket: Socket, io: Server) {
 	})
 }
 
-async function handlePartCreate(payload: MutationPartCreate) {
+async function handlePartCreate(payload: MutationPartCreate, io?: Server) {
 	{
 		let returnedError: unknown | Error | undefined
 
 		const { result, error: createError } = await mutations.create(payload)
 
 		if (createError) returnedError = createError
+
+		if (result && !returnedError && io) {
+			broadcastStoryDurationSync(io, result.id)
+		}
 
 		if (result && !result.float) {
 			const { result: rundown } = await rundownMutations.read({ id: result.rundownId })
