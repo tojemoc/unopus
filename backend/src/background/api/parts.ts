@@ -37,7 +37,7 @@ import {
 	resolvePartOnAirDuration,
 	resolvePieceOnAirDuration
 } from '../storyDuration'
-import { syncStoryDurationsForPart } from '../storyDurationSync'
+import { syncStoryDurationsForPart, broadcastStoryDurationSync } from '../storyDurationSync'
 
 async function mutatePart(part: Part): Promise<MutatedPart> {
 	const { result: partTypeManifests } = await typeManifestMutations.read({
@@ -657,7 +657,8 @@ export function registerPartsHandlers(socket: Socket, io: Server) {
 				{
 					const { result, error } = await handlePartUpdate(
 						payload,
-						(socket as AuthenticatedSocket).data.user
+						(socket as AuthenticatedSocket).data.user,
+						io
 					)
 					callback(result || error)
 				}
@@ -731,7 +732,8 @@ async function handleCopyPart(payload: MutationPartCopy) {
 }
 async function handlePartUpdate(
 	payload: MutationPartUpdate,
-	editor: AuthenticatedSocket['data']['user']
+	editor: AuthenticatedSocket['data']['user'],
+	io?: Server
 ) {
 	{
 		let returnedError: unknown | Error | undefined
@@ -744,6 +746,7 @@ async function handlePartUpdate(
 		if (result) {
 			try {
 				await syncStoryDurationsForPart(result.id)
+				if (io) broadcastStoryDurationSync(io, result.id)
 			} catch (error) {
 				console.error('Failed to sync story durations for part', result.id, error)
 				returnedError = error instanceof Error ? error : new Error(String(error))

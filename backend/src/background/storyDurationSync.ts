@@ -105,6 +105,22 @@ function applyPartDurationIfUnset(partId: string, duration: number): void {
 	}
 }
 
+/** Push synced part/piece rows to connected RE clients (after DB inheritance). */
+export function broadcastStoryDurationSync(
+	io: { emit: (event: string, payload: unknown) => void },
+	partId: string
+): void {
+	const part = readPartRow(partId)
+	const pieces = readPiecesForPart(partId)
+
+	if (part) {
+		io.emit('parts:update', { action: 'update', parts: [part] })
+	}
+	if (pieces.length > 0) {
+		io.emit('pieces:update', { action: 'update', pieces })
+	}
+}
+
 async function syncStoryDurationsForPartLocked(partId: string): Promise<void> {
 	if (beforeLocked) {
 		await beforeLocked(partId)
