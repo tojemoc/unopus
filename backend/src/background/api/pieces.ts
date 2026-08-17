@@ -15,7 +15,7 @@ import { db } from '../db'
 import { v4 as uuid } from 'uuid'
 import { sendPartUpdateToCore } from './parts'
 import { mutations as partsMutations } from './parts'
-import { syncStoryDurationsForPart } from '../storyDurationSync'
+import { syncStoryDurationsForPart, broadcastStoryDurationSync } from '../storyDurationSync'
 import { Server, Socket } from 'socket.io'
 import { mutations as typeManifestMutations, resolveManifestId } from './typeManifests'
 import { resolveSourceEnabled, trimSourceText } from '../sourcePayload'
@@ -312,12 +312,12 @@ export const mutations = {
 	}
 }
 
-export function registerPiecesHandlers(socket: Socket, _io: Server) {
+export function registerPiecesHandlers(socket: Socket, io: Server) {
 	socket.on('pieces', async (action, payload, callback) => {
 		switch (action) {
 			case IpcOperationType.Create:
 				{
-					const { result, error } = await handleCreatePiece(payload)
+					const { result, error } = await handleCreatePiece(payload, io)
 					callback(result || error)
 				}
 				break
@@ -335,7 +335,7 @@ export function registerPiecesHandlers(socket: Socket, _io: Server) {
 				break
 			case IpcOperationType.Update:
 				{
-					const { result, error } = await handleUpdatePiece(payload)
+					const { result, error } = await handleUpdatePiece(payload, io)
 					callback(result || error)
 				}
 				break
@@ -351,7 +351,7 @@ export function registerPiecesHandlers(socket: Socket, _io: Server) {
 	})
 }
 
-async function handleCreatePiece(payload: MutationPieceCreate) {
+async function handleCreatePiece(payload: MutationPieceCreate, io?: Server) {
 	{
 		let returnedError: unknown | Error | undefined
 
@@ -362,6 +362,7 @@ async function handleCreatePiece(payload: MutationPieceCreate) {
 		if (result) {
 			try {
 				await syncStoryDurationsForPart(result.partId)
+				if (io) broadcastStoryDurationSync(io, result.partId)
 			} catch (error) {
 				console.error('Failed to sync story durations for part', result.partId, error)
 				returnedError = error instanceof Error ? error : new Error(String(error))
@@ -402,7 +403,7 @@ async function handleCopyPiece(payload: MutationPieceCopy) {
 	return { result, error: returnedError }
 }
 
-async function handleUpdatePiece(payload: MutationPieceUpdate) {
+async function handleUpdatePiece(payload: MutationPieceUpdate, io?: Server) {
 	{
 		let returnedError: unknown | Error | undefined
 
@@ -413,6 +414,7 @@ async function handleUpdatePiece(payload: MutationPieceUpdate) {
 		if (result) {
 			try {
 				await syncStoryDurationsForPart(result.partId)
+				if (io) broadcastStoryDurationSync(io, result.partId)
 			} catch (error) {
 				console.error('Failed to sync story durations for part', result.partId, error)
 				returnedError = error instanceof Error ? error : new Error(String(error))

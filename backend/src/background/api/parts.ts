@@ -37,7 +37,7 @@ import {
 	resolvePartOnAirDuration,
 	resolvePieceOnAirDuration
 } from '../storyDuration'
-import { syncStoryDurationsForPart } from '../storyDurationSync'
+import { syncStoryDurationsForPart, broadcastStoryDurationSync } from '../storyDurationSync'
 
 async function mutatePart(part: Part): Promise<MutatedPart> {
 	const { result: partTypeManifests } = await typeManifestMutations.read({
@@ -620,7 +620,7 @@ export function registerPartsHandlers(socket: Socket, io: Server) {
 		switch (action) {
 			case IpcOperationType.Create:
 				{
-					const { result, error, materialized } = await handlePartCreate(payload)
+					const { result, error, materialized } = await handlePartCreate(payload, io)
 					if (materialized && result) {
 						const piecesResult = await piecesMutations.read({ rundownId: result.rundownId })
 						io.emit('pieces:update', {
@@ -657,7 +657,8 @@ export function registerPartsHandlers(socket: Socket, io: Server) {
 				{
 					const { result, error } = await handlePartUpdate(
 						payload,
-						(socket as AuthenticatedSocket).data.user
+						(socket as AuthenticatedSocket).data.user,
+						io
 					)
 					callback(result || error)
 				}
@@ -680,13 +681,17 @@ export function registerPartsHandlers(socket: Socket, io: Server) {
 	})
 }
 
-async function handlePartCreate(payload: MutationPartCreate) {
+async function handlePartCreate(payload: MutationPartCreate, io?: Server) {
 	{
 		let returnedError: unknown | Error | undefined
 
 		const { result, error: createError } = await mutations.create(payload)
 
 		if (createError) returnedError = createError
+
+		if (result && !returnedError && io) {
+			broadcastStoryDurationSync(io, result.id)
+		}
 
 		if (result && !result.float) {
 			const { result: rundown } = await rundownMutations.read({ id: result.rundownId })
@@ -731,7 +736,8 @@ async function handleCopyPart(payload: MutationPartCopy) {
 }
 async function handlePartUpdate(
 	payload: MutationPartUpdate,
-	editor: AuthenticatedSocket['data']['user']
+	editor: AuthenticatedSocket['data']['user'],
+	io?: Server
 ) {
 	{
 		let returnedError: unknown | Error | undefined
@@ -744,6 +750,7 @@ async function handlePartUpdate(
 		if (result) {
 			try {
 				await syncStoryDurationsForPart(result.id)
+				if (io) broadcastStoryDurationSync(io, result.id)
 			} catch (error) {
 				console.error('Failed to sync story durations for part', result.id, error)
 				returnedError = error instanceof Error ? error : new Error(String(error))
