@@ -221,8 +221,19 @@ export const mutations = {
 		}
 	},
 	async update(payload: MutationPieceUpdate): Promise<{ result?: Piece; error?: Error }> {
+		const existing = await this.readOne(payload.id)
+		if (existing.error || !existing.result) {
+			return { error: existing.error ?? new Error(`Piece with id ${payload.id} not found`) }
+		}
+
+		const mergedPayload =
+			payload.payload !== undefined
+				? { ...(existing.result.payload ?? {}), ...payload.payload }
+				: existing.result.payload
+
 		const update = {
 			...payload,
+			...(payload.payload !== undefined ? { payload: mergedPayload } : {}),
 			id: null,
 			playlistId: null,
 			rundownId: null,

@@ -32,8 +32,17 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 	const form = useForm({
 		defaultValues: piece,
 		onSubmit: async (values) => {
+			const pieceToSave: Piece = {
+				...values.value,
+				payload: {
+					...(piece.payload ?? {}),
+					...(values.value.payload ?? {})
+				}
+			}
+
+			let updatedPiece: Piece
 			try {
-				await dispatch(updatePiece({ piece: values.value })).unwrap()
+				updatedPiece = await dispatch(updatePiece({ piece: pieceToSave })).unwrap()
 			} catch (e) {
 				console.error(e)
 				toasts.show({
@@ -69,15 +78,14 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 						bodyContent: 'Piece saved, but part duration could not be synchronized'
 					})
 					// Preserve the successful piece save even when part sync fails.
-					form.reset()
+					form.reset(updatedPiece)
 					return
 				}
 			}
 
 			// Clear after a successful piece save path (retry keeps the flag when part sync fails).
 			durationFromMediaRef.current = false
-			// Mark as pristine
-			form.reset()
+			form.reset(updatedPiece)
 		}
 	})
 
