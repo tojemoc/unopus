@@ -2,7 +2,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { useMemo } from 'react'
 import { useAppDispatch, useAppSelector } from '~/store/app'
 import './piecesList.scss'
-import { addNewPiece, copyPiece } from '~/store/pieces'
+import { addNewPiece, copyPiece, reorderPieces } from '~/store/pieces'
 import type { Part, Piece } from '~backend/background/interfaces'
 import { TypeManifestEntity } from '~backend/background/interfaces'
 import { toTime } from '~/util/lib'
@@ -19,6 +19,21 @@ import {
 	getPieceSourceDurationSeconds,
 	resolvePartOnAirDuration
 } from '~/util/pieceDuration'
+import { Button, Stack } from 'react-bootstrap'
+
+function sortPieces(pieces: Piece[]): Piece[] {
+	return [...pieces].sort((a, b) => {
+		const rankA = typeof a.rank === 'number' ? a.rank : Number.MAX_SAFE_INTEGER
+		const rankB = typeof b.rank === 'number' ? b.rank : Number.MAX_SAFE_INTEGER
+		if (rankA !== rankB) return rankA - rankB
+
+		const startA = a.start ?? 0
+		const startB = b.start ?? 0
+		if (startA !== startB) return startA - startB
+
+		return a.id.localeCompare(b.id)
+	})
+}
 
 const selectPiecesByPart = createSelector(
 	[
@@ -26,17 +41,21 @@ const selectPiecesByPart = createSelector(
 		(_state, props: { rundownId: string; segmentId: string; partId: string }) => props
 	],
 	(pieces, props) =>
-		pieces.filter(
-			(p: Piece) =>
-				p.rundownId === props.rundownId &&
-				p.segmentId === props.segmentId &&
-				p.partId === props.partId
+		sortPieces(
+			pieces.filter(
+				(p: Piece) =>
+					p.rundownId === props.rundownId &&
+					p.segmentId === props.segmentId &&
+					p.partId === props.partId
+			)
 		)
 )
 
 export function PiecesList({ part }: { part: Part }) {
 	const { rundownId, segmentId, id: partId } = part
 	const partIds = useMemo(() => ({ rundownId, segmentId, partId }), [rundownId, segmentId, partId])
+	const dispatch = useAppDispatch()
+	const toasts = useToasts()
 
 	const pieces = useAppSelector((state) => selectPiecesByPart(state, partIds))
 	const { readiness } = useRundownReadinessContext()
@@ -57,10 +76,34 @@ export function PiecesList({ part }: { part: Part }) {
 		[part, pieces]
 	)
 
+	const handleReorderPiece = (sourceIndex: number, targetIndex: number) => {
+		const piece = pieces[sourceIndex]
+		if (!piece || sourceIndex === targetIndex) {
+			return
+		}
+
+		dispatch(
+			reorderPieces({
+				element: piece,
+				sourceIndex,
+				targetIndex
+			})
+		)
+			.unwrap()
+			.catch((error) => {
+				console.error(error)
+				toasts.show({
+					headerContent: 'Reordering piece',
+					bodyContent: 'Encountered an unexpected error'
+				})
+			})
+	}
+
 	return (
 		<table className="pieces-table rundown-pieces-list">
 			<thead>
 				<tr>
+					<th aria-label="Order" />
 					<th>Status</th>
 					<th>Type</th>
 					<th>Item</th>
@@ -71,10 +114,14 @@ export function PiecesList({ part }: { part: Part }) {
 				</tr>
 			</thead>
 			<tbody>
-				{pieces.map((piece: Piece) => (
+				{pieces.map((piece: Piece, index: number) => (
 					<PieceRow
 						key={piece.id}
 						piece={piece}
+						isFirst={index === 0}
+						isLast={index === pieces.length - 1}
+						onMoveUp={() => handleReorderPiece(index, index - 1)}
+						onMoveDown={() => handleReorderPiece(index, index + 1)}
 						effectivePartDuration={effectivePartDuration}
 						readiness={readiness}
 						showSourceColumn={showSourceColumn}
@@ -82,7 +129,7 @@ export function PiecesList({ part }: { part: Part }) {
 				))}
 
 				<tr>
-					<td colSpan={showSourceColumn ? 7 : 6}>
+					<td colSpan={showSourceColumn ? 8 : 7}>
 						<NewPieceButtons part={part} existingPieces={pieces} />
 					</td>
 				</tr>
@@ -93,11 +140,19 @@ export function PiecesList({ part }: { part: Part }) {
 
 function PieceRow({
 	piece,
+	isFirst,
+	isLast,
+	onMoveUp,
+	onMoveDown,
 	effectivePartDuration,
 	readiness,
 	showSourceColumn
 }: {
 	piece: Piece
+	isFirst: boolean
+	isLast: boolean
+	onMoveUp: () => void
+	onMoveDown: () => void
 	effectivePartDuration: number | undefined
 	readiness: ReturnType<typeof useRundownReadinessContext>['readiness']
 	showSourceColumn: boolean
@@ -153,6 +208,28 @@ function PieceRow({
 
 	return (
 		<tr onClick={pieceRowClick}>
+			<td onClick={(event) => event.stopPropagation()}>
+				<Stack direction="horizontal" gap={1} className="piece-order-controls">
+					<Button
+						variant="outline-secondary"
+						size="sm"
+						disabled={isFirst}
+						aria-label={`Move ${piece.name} up`}
+						onClick={onMoveUp}
+					>
+						↑
+					</Button>
+					<Button
+						variant="outline-secondary"
+						size="sm"
+						disabled={isLast}
+						aria-label={`Move ${piece.name} down`}
+						onClick={onMoveDown}
+					>
+						↓
+					</Button>
+				</Stack>
+			</td>
 			<td>
 				{pieceReadiness ? (
 					<ReadinessBadge state={pieceReadiness.state} tooltip={pieceReadiness.tooltip} compact />

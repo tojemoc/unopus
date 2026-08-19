@@ -102,6 +102,7 @@ export interface Piece extends IHasPayload {
 
 	start?: number
 	duration?: number // todo - timing type for infintes
+	rank?: number
 
 	pieceType: string
 }

@@ -155,6 +155,9 @@ export const ipcAPI: BackendApi = {
 	updatePiece: (piece: MutationPieceUpdate) => {
 		return getSocket().emitWithAck('pieces', 'update', piece)
 	},
+	reorderPieces: (payload: MutationReorder<MutationPieceUpdate>) => {
+		return getSocket().emitWithAck('pieces', 'reorder', payload)
+	},
 	deletePiece: (pieceId: string) => {
 		return getSocket().emitWithAck('pieces', 'delete', {
 			id: pieceId
