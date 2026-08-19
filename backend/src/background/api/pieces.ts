@@ -221,19 +221,9 @@ export const mutations = {
 		}
 	},
 	async update(payload: MutationPieceUpdate): Promise<{ result?: Piece; error?: Error }> {
-		const existing = await this.readOne(payload.id)
-		if (existing.error || !existing.result) {
-			return { error: existing.error ?? new Error(`Piece with id ${payload.id} not found`) }
-		}
-
-		const mergedPayload =
-			payload.payload !== undefined
-				? { ...(existing.result.payload ?? {}), ...payload.payload }
-				: existing.result.payload
-
 		const update = {
 			...payload,
-			...(payload.payload !== undefined ? { payload: mergedPayload } : {}),
+			payload: undefined,
 			id: null,
 			playlistId: null,
 			rundownId: null,
@@ -242,18 +232,48 @@ export const mutations = {
 		}
 
 		try {
-			const stmt = db.prepare(`
-				UPDATE pieces
-				SET playlistId = ?, document = (SELECT json_patch(pieces.document, json(?)) FROM pieces WHERE id = ?)
-				WHERE id = ?;
-			`)
+			let sql: string
+			let args: (string | null)[]
 
-			const result = stmt.run(
-				payload.playlistId || null,
-				JSON.stringify(update),
-				payload.id,
-				payload.id
-			)
+			if (payload.payload !== undefined) {
+				// Atomically deep-merge incoming payload fields into the stored payload
+				// so concurrent partial updates cannot overwrite each other's fields.
+				sql = `
+					UPDATE pieces
+					SET playlistId = ?,
+					    document = json_set(
+					        (SELECT json_patch(pieces.document, json(?)) FROM pieces WHERE id = ?),
+					        '$.payload',
+					        json_patch(
+					            COALESCE(json_extract(pieces.document, '$.payload'), '{}'),
+					            json(?)
+					        )
+					    )
+					WHERE id = ?;
+				`
+				args = [
+					payload.playlistId || null,
+					JSON.stringify(update),
+					payload.id,
+					JSON.stringify(payload.payload),
+					payload.id
+				]
+			} else {
+				sql = `
+					UPDATE pieces
+					SET playlistId = ?, document = (SELECT json_patch(pieces.document, json(?)) FROM pieces WHERE id = ?)
+					WHERE id = ?;
+				`
+				args = [
+					payload.playlistId || null,
+					JSON.stringify(update),
+					payload.id,
+					payload.id
+				]
+			}
+
+			const stmt = db.prepare(sql)
+			const result = stmt.run(...args)
 			if (result.changes === 0) {
 				throw new Error('No rows were updated')
 			}
