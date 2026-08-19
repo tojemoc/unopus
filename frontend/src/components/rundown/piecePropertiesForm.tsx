@@ -384,8 +384,8 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 													) {
 														return
 													}
-													// Only the primary media field drives piece/part duration.
-													if (fieldInfo.id !== 'fileName') {
+													// Primary media fields drive piece/part duration.
+													if (fieldInfo.id !== 'fileName' && fieldInfo.id !== 'iluFile') {
 														return
 													}
 													// Piece duration is stored in seconds in the editor.
