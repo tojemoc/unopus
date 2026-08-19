@@ -1,7 +1,7 @@
 /**
  * Display helpers for piece on-air vs source (ffprobe) duration.
  *
- * Blueprints `DEFAULT_WIPE_DURATION_MS` = 2500 — used when wipe on-air duration is empty/0
+ * Blueprints `DEFAULT_WIPE_DURATION_MS` = 760 — used when wipe on-air duration is empty/0
  * so the UI does not look uncontrolled.
  */
 import {
@@ -11,7 +11,7 @@ import {
 
 export { resolvePieceOnAirDuration, resolvePartOnAirDuration }
 
-export const DEFAULT_WIPE_DURATION_SECONDS = 2.5
+export const DEFAULT_WIPE_DURATION_SECONDS = 0.76
 
 export function getPieceSourceDurationSeconds(piece: {
 	payload?: Record<string, unknown> | null
@@ -37,7 +37,7 @@ export function formatPieceOnAirDuration(
 	}
 
 	if (piece.pieceType === 'wipe') {
-		// Mirrors sofie-demo-blueprints DEFAULT_WIPE_DURATION_MS = 2500
+		// Mirrors sofie-demo-blueprints DEFAULT_WIPE_DURATION_MS = 760
 		return formatSecondsClock(DEFAULT_WIPE_DURATION_SECONDS)
 	}
 
