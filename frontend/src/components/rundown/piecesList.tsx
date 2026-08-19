@@ -17,7 +17,9 @@ import {
 	formatPieceOnAirDuration,
 	formatSourceDurationSeconds,
 	getPieceSourceDurationSeconds,
-	resolvePartOnAirDuration
+	resolvePartOnAirDuration,
+	WIPE_CUT_POINT_SECONDS,
+	formatSecondsClock
 } from '~/util/pieceDuration'
 
 const selectPiecesByPart = createSelector(
@@ -168,6 +170,11 @@ function PieceRow({
 			<td className="piece-start">{piece.start !== undefined ? toTime(piece.start) : ''}</td>
 			<td className="piece-duration" title="On-air duration">
 				{formatPieceOnAirDuration(piece, effectivePartDuration)}
+				{piece.pieceType === 'wipe' ? (
+					<span className="wipe-cut-point" title={`Cut point at ${formatSecondsClock(WIPE_CUT_POINT_SECONDS)} — content switches when screen is fully covered. Other audio muted during full wipe.`}>
+						✂ {formatSecondsClock(WIPE_CUT_POINT_SECONDS)}
+					</span>
+				) : null}
 			</td>
 			{showSourceColumn ? (
 				<td className="piece-duration" title="Source duration (ffprobe)">

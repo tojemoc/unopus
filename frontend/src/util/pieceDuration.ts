@@ -1,8 +1,10 @@
 /**
  * Display helpers for piece on-air vs source (ffprobe) duration.
  *
- * Blueprints `DEFAULT_WIPE_DURATION_MS` = 2500 — used when wipe on-air duration is empty/0
- * so the UI does not look uncontrolled.
+ * Blueprints `DEFAULT_WIPE_DURATION_MS` = 2500 — full stinger overlay on PGM.
+ * The cut point (content switch under the wipe) is at 760ms / 38 frames @ 50fps.
+ * During the full wipe window, other audio sources are force-muted so the wipe SFX
+ * plays in isolation.
  */
 import {
 	resolvePieceOnAirDuration,
@@ -12,6 +14,9 @@ import {
 export { resolvePieceOnAirDuration, resolvePartOnAirDuration }
 
 export const DEFAULT_WIPE_DURATION_SECONDS = 2.5
+
+/** Cut point within the wipe stinger when screen is fully covered (frame 38 @ 50fps). */
+export const WIPE_CUT_POINT_SECONDS = 0.76
 
 export function getPieceSourceDurationSeconds(piece: {
 	payload?: Record<string, unknown> | null
