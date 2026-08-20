@@ -40,11 +40,19 @@ function getNextPieceRank(partId: string): number {
 		.all(partId) as Array<{ document: string }>
 
 	let maxRank = -1
+	let hasExplicitRank = false
 	for (const row of rows) {
 		const document = JSON.parse(row.document) as Pick<Piece, 'rank'>
 		if (typeof document.rank === 'number') {
+			hasExplicitRank = true
 			maxRank = Math.max(maxRank, document.rank)
 		}
+	}
+
+	// Legacy parts without ranks sort unranked pieces after explicit ranks.
+	// Append at the end instead of assigning rank 0 (which would jump above them).
+	if (!hasExplicitRank) {
+		return rows.length
 	}
 
 	return maxRank + 1
@@ -160,7 +168,8 @@ export const mutations = {
 						segmentId: targetSegmentId,
 						partId: targetPartId,
 						name: `${sourcePiece.name}${!payload.preserveName ? ' Copy' : ''}`,
-						id: undefined
+						id: undefined,
+						rank: undefined
 					})
 
 					if (createError) returnedError = createError
@@ -214,21 +223,26 @@ export const mutations = {
 			FROM pieces
 		`
 		const args: string[] = []
+		const conditions: string[] = []
 		if (payload.id) {
-			query += `\nWHERE id = ?`
+			conditions.push(`id = ?`)
 			args.push(payload.id)
 		}
 		if (payload.rundownId) {
-			query += `\nWHERE rundownId = ?`
+			conditions.push(`rundownId = ?`)
 			args.push(payload.rundownId)
 		}
 		if (payload.segmentId) {
-			query += `\nWHERE segmentId = ?`
+			conditions.push(`segmentId = ?`)
 			args.push(payload.segmentId)
 		}
 		if (payload.partId) {
-			query += `\nWHERE partId = ?`
+			conditions.push(`partId = ?`)
 			args.push(payload.partId)
+		}
+
+		if (conditions.length > 0) {
+			query += `\nWHERE ${conditions.join(' AND ')}`
 		}
 
 		try {
@@ -288,13 +302,12 @@ export const mutations = {
 	},
 	async reorder({
 		element,
-		sourceIndex,
+		sourceIndex: _sourceIndex,
 		targetIndex
 	}: MutationReorder<MutationPieceUpdate>): Promise<{ result?: Piece[]; error?: Error }> {
 		try {
 			const { result, error } = await this.read({
-				partId: element.partId,
-				rundownId: element.rundownId
+				partId: element.partId
 			})
 
 			if (error) throw error
@@ -304,7 +317,12 @@ export const mutations = {
 
 			const safeTargetIndex = Math.max(0, Math.min((result as Piece[]).length - 1, targetIndex))
 			const piecesInOrder = [...(result as Piece[])].sort(comparePieceOrder)
-			const reorderedPieces = spliceReorder(piecesInOrder, sourceIndex, safeTargetIndex)
+			const resolvedSourceIndex = piecesInOrder.findIndex((piece) => piece.id === element.id)
+			if (resolvedSourceIndex === -1) {
+				throw new Error(`Piece with id ${element.id} not found during reorder`)
+			}
+
+			const reorderedPieces = spliceReorder(piecesInOrder, resolvedSourceIndex, safeTargetIndex)
 
 			db.exec('BEGIN;')
 			try {
@@ -331,8 +349,7 @@ export const mutations = {
 			}
 
 			const { result: updatedPieces, error: updatedPiecesError } = await this.read({
-				partId: element.partId,
-				rundownId: element.rundownId
+				partId: element.partId
 			})
 
 			if (updatedPiecesError) throw updatedPiecesError
