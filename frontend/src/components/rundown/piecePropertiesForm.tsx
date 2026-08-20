@@ -15,7 +15,7 @@ import { resolveSourceEnabled } from '~/util/sourcePayload'
 import {
 	DEFAULT_WIPE_DURATION_SECONDS,
 	WIPE_CUT_POINT_SECONDS,
-	formatSecondsClock,
+	formatSecondsPrecise,
 	getPieceSourceDurationSeconds
 } from '~/util/pieceDuration'
 
@@ -185,7 +185,7 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 											Effective on air: {DEFAULT_WIPE_DURATION_SECONDS}s (blueprint
 											DEFAULT_WIPE_DURATION_MS=2500) when left empty.
 											<br />
-											✂ Cut point at {formatSecondsClock(WIPE_CUT_POINT_SECONDS)} — content switches when screen is fully covered. Other audio sources are muted during the full wipe so the SFX plays in isolation.
+											✂ Cut point at {formatSecondsPrecise(WIPE_CUT_POINT_SECONDS)} — content switches when screen is fully covered. Other audio sources are muted during the full wipe so the SFX plays in isolation.
 										</Form.Text>
 									) : null}
 								</Form.Group>
