@@ -221,6 +221,11 @@ export const mutations = {
 		}
 	},
 	async update(payload: MutationPieceUpdate): Promise<{ result?: Piece; error?: Error }> {
+		const existing = await this.readOne(payload.id)
+		if (existing.error || !existing.result) {
+			return { error: existing.error ?? new Error(`Piece with id ${payload.id} not found`) }
+		}
+
 		const update = {
 			...payload,
 			payload: undefined,
@@ -275,7 +280,7 @@ export const mutations = {
 			const stmt = db.prepare(sql)
 			const result = stmt.run(...args)
 			if (result.changes === 0) {
-				throw new Error('No rows were updated')
+				return { error: new Error(`Piece with id ${payload.id} not found`) }
 			}
 
 			return this.readOne(payload.id)
