@@ -20,7 +20,7 @@ import { syncStoryDurationsForPart, broadcastStoryDurationSync } from '../storyD
 import { Server, Socket } from 'socket.io'
 import { mutations as typeManifestMutations, resolveManifestId } from './typeManifests'
 import { resolveSourceEnabled, trimSourceText } from '../sourcePayload'
-import { spliceReorder } from '../util'
+import { spliceReorder, resolveReorderTargetIndex } from '../util'
 
 export function comparePieceOrder(a: Piece, b: Piece): number {
 	const rankA = typeof a.rank === 'number' ? a.rank : Number.MAX_SAFE_INTEGER
@@ -36,23 +36,36 @@ export function comparePieceOrder(a: Piece, b: Piece): number {
 
 function getNextPieceRank(partId: string): number {
 	const rows = db
-		.prepare(`SELECT document FROM pieces WHERE partId = ?`)
-		.all(partId) as Array<{ document: string }>
+		.prepare(`SELECT id, document FROM pieces WHERE partId = ?`)
+		.all(partId) as Array<{ id: string; document: string }>
 
-	let maxRank = -1
-	let hasExplicitRank = false
-	for (const row of rows) {
-		const document = JSON.parse(row.document) as Pick<Piece, 'rank'>
-		if (typeof document.rank === 'number') {
-			hasExplicitRank = true
-			maxRank = Math.max(maxRank, document.rank)
-		}
+	const pieces = rows.map((row) => {
+		const document = JSON.parse(row.document) as Omit<Piece, 'id'>
+		return { ...document, id: row.id } as Piece
+	})
+
+	const hasExplicitRank = pieces.some((piece) => typeof piece.rank === 'number')
+
+	// Unranked legacy pieces sort at Number.MAX_SAFE_INTEGER. A finite append rank
+	// (e.g. rows.length) would appear *before* them — materialize 0..n-1 first.
+	if (!hasExplicitRank && pieces.length > 0) {
+		const ordered = [...pieces].sort(comparePieceOrder)
+		const updateStmt = db.prepare(`
+			UPDATE pieces
+			SET document = (SELECT json_patch(pieces.document, json(?)) FROM pieces WHERE id = ?)
+			WHERE id = ?;
+		`)
+		ordered.forEach((piece, index) => {
+			updateStmt.run(JSON.stringify({ rank: index }), piece.id, piece.id)
+		})
+		return ordered.length
 	}
 
-	// Legacy parts without ranks sort unranked pieces after explicit ranks.
-	// Append at the end instead of assigning rank 0 (which would jump above them).
-	if (!hasExplicitRank) {
-		return rows.length
+	let maxRank = -1
+	for (const piece of pieces) {
+		if (typeof piece.rank === 'number') {
+			maxRank = Math.max(maxRank, piece.rank)
+		}
 	}
 
 	return maxRank + 1
@@ -302,7 +315,7 @@ export const mutations = {
 	},
 	async reorder({
 		element,
-		sourceIndex: _sourceIndex,
+		sourceIndex,
 		targetIndex
 	}: MutationReorder<MutationPieceUpdate>): Promise<{ result?: Piece[]; error?: Error }> {
 		try {
@@ -315,14 +328,19 @@ export const mutations = {
 				throw new Error('An error occurred when getting pieces from the database during reorder.')
 			}
 
-			const safeTargetIndex = Math.max(0, Math.min((result as Piece[]).length - 1, targetIndex))
 			const piecesInOrder = [...(result as Piece[])].sort(comparePieceOrder)
 			const resolvedSourceIndex = piecesInOrder.findIndex((piece) => piece.id === element.id)
 			if (resolvedSourceIndex === -1) {
 				throw new Error(`Piece with id ${element.id} not found during reorder`)
 			}
 
-			const reorderedPieces = spliceReorder(piecesInOrder, resolvedSourceIndex, safeTargetIndex)
+			const resolvedTargetIndex = resolveReorderTargetIndex(
+				resolvedSourceIndex,
+				sourceIndex,
+				targetIndex,
+				piecesInOrder.length
+			)
+			const reorderedPieces = spliceReorder(piecesInOrder, resolvedSourceIndex, resolvedTargetIndex)
 
 			db.exec('BEGIN;')
 			try {
