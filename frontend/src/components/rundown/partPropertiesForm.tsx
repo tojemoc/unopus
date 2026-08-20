@@ -2,7 +2,7 @@ import { useForm } from '@tanstack/react-form'
 import { Button, ButtonGroup, Form, Modal } from 'react-bootstrap'
 import type { Part } from '~backend/background/interfaces'
 import { FieldInfo } from '../form'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { friendlyLabel } from '~/util/fieldLabels'
 import { findTypeManifest } from '~/util/typeManifest'
 import { TypeManifestEntity } from '~backend/background/interfaces'
@@ -11,6 +11,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { useAppDispatch, useAppSelector } from '~/store/app'
 import { removePart, updatePart } from '~/store/parts'
 import { useToasts } from '../toasts/useToasts'
+import { formatPartOnAirDuration, resolvePartOnAirDuration } from '~/util/pieceDuration'
 
 export function PartPropertiesForm({ part }: { part: Part }) {
 	const dispatch = useAppDispatch()
@@ -19,6 +20,21 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 	const [lastEdit, setLastEdit] = useState<{ displayName: string; editedAt: number } | null>(null)
 
 	const manifests = useAppSelector((state) => state.typeManifests.manifests)
+	const livePart = useAppSelector((state) => state.parts.parts.find((p) => p.id === part.id) ?? part)
+	const childPieces = useAppSelector((state) =>
+		state.pieces.pieces.filter((piece) => piece.partId === part.id)
+	)
+	const effectivePartDuration = useMemo(
+		() =>
+			resolvePartOnAirDuration(
+				livePart,
+				childPieces.map((piece) => ({
+					pieceType: piece.pieceType,
+					duration: piece.duration
+				}))
+			),
+		[livePart, childPieces]
+	)
 
 	useEffect(() => {
 		let cancelled = false
@@ -42,8 +58,8 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 		defaultValues: part,
 		onSubmit: async (values) => {
 			try {
-				await dispatch(updatePart({ part: values.value })).unwrap()
-				form.reset()
+				const updatedPart = await dispatch(updatePart({ part: values.value })).unwrap()
+				form.reset(updatedPart)
 				setSavedFlash(true)
 				setTimeout(() => setSavedFlash(false), 2000)
 				try {
@@ -61,6 +77,22 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 			}
 		}
 	})
+
+	const prevPartIdRef = useRef(part.id)
+
+	useEffect(() => {
+		if (prevPartIdRef.current !== livePart.id) {
+			prevPartIdRef.current = livePart.id
+			form.reset(livePart)
+			return
+		}
+
+		if (form.getFieldMeta('duration')?.isDirty) {
+			return
+		}
+
+		form.setFieldValue('duration', livePart.duration)
+	}, [livePart, form])
 
 	return (
 		<div>
@@ -149,21 +181,49 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 				)}
 				<form.Field
 					name="duration"
-					children={(field) => (
-						<>
-							<Form.Group className="mb-3">
-								<Form.Label htmlFor={field.name}>Duration (seconds):</Form.Label>
-								<Form.Control
-									name={field.name}
-									type="number"
-									value={Number(field.state.value ?? 0)}
-									onBlur={field.handleBlur}
-									onChange={(e) => field.handleChange(Number(e.target.value))}
-								/>
-							</Form.Group>
-							<FieldInfo field={field} />
-						</>
-					)}
+					children={(field) => {
+						const storedDuration =
+							typeof field.state.value === 'number' &&
+							Number.isFinite(field.state.value) &&
+							field.state.value > 0
+								? field.state.value
+								: undefined
+						const effectiveHint =
+							effectivePartDuration &&
+							(!storedDuration || storedDuration !== effectivePartDuration)
+								? formatPartOnAirDuration(livePart, childPieces)
+								: undefined
+
+						return (
+							<>
+								<Form.Group className="mb-3">
+									<Form.Label htmlFor={field.name}>Duration (seconds):</Form.Label>
+									<Form.Control
+										name={field.name}
+										type="number"
+										min={0}
+										step="any"
+										value={storedDuration ?? ''}
+										placeholder={
+											effectivePartDuration ? String(effectivePartDuration) : 'Unset'
+										}
+										onBlur={field.handleBlur}
+										onChange={(e) => {
+											const raw = e.target.value.trim()
+											field.handleChange(raw === '' ? undefined : Number(raw))
+										}}
+									/>
+									{effectiveHint ? (
+										<Form.Text className="text-muted">
+											Effective on-air duration: {effectiveHint}
+											{!storedDuration ? ' (from child pieces until you set a value)' : ''}
+										</Form.Text>
+									) : null}
+								</Form.Group>
+								<FieldInfo field={field} />
+							</>
+						)
+					}}
 				/>
 				<form.Field
 					name="script"
