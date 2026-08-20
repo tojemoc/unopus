@@ -329,6 +329,18 @@ export const mutations = {
 		sourceIndex,
 		targetIndex
 	}: MutationReorder<MutationPieceUpdate>): Promise<{ result?: Piece[]; error?: Error }> {
+		if (
+			!element ||
+			typeof element.id !== 'string' ||
+			element.id === '' ||
+			typeof element.partId !== 'string' ||
+			element.partId === '' ||
+			!Number.isInteger(sourceIndex) ||
+			!Number.isInteger(targetIndex)
+		) {
+			return { error: new Error('Invalid piece reorder payload') }
+		}
+
 		try {
 			const { result, error } = await this.read({
 				partId: element.partId
