@@ -8,6 +8,7 @@ import {
 	MutationPieceDelete,
 	MutationPieceRead,
 	MutationPieceUpdate,
+	MutationReorder,
 	Piece,
 	TypeManifestEntity
 } from '../interfaces'
@@ -19,6 +20,56 @@ import { syncStoryDurationsForPart, broadcastStoryDurationSync } from '../storyD
 import { Server, Socket } from 'socket.io'
 import { mutations as typeManifestMutations, resolveManifestId } from './typeManifests'
 import { resolveSourceEnabled, trimSourceText } from '../sourcePayload'
+import { spliceReorder, resolveReorderTargetIndex } from '../util'
+
+export function comparePieceOrder(a: Piece, b: Piece): number {
+	const rankA = typeof a.rank === 'number' ? a.rank : Number.MAX_SAFE_INTEGER
+	const rankB = typeof b.rank === 'number' ? b.rank : Number.MAX_SAFE_INTEGER
+	if (rankA !== rankB) return rankA - rankB
+
+	const startA = a.start ?? 0
+	const startB = b.start ?? 0
+	if (startA !== startB) return startA - startB
+
+	return a.id.localeCompare(b.id)
+}
+
+function getNextPieceRank(partId: string): number {
+	const rows = db
+		.prepare(`SELECT id, document FROM pieces WHERE partId = ?`)
+		.all(partId) as Array<{ id: string; document: string }>
+
+	const pieces = rows.map((row) => {
+		const document = JSON.parse(row.document) as Omit<Piece, 'id'>
+		return { ...document, id: row.id } as Piece
+	})
+
+	const hasExplicitRank = pieces.some((piece) => typeof piece.rank === 'number')
+
+	// Unranked legacy pieces sort at Number.MAX_SAFE_INTEGER. A finite append rank
+	// (e.g. rows.length) would appear *before* them — materialize 0..n-1 first.
+	if (!hasExplicitRank && pieces.length > 0) {
+		const ordered = [...pieces].sort(comparePieceOrder)
+		const updateStmt = db.prepare(`
+			UPDATE pieces
+			SET document = (SELECT json_patch(pieces.document, json(?)) FROM pieces WHERE id = ?)
+			WHERE id = ?;
+		`)
+		ordered.forEach((piece, index) => {
+			updateStmt.run(JSON.stringify({ rank: index }), piece.id, piece.id)
+		})
+		return ordered.length
+	}
+
+	let maxRank = -1
+	for (const piece of pieces) {
+		if (typeof piece.rank === 'number') {
+			maxRank = Math.max(maxRank, piece.rank)
+		}
+	}
+
+	return maxRank + 1
+}
 
 export const mutations = {
 	async create(payload: MutationPieceCreate): Promise<{ result?: Piece; error?: Error }> {
@@ -43,21 +94,27 @@ export const mutations = {
 			resolvedPieceType = matchedPieceType
 		}
 
-		const id = payload.id || uuid()
-		const document: Partial<MutationPieceCreate> = {
-			...payload,
-			pieceType: payloadHasType ? resolvedPieceType : defaultPieceType,
-			start: payload.start ?? 0
-		}
-		delete document.playlistId
-		delete document.rundownId
-		delete document.segmentId
-		delete document.partId
+		if (!payload.rundownId || !payload.segmentId || !payload.partId)
+			return { error: new Error('Missing rundown id, segment id or part id') }
 
-		if (!payload.rundownId || !payload.partId)
-			return { error: new Error('Missing rundown id or part id') }
+		const id = payload.id || uuid()
 
 		try {
+			db.exec('BEGIN')
+
+			const document: Partial<MutationPieceCreate> = {
+				...payload,
+				pieceType: payloadHasType ? resolvedPieceType : defaultPieceType,
+				start: payload.start ?? 0,
+				// Rank materialization for legacy parts must share this transaction so a
+				// failed INSERT cannot leave rewritten ranks behind.
+				rank: payload.rank ?? getNextPieceRank(payload.partId)
+			}
+			delete document.playlistId
+			delete document.rundownId
+			delete document.segmentId
+			delete document.partId
+
 			const stmt = db.prepare(`
 				INSERT INTO pieces (id,playlistId,rundownId,segmentId,partId,document)
 				VALUES (?,?,?,?,?,json(?));
@@ -73,8 +130,14 @@ export const mutations = {
 			)
 			if (result.changes === 0) throw new Error('No rows were inserted')
 
+			db.exec('COMMIT')
 			return this.readOne(id)
 		} catch (e) {
+			try {
+				db.exec('ROLLBACK')
+			} catch {
+				// ignore when no transaction is open
+			}
 			console.error(e)
 			return { error: e as Error }
 		}
@@ -129,7 +192,8 @@ export const mutations = {
 						segmentId: targetSegmentId,
 						partId: targetPartId,
 						name: `${sourcePiece.name}${!payload.preserveName ? ' Copy' : ''}`,
-						id: undefined
+						id: undefined,
+						rank: undefined
 					})
 
 					if (createError) returnedError = createError
@@ -183,21 +247,26 @@ export const mutations = {
 			FROM pieces
 		`
 		const args: string[] = []
+		const conditions: string[] = []
 		if (payload.id) {
-			query += `\nWHERE id = ?`
+			conditions.push(`id = ?`)
 			args.push(payload.id)
 		}
 		if (payload.rundownId) {
-			query += `\nWHERE rundownId = ?`
+			conditions.push(`rundownId = ?`)
 			args.push(payload.rundownId)
 		}
 		if (payload.segmentId) {
-			query += `\nWHERE segmentId = ?`
+			conditions.push(`segmentId = ?`)
 			args.push(payload.segmentId)
 		}
 		if (payload.partId) {
-			query += `\nWHERE partId = ?`
+			conditions.push(`partId = ?`)
 			args.push(payload.partId)
+		}
+
+		if (conditions.length > 0) {
+			query += `\nWHERE ${conditions.join(' AND ')}`
 		}
 
 		try {
@@ -206,14 +275,16 @@ export const mutations = {
 			const documents = stmt.all(...args) as unknown as DBPiece[]
 
 			return {
-				result: documents.map((d) => ({
-					...JSON.parse(d.document),
-					id: d.id,
-					playlistId: d.playlistId,
-					rundownId: d.rundownId,
-					segmentId: d.segmentId,
-					partId: d.partId
-				}))
+				result: documents
+					.map((d) => ({
+						...JSON.parse(d.document),
+						id: d.id,
+						playlistId: d.playlistId,
+						rundownId: d.rundownId,
+						segmentId: d.segmentId,
+						partId: d.partId
+					}))
+					.sort(comparePieceOrder)
 			}
 		} catch (e) {
 			console.error(e)
@@ -284,6 +355,86 @@ export const mutations = {
 			}
 
 			return this.readOne(payload.id)
+		} catch (e) {
+			console.error(e)
+			return { error: e as Error }
+		}
+	},
+	async reorder({
+		element,
+		sourceIndex,
+		targetIndex
+	}: MutationReorder<MutationPieceUpdate>): Promise<{ result?: Piece[]; error?: Error }> {
+		if (
+			!element ||
+			typeof element.id !== 'string' ||
+			element.id === '' ||
+			typeof element.partId !== 'string' ||
+			element.partId === '' ||
+			!Number.isInteger(sourceIndex) ||
+			!Number.isInteger(targetIndex)
+		) {
+			return { error: new Error('Invalid piece reorder payload') }
+		}
+
+		try {
+			const { result, error } = await this.read({
+				partId: element.partId
+			})
+
+			if (error) throw error
+			if (result && (!('length' in result) || result.length < 2)) {
+				throw new Error('An error occurred when getting pieces from the database during reorder.')
+			}
+
+			const piecesInOrder = [...(result as Piece[])].sort(comparePieceOrder)
+			const resolvedSourceIndex = piecesInOrder.findIndex((piece) => piece.id === element.id)
+			if (resolvedSourceIndex === -1) {
+				throw new Error(`Piece with id ${element.id} not found during reorder`)
+			}
+
+			const resolvedTargetIndex = resolveReorderTargetIndex(
+				resolvedSourceIndex,
+				sourceIndex,
+				targetIndex,
+				piecesInOrder.length
+			)
+			const reorderedPieces = spliceReorder(piecesInOrder, resolvedSourceIndex, resolvedTargetIndex)
+
+			db.exec('BEGIN;')
+			try {
+				const updateStmt = db.prepare(`
+				UPDATE pieces
+				SET playlistId = ?, document = (SELECT json_patch(pieces.document, json(?)) FROM pieces WHERE id = ?)
+				WHERE id = ?;
+			`)
+
+				reorderedPieces.forEach((piece, index) => {
+					updateStmt.run(
+						piece.playlistId || null,
+						JSON.stringify({ rank: index }),
+						piece.id,
+						piece.id
+					)
+				})
+
+				db.exec('COMMIT;')
+			} catch (transactionError) {
+				console.error(transactionError)
+				db.exec('ROLLBACK;')
+				throw transactionError
+			}
+
+			const { result: updatedPieces, error: updatedPiecesError } = await this.read({
+				partId: element.partId
+			})
+
+			if (updatedPiecesError) throw updatedPiecesError
+			if (!updatedPieces || !Array.isArray(updatedPieces)) {
+				throw new Error('Failed to read pieces after reorder.')
+			}
+
+			return { result: updatedPieces }
 		} catch (e) {
 			console.error(e)
 			return { error: e as Error }
@@ -372,6 +523,12 @@ export function registerPiecesHandlers(socket: Socket, io: Server) {
 			case IpcOperationType.Update:
 				{
 					const { result, error } = await handleUpdatePiece(payload, io)
+					callback(result || error)
+				}
+				break
+			case IpcOperationType.Reorder:
+				{
+					const { result, error } = await handleReorderPieces(payload, io)
 					callback(result || error)
 				}
 				break
@@ -470,6 +627,29 @@ async function handleUpdatePiece(payload: MutationPieceUpdate, io?: Server) {
 
 		return { result: syncedPiece ?? result, error: returnedError }
 	}
+}
+
+async function handleReorderPieces(payload: MutationReorder<MutationPieceUpdate>, io?: Server) {
+	let returnedError: unknown | Error | undefined
+
+	const { result: reorderedPieces, error: reorderError } = await mutations.reorder(payload)
+
+	if (reorderError) returnedError = reorderError
+
+	if (!reorderError && Array.isArray(reorderedPieces)) {
+		if (io) {
+			io.emit('pieces:update', { action: 'update', pieces: reorderedPieces })
+		}
+
+		try {
+			await sendPartUpdateToCore(reorderedPieces[0].partId)
+		} catch (error) {
+			console.error(error)
+			returnedError = error instanceof Error ? error : new Error(String(error))
+		}
+	}
+
+	return { result: returnedError === undefined ? reorderedPieces : undefined, error: returnedError }
 }
 
 async function handleDeletePiece(payload: MutationPieceDelete) {

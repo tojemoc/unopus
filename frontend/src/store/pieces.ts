@@ -1,6 +1,8 @@
 import type {
 	MutationPieceCloneFromParToPart,
 	MutationPieceCopy,
+	MutationPieceUpdate,
+	MutationReorder,
 	PayloadValue,
 	Piece
 } from '~backend/background/interfaces.js'
@@ -56,6 +58,12 @@ export const updatePiece = createAppAsyncThunk(
 	'pieces/updatePiece',
 	async (payload: UpdatePiecePayload) => {
 		return ipcAPI.updatePiece(payload.piece)
+	}
+)
+export const reorderPieces = createAppAsyncThunk(
+	'pieces/reorderPieces',
+	async (payload: MutationReorder<MutationPieceUpdate>) => {
+		return ipcAPI.reorderPieces(payload)
 	}
 )
 export const removePiece = createAppAsyncThunk(
@@ -136,6 +144,14 @@ const piecesSlice = createSlice({
 				const index = state.pieces.findIndex((piece) => piece.id === action.payload.id)
 				if (index !== -1) {
 					state.pieces[index] = action.payload
+				}
+			})
+			.addCase(reorderPieces.fulfilled, (state, action) => {
+				for (const updatedPiece of action.payload) {
+					const index = state.pieces.findIndex((piece) => piece.id === updatedPiece.id)
+					if (index !== -1) {
+						state.pieces[index] = updatedPiece
+					}
 				}
 			})
 			.addCase(removePiece.fulfilled, (state, action) => {

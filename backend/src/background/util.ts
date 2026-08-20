@@ -62,3 +62,14 @@ export function spliceReorder<T>(arr: T[], sourceIndex: number, targetIndex: num
 	newArr = [...newArr.slice(0, targetIndex), arr[sourceIndex], ...newArr.slice(targetIndex)]
 	return newArr
 }
+
+/** Apply client move as a relative offset against the server's current source index. */
+export function resolveReorderTargetIndex(
+	resolvedSourceIndex: number,
+	clientSourceIndex: number,
+	clientTargetIndex: number,
+	length: number
+): number {
+	const delta = clientTargetIndex - clientSourceIndex
+	return Math.max(0, Math.min(length - 1, resolvedSourceIndex + delta))
+}

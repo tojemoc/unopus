@@ -82,6 +82,7 @@ export interface BackendApi {
 	addNewPiece: (piece: MutationPieceCreate) => Promise<Piece>
 	copyPiece: (payload: MutationPieceCopy) => Promise<Piece>
 	updatePiece: (piece: MutationPieceUpdate) => Promise<Piece>
+	reorderPieces: (payload: MutationReorder<MutationPieceUpdate>) => Promise<Piece[]>
 	deletePiece: (pieceId: string) => Promise<void>
 	clonePiecesFromPartToPart: (payload: MutationPieceCloneFromParToPart) => Promise<Piece[]>
 	onPiecesUpdate: (callback: (update: PiecesUpdateEvent) => void) => void
