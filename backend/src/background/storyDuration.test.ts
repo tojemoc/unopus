@@ -13,6 +13,14 @@ describe('storyDuration', () => {
 			6
 		)
 		assert.equal(
+			resolvePieceOnAirDuration({ pieceType: 'l3d-predstavovak', duration: undefined }, 6),
+			6
+		)
+		assert.equal(
+			resolvePieceOnAirDuration({ pieceType: 'l3d-odporucanie', duration: undefined }, 6),
+			6
+		)
+		assert.equal(
 			resolvePieceOnAirDuration({ pieceType: 'logo-bug', duration: undefined }, 6),
 			undefined
 		)
@@ -42,6 +50,23 @@ describe('storyDuration', () => {
 
 		assert.equal(plan.partDuration, undefined)
 		assert.deepEqual(plan.pieceUpdates, [{ id: 'mod', duration: 6 }])
+	})
+
+	it('plans story sync: part → l3d-predstavovak and l3d-odporucanie when unset', () => {
+		const plan = planStoryDurationSync(
+			{ duration: 6 },
+			[
+				{ id: 'pred', pieceType: 'l3d-predstavovak' },
+				{ id: 'odp', pieceType: 'l3d-odporucanie' },
+				{ id: 'bug', pieceType: 'logo-bug' }
+			]
+		)
+
+		assert.equal(plan.partDuration, undefined)
+		assert.deepEqual(plan.pieceUpdates, [
+			{ id: 'pred', duration: 6 },
+			{ id: 'odp', duration: 6 }
+		])
 	})
 
 	it('plans Mod story sync: child → part when part unset', () => {
