@@ -94,22 +94,27 @@ export const mutations = {
 			resolvedPieceType = matchedPieceType
 		}
 
-		if (!payload.rundownId || !payload.partId)
-			return { error: new Error('Missing rundown id or part id') }
+		if (!payload.rundownId || !payload.segmentId || !payload.partId)
+			return { error: new Error('Missing rundown id, segment id or part id') }
 
 		const id = payload.id || uuid()
-		const document: Partial<MutationPieceCreate> = {
-			...payload,
-			pieceType: payloadHasType ? resolvedPieceType : defaultPieceType,
-			start: payload.start ?? 0,
-			rank: payload.rank ?? getNextPieceRank(payload.partId)
-		}
-		delete document.playlistId
-		delete document.rundownId
-		delete document.segmentId
-		delete document.partId
 
 		try {
+			db.exec('BEGIN')
+
+			const document: Partial<MutationPieceCreate> = {
+				...payload,
+				pieceType: payloadHasType ? resolvedPieceType : defaultPieceType,
+				start: payload.start ?? 0,
+				// Rank materialization for legacy parts must share this transaction so a
+				// failed INSERT cannot leave rewritten ranks behind.
+				rank: payload.rank ?? getNextPieceRank(payload.partId)
+			}
+			delete document.playlistId
+			delete document.rundownId
+			delete document.segmentId
+			delete document.partId
+
 			const stmt = db.prepare(`
 				INSERT INTO pieces (id,playlistId,rundownId,segmentId,partId,document)
 				VALUES (?,?,?,?,?,json(?));
@@ -125,8 +130,14 @@ export const mutations = {
 			)
 			if (result.changes === 0) throw new Error('No rows were inserted')
 
+			db.exec('COMMIT')
 			return this.readOne(id)
 		} catch (e) {
+			try {
+				db.exec('ROLLBACK')
+			} catch {
+				// ignore when no transaction is open
+			}
 			console.error(e)
 			return { error: e as Error }
 		}
