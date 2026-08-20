@@ -10,9 +10,11 @@ export const STORY_DURATION_INHERIT_PIECE_TYPES = new Set([
 	'l3d-headline',
 	'l3d-tema',
 	'l3d-mod',
+	'l3d-predstavovak',
 	'l3d-syn',
 	'l3d-sjv',
-	'l3d-sport'
+	'l3d-sport',
+	'l3d-odporucanie'
 ])
 
 export function isPositiveDurationSeconds(
