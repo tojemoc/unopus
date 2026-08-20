@@ -94,6 +94,9 @@ export const mutations = {
 			resolvedPieceType = matchedPieceType
 		}
 
+		if (!payload.rundownId || !payload.partId)
+			return { error: new Error('Missing rundown id or part id') }
+
 		const id = payload.id || uuid()
 		const document: Partial<MutationPieceCreate> = {
 			...payload,
@@ -105,9 +108,6 @@ export const mutations = {
 		delete document.rundownId
 		delete document.segmentId
 		delete document.partId
-
-		if (!payload.rundownId || !payload.partId)
-			return { error: new Error('Missing rundown id or part id') }
 
 		try {
 			const stmt = db.prepare(`
