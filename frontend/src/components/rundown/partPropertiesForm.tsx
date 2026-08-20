@@ -2,7 +2,7 @@ import { useForm } from '@tanstack/react-form'
 import { Button, ButtonGroup, Form, Modal } from 'react-bootstrap'
 import type { Part } from '~backend/background/interfaces'
 import { FieldInfo } from '../form'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { friendlyLabel } from '~/util/fieldLabels'
 import { findTypeManifest } from '~/util/typeManifest'
 import { TypeManifestEntity } from '~backend/background/interfaces'
@@ -78,9 +78,21 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 		}
 	})
 
+	const prevPartIdRef = useRef(part.id)
+
 	useEffect(() => {
+		if (prevPartIdRef.current !== livePart.id) {
+			prevPartIdRef.current = livePart.id
+			form.reset(livePart)
+			return
+		}
+
+		if (form.getFieldMeta('duration')?.isDirty) {
+			return
+		}
+
 		form.setFieldValue('duration', livePart.duration)
-	}, [livePart.id, livePart.duration, form])
+	}, [livePart, form])
 
 	return (
 		<div>
