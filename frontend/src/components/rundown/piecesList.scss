@@ -29,6 +29,13 @@
 		font-size: 0.75rem;
 	}
 
+	.wipe-cut-point {
+		display: block;
+		font-size: 0.65rem;
+		color: var(--re-text-muted);
+		opacity: 0.8;
+	}
+
 	.add-piece-button {
 		grid-column: 1/5;
 		text-decoration: none;
