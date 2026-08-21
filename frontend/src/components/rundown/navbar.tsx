@@ -12,11 +12,20 @@ import { Stack } from 'react-bootstrap'
 import { usePartInsertTarget } from '~/hooks/usePartInsertTarget'
 import { PartTypeButtons } from './sidebar/partTypeButtons'
 import { CoreDiagnosticsChip } from './coreDiagnosticsChip'
+import { resolvePartOnAirDuration } from '~/util/pieceDuration'
+import { resolveEffectiveScriptCps } from '~/util/scriptReadingTime'
+import { useMemo } from 'react'
 
 export function RundownNavbar({ rundown }: { rundown: Rundown }) {
 	const parts = useAppSelector((state) =>
 		state.parts.parts.filter((p) => p.rundownId === rundown.id)
 	)
+	const pieces = useAppSelector((state) =>
+		state.pieces.pieces.filter((p) => p.rundownId === rundown.id)
+	)
+	const userId = useAppSelector((s) => s.auth.user?.id)
+	const settingsCps = useAppSelector((s) => s.settings.settings?.scriptCps)
+	const scriptCps = resolveEffectiveScriptCps({ userId, settingsCps })
 
 	const insertTarget = usePartInsertTarget(rundown.id)
 
@@ -29,14 +38,25 @@ export function RundownNavbar({ rundown }: { rundown: Rundown }) {
 			? 'Not set'
 			: toTime((rundown.expectedEndTime - rundown.expectedStartTime) / 1000)
 
+	const actualDuration = useMemo(() => {
+		return parts
+			.filter((p) => !p.float && !p.skip)
+			.map((part) => {
+				const partPieces = pieces
+					.filter((piece) => piece.partId === part.id)
+					.map((piece) => ({
+						pieceType: piece.pieceType,
+						duration: piece.duration,
+						skip: piece.skip
+					}))
+				return resolvePartOnAirDuration(part, partPieces, { scriptCps }) ?? 0
+			})
+			.reduce((a, b) => a + b, 0)
+	}, [parts, pieces, scriptCps])
+
 	let diff: string | number = '-'
 	if (rundown.expectedStartTime && rundown.expectedEndTime) {
 		const expectedDuration = rundown.expectedEndTime - rundown.expectedStartTime
-		const actualDuration = parts
-			.filter((p) => p.payload && p.duration)
-			.map((p) => p.duration as number)
-			.reduce((a, b) => a + b, 0)
-
 		diff = toTimeDiff(actualDuration - expectedDuration / 1000)
 	}
 

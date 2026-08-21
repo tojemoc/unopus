@@ -266,6 +266,117 @@ export function CoreConnectionSettingsForm({ settings }: { settings: Application
 					)}
 				/>
 
+				<hr className="my-4" />
+				<h3 className="h5">Script timing &amp; editorial</h3>
+				<p className="text-muted small">
+					Reading-time estimates drive ILU story length. SYN / VO / VT length still comes from
+					ffprobe on the linked clip. Per-user CPS can also be tweaked next to any script field
+					(saved in this browser).
+				</p>
+
+				<form.Field
+					name="scriptCps"
+					children={(field) => (
+						<>
+							<Form.Group className="mb-3">
+								<Form.Label htmlFor={field.name}>{friendlyLabel('scriptCps')}</Form.Label>
+								<Form.Control
+									id={field.name}
+									name={field.name}
+									type="number"
+									min={5}
+									max={40}
+									step={1}
+									value={field.state.value ?? 15}
+									onBlur={field.handleBlur}
+									onChange={(e) => field.handleChange(Number(e.target.value))}
+								/>
+								<Form.Text className="text-muted">
+									Default characters per second for script → mm:ss estimates (5–40). Default 15.
+								</Form.Text>
+							</Form.Group>
+							<FieldInfo field={field} />
+						</>
+					)}
+				/>
+
+				<form.Field
+					name="iluDurationMode"
+					children={(field) => (
+						<>
+							<Form.Group className="mb-3">
+								<Form.Label htmlFor={field.name}>{friendlyLabel('iluDurationMode')}</Form.Label>
+								<Form.Select
+									id={field.name}
+									name={field.name}
+									value={field.state.value ?? 'auto'}
+									onBlur={field.handleBlur}
+									onChange={(e) =>
+										field.handleChange(e.target.value === 'manual' ? 'manual' : 'auto')
+									}
+								>
+									<option value="auto">Auto — Sofie may take after reading time</option>
+									<option value="manual">Manual — wait for take (duration still sent)</option>
+								</Form.Select>
+								<Form.Text className="text-muted">
+									When Auto, ILU parts export <code>autoNext: true</code> so Sofie can skip after
+									the script duration. Manual keeps the duration but does not request auto-take.
+								</Form.Text>
+							</Form.Group>
+							<FieldInfo field={field} />
+						</>
+					)}
+				/>
+
+				<form.Field
+					name="skipStatusUnlessEditorChecked"
+					children={(field) => (
+						<>
+							<Form.Group className="mb-3">
+								<Form.Label htmlFor={field.name}>
+									{friendlyLabel('skipStatusUnlessEditorChecked')}
+								</Form.Label>
+								<Form.Switch
+									id={field.name}
+									name={field.name}
+									checked={field.state.value !== false}
+									onBlur={field.handleBlur}
+									onChange={(e) => field.handleChange(e.target.checked)}
+								/>
+								<Form.Text className="text-muted">
+									Skipped stories/pieces show an SK status unless marked checked by an editor.
+								</Form.Text>
+							</Form.Group>
+							<FieldInfo field={field} />
+						</>
+					)}
+				/>
+
+				<form.Field
+					name="requireEditorCheckForAir"
+					children={(field) => (
+						<>
+							<Form.Group className="mb-3">
+								<Form.Label htmlFor={field.name}>
+									{friendlyLabel('requireEditorCheckForAir')}
+								</Form.Label>
+								<Form.Switch
+									id={field.name}
+									name={field.name}
+									checked={Boolean(field.state.value)}
+									onBlur={field.handleBlur}
+									onChange={(e) => field.handleChange(e.target.checked)}
+								/>
+								<Form.Text className="text-muted">
+									When enabled, stories without editor check show an unchecked status (prerequisite
+									signal for going on air).
+								</Form.Text>
+							</Form.Group>
+							<FieldInfo field={field} />
+						</>
+					)}
+				/>
+
 				<div className="mb-3">
 					<Button variant="outline-primary" onClick={() => void testConnection()} disabled={testing}>
 						{testing ? 'Testing…' : 'Test Connection'}

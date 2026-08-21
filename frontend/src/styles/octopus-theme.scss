@@ -219,6 +219,15 @@
 			background: var(--re-row-active);
 			box-shadow: inset 3px 0 0 var(--re-accent);
 		}
+
+		&.story-row--skipped,
+		&.story-row--floated {
+			opacity: 0.45;
+		}
+
+		&.story-row--skipped .col-title {
+			text-decoration: line-through;
+		}
 	}
 
 	.col-title {
@@ -277,6 +286,14 @@
 
 		&:hover {
 			background: var(--re-row-hover);
+		}
+
+		&.piece-row--skipped {
+			opacity: 0.45;
+
+			.piece-name {
+				text-decoration: line-through;
+			}
 		}
 	}
 

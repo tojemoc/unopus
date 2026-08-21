@@ -38,6 +38,12 @@ import {
 	resolvePieceOnAirDuration
 } from '../storyDuration'
 import { syncStoryDurationsForPart, broadcastStoryDurationSync } from '../storyDurationSync'
+import { partUsesScriptDuration } from '../scriptReadingTime'
+import { readApplicationSettingsSync } from '../settingsResolver'
+
+function partExcludedFromSofie(part: Part): boolean {
+	return Boolean(part.float || part.skip)
+}
 
 async function mutatePart(part: Part): Promise<MutatedPart> {
 	const { result: partTypeManifests } = await typeManifestMutations.read({
@@ -47,13 +53,23 @@ async function mutatePart(part: Part): Promise<MutatedPart> {
 	const partManifest = findTypeManifest(partManifestList, part.partType)
 	const ingestType = getPartIngestType(part, partManifest)
 
+	const settings = readApplicationSettingsSync()
 	const rawPieces = await getMutatedPiecesFromPart(part.id)
 	const durationPieces = rawPieces.map((piece) => ({
 		duration: piece.duration,
 		pieceType: piece.objectType
 	}))
 	const effectivePartDuration =
-		resolvePartOnAirDuration(part, durationPieces) ?? part.duration
+		resolvePartOnAirDuration(
+			{
+				duration: part.duration,
+				script: part.script,
+				partType: part.partType,
+				skip: part.skip
+			},
+			durationPieces,
+			{ scriptCps: settings?.scriptCps }
+		) ?? part.duration
 
 	const pieces = rawPieces.map((piece) => ({
 		...piece,
@@ -63,6 +79,10 @@ async function mutatePart(part: Part): Promise<MutatedPart> {
 				effectivePartDuration
 			) ?? piece.duration
 	}))
+
+	const iluDurationMode = settings?.iluDurationMode ?? 'auto'
+	const autoNext =
+		partUsesScriptDuration(part.partType) && iluDurationMode === 'auto' ? true : undefined
 
 	return {
 		externalId: part.id,
@@ -75,7 +95,10 @@ async function mutatePart(part: Part): Promise<MutatedPart> {
 			rank: part.rank,
 			name: part.name,
 			type: ingestType,
-			float: part.float,
+			float: part.float || Boolean(part.skip),
+			skip: Boolean(part.skip),
+			editorChecked: Boolean(part.editorChecked),
+			...(autoNext ? { autoNext: true } : {}),
 			script: part.script,
 			duration: effectivePartDuration,
 
@@ -94,15 +117,19 @@ async function sendPartDiffToCore(oldPart: Part, newPart: Part) {
 		return
 	}
 
-	if (oldPart.float && !newPart.float) {
-		await coreHandler.core.coreMethods.dataPartDelete(
-			oldPart.rundownId,
-			oldPart.segmentId,
-			oldPart.id
+	const wasExcluded = partExcludedFromSofie(oldPart)
+	const isExcluded = partExcludedFromSofie(newPart)
+
+	if (wasExcluded && !isExcluded) {
+		// Restored from float/skip — push a fresh update into Sofie.
+		coreHandler.core.coreMethods.dataPartUpdate(
+			newPart.rundownId,
+			newPart.segmentId,
+			await mutatePart(newPart)
 		)
-	} else if (!oldPart.float && newPart.float) {
+	} else if (!wasExcluded && isExcluded) {
 		coreHandler.core.coreMethods.dataPartDelete(newPart.rundownId, newPart.segmentId, newPart.id)
-	} else if (!oldPart.float && !newPart.float) {
+	} else if (!wasExcluded && !isExcluded) {
 		coreHandler.core.coreMethods.dataPartUpdate(
 			newPart.rundownId,
 			newPart.segmentId,
@@ -693,7 +720,7 @@ async function handlePartCreate(payload: MutationPartCreate, io?: Server) {
 			broadcastStoryDurationSync(io, result.id)
 		}
 
-		if (result && !result.float) {
+		if (result && !partExcludedFromSofie(result)) {
 			const { result: rundown } = await rundownMutations.read({ id: result.rundownId })
 			if (rundown && !Array.isArray(rundown) && rundown.sync) {
 				try {
@@ -850,7 +877,7 @@ async function handlePartDelete(payload: MutationRundownDelete) {
 
 	if (deleteError) returnedError = deleteError
 
-	if (!deleteError && document && !Array.isArray(document) && !document.float) {
+	if (!deleteError && document && !Array.isArray(document) && !partExcludedFromSofie(document)) {
 		const { result: rundown } = await rundownMutations.read({ id: document.rundownId })
 		if (rundown && !Array.isArray(rundown) && rundown.sync) {
 			try {
@@ -872,7 +899,7 @@ async function handlePartDelete(payload: MutationRundownDelete) {
 export async function sendPartUpdateToCore(partId: string) {
 	const { result } = await mutations.read({ id: partId })
 
-	if (result && !Array.isArray(result) && !result.float) {
+	if (result && !Array.isArray(result) && !partExcludedFromSofie(result)) {
 		const rd = await rundownMutations.read({ id: result.rundownId })
 		if (rd.result && !Array.isArray(rd.result) && rd.result.sync === false) {
 			return

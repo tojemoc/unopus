@@ -727,7 +727,9 @@ export function mutatePieceForExport(piece: Piece): MutatedPiece {
 		clipName: undefined,
 		attributes: {
 			...normalizeGraphicAttributesForExport(piece.payload),
-			adlib: false
+			adlib: false,
+			skip: Boolean(piece.skip),
+			editorChecked: Boolean(piece.editorChecked)
 		},
 		position: undefined
 	}
@@ -737,7 +739,7 @@ export async function getMutatedPiecesFromPart(partId: string): Promise<MutatedP
 	const { result: pieces } = await mutations.read({ partId: partId })
 
 	if (pieces && Array.isArray(pieces)) {
-		return pieces.map((piece) => mutatePieceForExport(piece))
+		return pieces.filter((piece) => !piece.skip).map((piece) => mutatePieceForExport(piece))
 	}
 
 	return []

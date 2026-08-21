@@ -3,7 +3,18 @@
  *
  * Single source of truth for what Rundown Editor displays and exports to Sofie ingest.
  * Keep in sync with megarepo assets piece types that need on-air enable length.
+ *
+ * Duration sources:
+ * - ILU / DoubleBox parts → part script reading time (CPS) → ILU pieces
+ * - SYN / VO / VT parts → ffprobe length on the video piece
+ * - Skipped parts/pieces are excluded from timing
  */
+import {
+	estimateScriptReadingSeconds,
+	partUsesScriptDuration,
+	pieceReceivesScriptDuration
+} from './scriptReadingTime.js'
+
 export const STORY_DURATION_INHERIT_PIECE_TYPES = new Set([
 	'headline',
 	'doublebox-ilu',
@@ -31,17 +42,47 @@ export type StoryDurationPiece = {
 	id: string
 	pieceType: string
 	duration?: number
+	skip?: boolean
 }
 
 export type StoryDurationPart = {
 	duration?: number
+	script?: string
+	partType?: string
+	skip?: boolean
+}
+
+export type StoryDurationOptions = {
+	/** Characters per second for script → ILU duration. */
+	scriptCps?: number
+}
+
+function activePieces<T extends { skip?: boolean }>(pieces: T[]): T[] {
+	return pieces.filter((piece) => !piece.skip)
+}
+
+/** Script-derived duration for ILU-family stories (seconds). */
+export function resolveScriptDerivedPartDuration(
+	part: StoryDurationPart,
+	options?: StoryDurationOptions
+): number | undefined {
+	if (part.skip) {
+		return undefined
+	}
+	if (!partUsesScriptDuration(part.partType)) {
+		return undefined
+	}
+	return estimateScriptReadingSeconds(part.script, options?.scriptCps)
 }
 
 /** Effective on-air duration for one piece (seconds), before persistence. */
 export function resolvePieceOnAirDuration(
-	piece: Pick<StoryDurationPiece, 'duration' | 'pieceType'>,
+	piece: Pick<StoryDurationPiece, 'duration' | 'pieceType' | 'skip'>,
 	partDuration: number | undefined
 ): number | undefined {
+	if (piece.skip) {
+		return undefined
+	}
 	if (isPositiveDurationSeconds(piece.duration)) {
 		return piece.duration
 	}
@@ -51,17 +92,34 @@ export function resolvePieceOnAirDuration(
 	return undefined
 }
 
-/** Effective story on-air duration (seconds). */
+/**
+ * Effective story on-air duration (seconds).
+ *
+ * Order of preference:
+ * 1. Script reading time for ILU-family parts (script is source of truth for ILU)
+ * 2. Explicit positive part.duration (manual / media-synced)
+ * 3. Longest non-skipped child piece duration (SYN video, etc.)
+ */
 export function resolvePartOnAirDuration(
 	part: StoryDurationPart,
-	pieces: Array<Pick<StoryDurationPiece, 'duration' | 'pieceType'>>
+	pieces: Array<Pick<StoryDurationPiece, 'duration' | 'pieceType' | 'skip'>>,
+	options?: StoryDurationOptions
 ): number | undefined {
+	if (part.skip) {
+		return undefined
+	}
+
+	const scriptDuration = resolveScriptDerivedPartDuration(part, options)
+	if (isPositiveDurationSeconds(scriptDuration)) {
+		return scriptDuration
+	}
+
 	if (isPositiveDurationSeconds(part.duration)) {
 		return part.duration
 	}
 
 	let maxChild = 0
-	for (const piece of pieces) {
+	for (const piece of activePieces(pieces)) {
 		if (isPositiveDurationSeconds(piece.duration)) {
 			maxChild = Math.max(maxChild, piece.duration)
 		}
@@ -70,26 +128,79 @@ export function resolvePartOnAirDuration(
 	return maxChild > 0 ? maxChild : undefined
 }
 
+/**
+ * Sum of story durations that contribute to rundown timing
+ * (ILU script times + SYN/media lengths for non-skipped parts).
+ */
+export function sumPartsOnAirDuration(
+	parts: Array<{
+		part: StoryDurationPart
+		pieces: Array<Pick<StoryDurationPiece, 'duration' | 'pieceType' | 'skip'>>
+	}>,
+	options?: StoryDurationOptions
+): number {
+	let total = 0
+	for (const entry of parts) {
+		const duration = resolvePartOnAirDuration(entry.part, entry.pieces, options)
+		if (isPositiveDurationSeconds(duration)) {
+			total += duration
+		}
+	}
+	return total
+}
+
 export type StoryDurationSyncPlan = {
 	partDuration?: number
-	pieceUpdates: Array<{ id: string; duration: number }>
+	/** When set, overwrite part.duration even if already positive (script is source of truth). */
+	forcePartDuration?: boolean
+	pieceUpdates: Array<{ id: string; duration: number; force?: boolean }>
 }
 
 /**
  * Compute DB updates so stored part/piece durations match what we export to Sofie.
  *
- * 1. Part duration → inheriting pieces with no explicit duration
- * 2. When part duration is empty → set from longest explicit child duration, then fill siblings
+ * 1. ILU-family + script → force part + script-receiving pieces to reading time
+ * 2. Part duration → inheriting pieces with no explicit duration
+ * 3. When part duration is empty → set from longest explicit child duration, then fill siblings
+ * 4. Skipped pieces are never updated / never contribute
  */
 export function planStoryDurationSync(
 	part: StoryDurationPart,
-	pieces: StoryDurationPiece[]
+	pieces: StoryDurationPiece[],
+	options?: StoryDurationOptions
 ): StoryDurationSyncPlan {
-	const pieceUpdates: Array<{ id: string; duration: number }> = []
+	const pieceUpdates: Array<{ id: string; duration: number; force?: boolean }> = []
+	const livePieces = activePieces(pieces) as StoryDurationPiece[]
+
+	if (part.skip) {
+		return { pieceUpdates }
+	}
+
+	const scriptDuration = resolveScriptDerivedPartDuration(part, options)
+	if (isPositiveDurationSeconds(scriptDuration)) {
+		for (const piece of livePieces) {
+			if (pieceReceivesScriptDuration(piece.pieceType)) {
+				if (piece.duration !== scriptDuration) {
+					pieceUpdates.push({ id: piece.id, duration: scriptDuration, force: true })
+				}
+			} else if (
+				!isPositiveDurationSeconds(piece.duration) &&
+				pieceInheritsPartDuration(piece.pieceType)
+			) {
+				pieceUpdates.push({ id: piece.id, duration: scriptDuration })
+			}
+		}
+		return {
+			partDuration: scriptDuration,
+			forcePartDuration: part.duration !== scriptDuration,
+			pieceUpdates
+		}
+	}
+
 	let partDuration = part.duration
 
 	if (isPositiveDurationSeconds(partDuration)) {
-		for (const piece of pieces) {
+		for (const piece of livePieces) {
 			if (
 				!isPositiveDurationSeconds(piece.duration) &&
 				pieceInheritsPartDuration(piece.pieceType)
@@ -100,7 +211,7 @@ export function planStoryDurationSync(
 		return { pieceUpdates }
 	}
 
-	const maxChild = resolvePartOnAirDuration(part, pieces)
+	const maxChild = resolvePartOnAirDuration(part, livePieces, options)
 	if (!isPositiveDurationSeconds(maxChild)) {
 		return { pieceUpdates }
 	}
@@ -108,7 +219,7 @@ export function planStoryDurationSync(
 	partDuration = maxChild
 
 	const effectiveById = new Map<string, number>()
-	for (const piece of pieces) {
+	for (const piece of livePieces) {
 		if (isPositiveDurationSeconds(piece.duration)) {
 			effectiveById.set(piece.id, piece.duration)
 		}
@@ -117,7 +228,7 @@ export function planStoryDurationSync(
 		effectiveById.set(update.id, update.duration)
 	}
 
-	for (const piece of pieces) {
+	for (const piece of livePieces) {
 		if (effectiveById.has(piece.id)) {
 			continue
 		}

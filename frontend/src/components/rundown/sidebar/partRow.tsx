@@ -4,7 +4,10 @@ import type { Part, PieceReadiness, RundownReadiness } from '~backend/background
 import { TypeManifestEntity } from '~backend/background/interfaces'
 import { findTypeManifest } from '~/util/typeManifest'
 import { ReadinessBadge, getPieceReadinessTooltip } from '../readinessBadge'
+import { EditorialStatusBadge } from '../editorialStatusBadge'
+import { resolveEditorialStatus } from '~/util/editorialStatus'
 import { formatPartOnAirDuration } from '~/util/pieceDuration'
+import { resolveEffectiveScriptCps } from '~/util/scriptReadingTime'
 
 function getStoryReadiness(
 	partId: string,
@@ -50,7 +53,13 @@ export function SidebarPartRow({
 }: {
 	part: Part
 	readiness: RundownReadiness | null
-	partPieces: Array<{ id: string; partId: string; pieceType: string; duration?: number }>
+	partPieces: Array<{
+		id: string
+		partId: string
+		pieceType: string
+		duration?: number
+		skip?: boolean
+	}>
 }) {
 	const navigate = useNavigate()
 	const matchRoute = useMatchRoute()
@@ -58,6 +67,9 @@ export function SidebarPartRow({
 	const partTypeManifest = useAppSelector((state) =>
 		findTypeManifest(state.typeManifests.manifests, part.partType, TypeManifestEntity.Part)
 	)
+	const userId = useAppSelector((s) => s.auth.user?.id)
+	const settings = useAppSelector((s) => s.settings.settings)
+	const scriptCps = resolveEffectiveScriptCps({ userId, settingsCps: settings?.scriptCps })
 
 	const isActive = Boolean(
 		matchRoute({
@@ -71,6 +83,12 @@ export function SidebarPartRow({
 	)
 
 	const storyReadiness = getStoryReadiness(part.id, partPieces, readiness)
+	const editorial = resolveEditorialStatus({
+		skip: part.skip,
+		editorChecked: part.editorChecked,
+		skipStatusUnlessEditorChecked: settings?.skipStatusUnlessEditorChecked !== false,
+		requireEditorCheckForAir: Boolean(settings?.requireEditorCheckForAir)
+	})
 
 	const openPart = () => {
 		void navigate({
@@ -83,9 +101,18 @@ export function SidebarPartRow({
 		})
 	}
 
+	const rowClass = [
+		'story-row',
+		isActive ? 'active' : '',
+		part.skip ? 'story-row--skipped' : '',
+		part.float ? 'story-row--floated' : ''
+	]
+		.filter(Boolean)
+		.join(' ')
+
 	return (
 		<div
-			className={`story-row ${isActive ? 'active' : ''}`}
+			className={rowClass}
 			tabIndex={0}
 			onClick={openPart}
 			onKeyDown={(event) => {
@@ -97,9 +124,18 @@ export function SidebarPartRow({
 			style={{ borderLeftColor: partTypeManifest?.colour ?? '#666' }}
 		>
 			<div className="col-status">
-				{storyReadiness ? (
-					<ReadinessBadge state={storyReadiness.state} tooltip={storyReadiness.tooltip} compact />
-				) : null}
+				<span className="d-inline-flex gap-1 align-items-center">
+					{storyReadiness ? (
+						<ReadinessBadge state={storyReadiness.state} tooltip={storyReadiness.tooltip} compact />
+					) : null}
+					{editorial ? (
+						<EditorialStatusBadge
+							status={editorial.status}
+							tooltip={editorial.tooltip}
+							compact
+						/>
+					) : null}
+				</span>
 			</div>
 			<div className="col-type">
 				<span
@@ -118,8 +154,10 @@ export function SidebarPartRow({
 					part,
 					partPieces.map((piece) => ({
 						pieceType: piece.pieceType,
-						duration: piece.duration
-					}))
+						duration: piece.duration,
+						skip: piece.skip
+					})),
+					{ scriptCps }
 				) || '--:--'}
 			</div>
 		</div>

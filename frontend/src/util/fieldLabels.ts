@@ -2,6 +2,8 @@ const LABELS: Record<string, string> = {
 	externalId: 'Reference ID',
 	float: 'Floated (not in timing)',
 	floated: 'Floated',
+	skip: 'Skipped (not in timing)',
+	editorChecked: 'Checked by editor',
 	partType: 'Story type',
 	pieceType: 'Element type',
 	sync: 'Sync to Sofie',
@@ -19,7 +21,11 @@ const LABELS: Record<string, string> = {
 	isTemplate: 'Save as template',
 	dailyTemplateRundownId: 'Daily template rundown',
 	dailyCloneTime: 'Daily clone time',
-	dailyCloneTimezone: 'Daily clone timezone'
+	dailyCloneTimezone: 'Daily clone timezone',
+	scriptCps: 'Script reading speed (CPS)',
+	iluDurationMode: 'ILU duration mode in Sofie',
+	skipStatusUnlessEditorChecked: 'Show Skipped status unless editor-checked',
+	requireEditorCheckForAir: 'Require editor check before on-air'
 }
 
 export function friendlyLabel(fieldName: string): string {
