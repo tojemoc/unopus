@@ -13,11 +13,14 @@ payload fields in `sofie-rundown-editor-piece-types.json` (canonical home:
 | `bg-loop` | `fileName` |
 | `wipe` | `fileName` |
 | `l3d-tema` | `headline`, `subline` |
+| `l3d-predstavovak` | `name`, `title` (topic / guest nameplate) |
 | `l3d-mod` | `name`, `title` |
 | `l3d-headline` | `headline`, `subline` |
-| `l3d-syn` | `name`, `role` |
-| `l3d-sjv` | `headline` |
-| `l3d-sport` | `headline` |
+| `l3d-syn` | `name`, `role` (+ optional timed `start`/`duration`) |
+| `l3d-sjv` | `kicker`, `headline` |
+| `l3d-sport` | `kicker`, `headline`, `source` |
+| `l3d-odporucanie` | `headline` (no kicker) |
+| `weather` | `bypass` (default true), `fileName`, optional `cities` |
 | `headline` (ILU) | `text`, `iluFile` |
 
 Example:
