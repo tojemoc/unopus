@@ -64,9 +64,9 @@ export function PiecesList({ part }: { part: Part }) {
 
 	const pieces = useAppSelector((state) => selectPiecesByPart(state, partIds))
 	const { readiness } = useRundownReadinessContext()
-	const userId = useAppSelector((s) => s.auth.user?.id)
+	const userScriptCps = useAppSelector((s) => s.auth.user?.scriptCps)
 	const settings = useAppSelector((s) => s.settings.settings)
-	const scriptCps = resolveEffectiveScriptCps({ userId, settingsCps: settings?.scriptCps })
+	const scriptCps = resolveEffectiveScriptCps({ userScriptCps, settingsCps: settings?.scriptCps })
 
 	const showSourceColumn = pieces.some(
 		(piece: Piece) => getPieceSourceDurationSeconds(piece) !== undefined

@@ -1,31 +1,19 @@
-import { Form } from 'react-bootstrap'
-import {
-	formatScriptReadingEstimate,
-	resolveEffectiveScriptCps,
-	writeUserScriptCps
-} from '~/util/scriptReadingTime'
+import { formatScriptReadingEstimate, resolveEffectiveScriptCps } from '~/util/scriptReadingTime'
 import { useAppSelector } from '~/store/app'
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 
 /**
  * Live mm:ss reading-time counter for script / voiceover text fields.
- * CPS comes from per-user localStorage override, else ApplicationSettings.scriptCps.
+ * CPS comes from the signed-in user's profile, else ApplicationSettings.scriptCps.
  */
-export function ScriptReadingCounter({
-	text,
-	showCpsControl = false
-}: {
-	text: string | undefined | null
-	showCpsControl?: boolean
-}) {
-	const userId = useAppSelector((s) => s.auth.user?.id)
+export function ScriptReadingCounter({ text }: { text: string | undefined | null }) {
+	const userScriptCps = useAppSelector((s) => s.auth.user?.scriptCps)
 	const settingsCps = useAppSelector((s) => s.settings.settings?.scriptCps)
-	const [cpsTick, setCpsTick] = useState(0)
 
-	const cps = useMemo(() => {
-		void cpsTick
-		return resolveEffectiveScriptCps({ userId, settingsCps })
-	}, [userId, settingsCps, cpsTick])
+	const cps = useMemo(
+		() => resolveEffectiveScriptCps({ userScriptCps, settingsCps }),
+		[userScriptCps, settingsCps]
+	)
 
 	const estimate = formatScriptReadingEstimate(text, cps)
 
@@ -35,25 +23,6 @@ export function ScriptReadingCounter({
 				Read time: <strong className="text-body">{estimate.clock}</strong>
 				<span className="ms-1">({cps} CPS)</span>
 			</span>
-			{showCpsControl && userId ? (
-				<Form.Control
-					type="number"
-					min={5}
-					max={40}
-					step={1}
-					size="sm"
-					style={{ width: '4.5rem' }}
-					value={cps}
-					aria-label="Your characters per second"
-					title="Your CPS (saved in this browser)"
-					onChange={(e) => {
-						const next = Number(e.target.value)
-						if (!Number.isFinite(next)) return
-						writeUserScriptCps(userId, next)
-						setCpsTick((t) => t + 1)
-					}}
-				/>
-			) : null}
 		</div>
 	)
 }

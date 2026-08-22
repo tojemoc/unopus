@@ -6,6 +6,8 @@ export interface AuthUser {
 	displayName: string
 	role: UserRole
 	active?: boolean
+	/** Personal script CPS; null = use site default from ApplicationSettings. */
+	scriptCps?: number | null
 }
 
 const apiBase = import.meta.env.MODE === 'development' ? '' : ''
@@ -45,6 +47,16 @@ export async function login(username: string, password: string): Promise<AuthUse
 
 export async function logout(): Promise<void> {
 	await request('/api/auth/logout', { method: 'POST' })
+}
+
+export async function updateMyProfile(payload: {
+	scriptCps?: number | null
+}): Promise<AuthUser> {
+	const data = await request<{ user: AuthUser }>('/api/auth/me', {
+		method: 'PATCH',
+		body: JSON.stringify(payload)
+	})
+	return data.user
 }
 
 export async function listUsers(): Promise<AuthUser[]> {

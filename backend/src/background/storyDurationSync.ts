@@ -6,6 +6,7 @@ import {
 	planStoryDurationSync,
 	type StoryDurationPiece
 } from './storyDuration.js'
+import { resolveEffectiveScriptCps } from './scriptReadingTime.js'
 
 /** Serialize duration sync per story so concurrent saves cannot clobber each other. */
 const syncTailByPartId = new Map<string, Promise<void>>()
@@ -148,7 +149,10 @@ function applyPartDuration(partId: string, duration: number, force: boolean): vo
 	applyPartDurationIfUnset(partId, duration)
 }
 
-async function syncStoryDurationsForPartLocked(partId: string): Promise<void> {
+async function syncStoryDurationsForPartLocked(
+	partId: string,
+	options?: { editorScriptCps?: number | null }
+): Promise<void> {
 	if (beforeLocked) {
 		await beforeLocked(partId)
 	}
@@ -159,6 +163,7 @@ async function syncStoryDurationsForPartLocked(partId: string): Promise<void> {
 	}
 
 	const settings = readApplicationSettingsSync()
+	const scriptCps = resolveEffectiveScriptCps(options?.editorScriptCps, settings?.scriptCps)
 	const pieces = readPiecesForPart(partId).map(
 		(piece): StoryDurationPiece => ({
 			id: piece.id,
@@ -176,7 +181,7 @@ async function syncStoryDurationsForPartLocked(partId: string): Promise<void> {
 			skip: part.skip
 		},
 		pieces,
-		{ scriptCps: settings?.scriptCps }
+		{ scriptCps }
 	)
 
 	db.exec('BEGIN IMMEDIATE')
@@ -225,9 +230,12 @@ async function syncStoryDurationsForPartLocked(partId: string): Promise<void> {
 }
 
 /** Persist inherited story/piece durations after a part or piece edit. */
-export function syncStoryDurationsForPart(partId: string): Promise<void> {
+export function syncStoryDurationsForPart(
+	partId: string,
+	options?: { editorScriptCps?: number | null }
+): Promise<void> {
 	const previous = syncTailByPartId.get(partId) ?? Promise.resolve()
-	const run = previous.then(() => syncStoryDurationsForPartLocked(partId))
+	const run = previous.then(() => syncStoryDurationsForPartLocked(partId, options))
 	const tail = run.catch(() => undefined)
 	syncTailByPartId.set(partId, tail)
 	void tail.then(() => {

@@ -270,8 +270,8 @@ export function CoreConnectionSettingsForm({ settings }: { settings: Application
 				<h3 className="h5">Script timing &amp; editorial</h3>
 				<p className="text-muted small">
 					Reading-time estimates drive ILU story length. SYN / VO / VT length still comes from
-					ffprobe on the linked clip. Per-user CPS can also be tweaked next to any script field
-					(saved in this browser).
+					ffprobe on the linked clip. Each user can set their own CPS under Settings → Profile;
+					when unset, this site default applies.
 				</p>
 
 				<form.Field

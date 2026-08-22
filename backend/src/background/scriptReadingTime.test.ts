@@ -5,7 +5,8 @@ import {
 	estimateScriptReadingSeconds,
 	formatReadingClock,
 	normalizeScriptCps,
-	partUsesScriptDuration
+	partUsesScriptDuration,
+	resolveEffectiveScriptCps
 } from './scriptReadingTime.js'
 
 describe('scriptReadingTime', () => {
@@ -32,5 +33,12 @@ describe('scriptReadingTime', () => {
 		assert.equal(partUsesScriptDuration('ilu'), true)
 		assert.equal(partUsesScriptDuration('doublebox'), true)
 		assert.equal(partUsesScriptDuration('syn'), false)
+	})
+
+	it('resolves effective CPS from user profile then site default', () => {
+		assert.equal(resolveEffectiveScriptCps(18, 15), 18)
+		assert.equal(resolveEffectiveScriptCps(null, 20), 20)
+		assert.equal(resolveEffectiveScriptCps(undefined, undefined), 15)
+		assert.equal(resolveEffectiveScriptCps(0, 12), 12)
 	})
 })

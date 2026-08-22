@@ -67,9 +67,9 @@ export function SidebarPartRow({
 	const partTypeManifest = useAppSelector((state) =>
 		findTypeManifest(state.typeManifests.manifests, part.partType, TypeManifestEntity.Part)
 	)
-	const userId = useAppSelector((s) => s.auth.user?.id)
+	const userScriptCps = useAppSelector((s) => s.auth.user?.scriptCps)
 	const settings = useAppSelector((s) => s.settings.settings)
-	const scriptCps = resolveEffectiveScriptCps({ userId, settingsCps: settings?.scriptCps })
+	const scriptCps = resolveEffectiveScriptCps({ userScriptCps, settingsCps: settings?.scriptCps })
 
 	const isActive = Boolean(
 		matchRoute({

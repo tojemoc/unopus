@@ -16,65 +16,17 @@ export {
 } from '~backend/background/scriptReadingTime'
 
 import {
-	DEFAULT_SCRIPT_CPS,
 	estimateScriptReadingSeconds,
 	formatReadingClock,
-	normalizeScriptCps
+	resolveEffectiveScriptCps as resolveEffectiveScriptCpsBackend
 } from '~backend/background/scriptReadingTime'
 
-const USER_CPS_STORAGE_PREFIX = 'unopus-script-cps:'
-
-export function readUserScriptCps(userId: string | undefined): number | undefined {
-	if (!userId || typeof localStorage === 'undefined') {
-		return undefined
-	}
-	try {
-		const raw = localStorage.getItem(`${USER_CPS_STORAGE_PREFIX}${userId}`)
-		if (raw === null || raw === '') {
-			return undefined
-		}
-		const parsed = Number(raw)
-		if (!Number.isFinite(parsed) || parsed <= 0) {
-			return undefined
-		}
-		return normalizeScriptCps(parsed)
-	} catch {
-		return undefined
-	}
-}
-
-export function writeUserScriptCps(userId: string | undefined, cps: number): void {
-	if (!userId || typeof localStorage === 'undefined') {
-		return
-	}
-	try {
-		localStorage.setItem(`${USER_CPS_STORAGE_PREFIX}${userId}`, String(normalizeScriptCps(cps)))
-	} catch {
-		// ignore quota / private mode
-	}
-}
-
-export function clearUserScriptCps(userId: string | undefined): void {
-	if (!userId || typeof localStorage === 'undefined') {
-		return
-	}
-	try {
-		localStorage.removeItem(`${USER_CPS_STORAGE_PREFIX}${userId}`)
-	} catch {
-		// ignore
-	}
-}
-
-/** Resolve effective CPS: per-user override → settings default → built-in default. */
+/** Resolve effective CPS: user account override → site default → built-in default. */
 export function resolveEffectiveScriptCps(options: {
-	userId?: string
+	userScriptCps?: number | null
 	settingsCps?: number
 }): number {
-	const userCps = readUserScriptCps(options.userId)
-	if (userCps !== undefined) {
-		return userCps
-	}
-	return normalizeScriptCps(options.settingsCps ?? DEFAULT_SCRIPT_CPS)
+	return resolveEffectiveScriptCpsBackend(options.userScriptCps, options.settingsCps)
 }
 
 export function formatScriptReadingEstimate(

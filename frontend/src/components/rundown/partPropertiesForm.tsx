@@ -26,9 +26,9 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 	const childPieces = useAppSelector((state) =>
 		state.pieces.pieces.filter((piece) => piece.partId === part.id)
 	)
-	const userId = useAppSelector((s) => s.auth.user?.id)
+	const userScriptCps = useAppSelector((s) => s.auth.user?.scriptCps)
 	const settingsCps = useAppSelector((s) => s.settings.settings?.scriptCps)
-	const scriptCps = resolveEffectiveScriptCps({ userId, settingsCps })
+	const scriptCps = resolveEffectiveScriptCps({ userScriptCps, settingsCps })
 	const effectivePartDuration = useMemo(
 		() =>
 			resolvePartOnAirDuration(
@@ -293,7 +293,7 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 									onBlur={field.handleBlur}
 									onChange={(e) => field.handleChange(e.target.value)}
 								/>
-								<ScriptReadingCounter text={field.state.value} showCpsControl />
+								<ScriptReadingCounter text={field.state.value} />
 							</Form.Group>
 							<FieldInfo field={field} />
 						</>

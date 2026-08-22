@@ -39,6 +39,7 @@ import {
 } from '../storyDuration'
 import { syncStoryDurationsForPart, broadcastStoryDurationSync } from '../storyDurationSync'
 import { partUsesScriptDuration } from '../scriptReadingTime'
+import { isPositiveDurationSeconds } from '../storyDuration'
 import { readApplicationSettingsSync } from '../settingsResolver'
 
 function partExcludedFromSofie(part: Part): boolean {
@@ -59,17 +60,18 @@ async function mutatePart(part: Part): Promise<MutatedPart> {
 		duration: piece.duration,
 		pieceType: piece.objectType
 	}))
-	const effectivePartDuration =
-		resolvePartOnAirDuration(
-			{
-				duration: part.duration,
-				script: part.script,
-				partType: part.partType,
-				skip: part.skip
-			},
-			durationPieces,
-			{ scriptCps: settings?.scriptCps }
-		) ?? part.duration
+	const effectivePartDuration = isPositiveDurationSeconds(part.duration)
+		? part.duration
+		: (resolvePartOnAirDuration(
+				{
+					duration: part.duration,
+					script: part.script,
+					partType: part.partType,
+					skip: part.skip
+				},
+				durationPieces,
+				{ scriptCps: settings?.scriptCps }
+			) ?? part.duration)
 
 	const pieces = rawPieces.map((piece) => ({
 		...piece,
@@ -776,7 +778,9 @@ async function handlePartUpdate(
 
 		if (result) {
 			try {
-				await syncStoryDurationsForPart(result.id)
+				await syncStoryDurationsForPart(result.id, {
+					editorScriptCps: editor?.scriptCps
+				})
 				if (io) broadcastStoryDurationSync(io, result.id)
 			} catch (error) {
 				console.error('Failed to sync story durations for part', result.id, error)

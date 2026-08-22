@@ -2,6 +2,7 @@ import { randomBytes } from 'crypto'
 import { db } from '../db'
 import { v4 as uuid } from 'uuid'
 import { hashPassword, verifyPassword } from './password'
+import { normalizeScriptCps } from '../scriptReadingTime'
 import type { AuthUser, SessionUser, UserRole } from './types'
 
 const SESSION_TTL_MS = 8 * 60 * 60 * 1000
@@ -14,6 +15,7 @@ interface UserRow {
 	display_name: string
 	role: UserRole
 	active: number
+	script_cps?: number | null
 }
 
 interface SessionRow {
@@ -22,13 +24,24 @@ interface SessionRow {
 	expires_at: number
 }
 
+const USER_SELECT = `SELECT id, username, password_hash, display_name, role, active, script_cps FROM users`
+
+function migrateUsersScriptCpsColumn(): void {
+	const columns = db.prepare(`PRAGMA table_info(users)`).all() as Array<{ name: string }>
+	if (columns.some((column) => column.name === 'script_cps')) {
+		return
+	}
+	db.exec(`ALTER TABLE users ADD COLUMN script_cps REAL`)
+}
+
 function rowToUser(row: UserRow): AuthUser {
 	return {
 		id: row.id,
 		username: row.username,
 		displayName: row.display_name,
 		role: row.role,
-		active: row.active === 1
+		active: row.active === 1,
+		scriptCps: row.script_cps ?? null
 	}
 }
 
@@ -63,6 +76,8 @@ export function initAuthTables(): void {
 			PRIMARY KEY (entity_type, entity_id)
 		);
 	`)
+
+	migrateUsersScriptCpsColumn()
 
 	const countRow = db.prepare(`SELECT COUNT(*) AS count FROM users`).get() as { count: number }
 	if (countRow.count === 0) {
@@ -101,8 +116,7 @@ export function authenticateUser(
 	const row = db
 		.prepare(
 			`
-			SELECT id, username, password_hash, display_name, role, active
-			FROM users
+			${USER_SELECT}
 			WHERE username = ?
 		`
 		)
@@ -144,21 +158,29 @@ export function getUserFromSession(sessionId: string | undefined): SessionUser |
 	const row = db
 		.prepare(
 			`
-			SELECT u.id, u.username, u.display_name, u.role, u.active, s.expires_at
+			SELECT u.id, u.username, u.display_name, u.role, u.active, u.script_cps, s.expires_at
 			FROM sessions s
 			JOIN users u ON u.id = s.user_id
 			WHERE s.id = ? AND s.expires_at >= ? AND u.active = 1
 		`
 		)
 		.get(sessionId, Date.now()) as
-		| (UserRow & { expires_at: number })
+		| (Omit<UserRow, 'password_hash'> & { expires_at: number })
 		| undefined
 
 	if (!row) {
 		return null
 	}
 
-	return rowToUser(row)
+	return rowToUser({
+		id: row.id,
+		username: row.username,
+		password_hash: '',
+		display_name: row.display_name,
+		role: row.role,
+		active: row.active,
+		script_cps: row.script_cps
+	})
 }
 
 export function parseSessionCookie(cookieHeader: string | undefined): string | undefined {
@@ -207,8 +229,7 @@ export function listUsers(): AuthUser[] {
 	const rows = db
 		.prepare(
 			`
-			SELECT id, username, password_hash, display_name, role, active
-			FROM users
+			${USER_SELECT}
 			ORDER BY username COLLATE NOCASE
 		`
 		)
@@ -264,11 +285,41 @@ export function createUser(payload: {
 		db
 			.prepare(
 				`
-				SELECT id, username, password_hash, display_name, role, active
-				FROM users WHERE id = ?
+				${USER_SELECT} WHERE id = ?
 			`
 			)
 			.get(id) as unknown as UserRow
+	)
+}
+
+export function updateUserProfile(
+	userId: string,
+	updates: { scriptCps?: number | null }
+): AuthUser | null {
+	const existing = db.prepare(`${USER_SELECT} WHERE id = ?`).get(userId) as UserRow | undefined
+	if (!existing) {
+		return null
+	}
+
+	let scriptCps = existing.script_cps ?? null
+	if (updates.scriptCps !== undefined) {
+		if (updates.scriptCps === null) {
+			scriptCps = null
+		} else if (
+			typeof updates.scriptCps === 'number' &&
+			Number.isFinite(updates.scriptCps) &&
+			updates.scriptCps > 0
+		) {
+			scriptCps = normalizeScriptCps(updates.scriptCps)
+		} else {
+			return null
+		}
+	}
+
+	db.prepare(`UPDATE users SET script_cps = ? WHERE id = ?`).run(scriptCps, userId)
+
+	return rowToUser(
+		db.prepare(`${USER_SELECT} WHERE id = ?`).get(userId) as unknown as UserRow
 	)
 }
 
@@ -282,12 +333,7 @@ export function updateUser(
 	}
 ): AuthUser | null {
 	const existing = db
-		.prepare(
-			`
-			SELECT id, username, password_hash, display_name, role, active
-			FROM users WHERE id = ?
-		`
-		)
+		.prepare(`${USER_SELECT} WHERE id = ?`)
 		.get(id) as UserRow | undefined
 	if (!existing) {
 		return null
@@ -306,16 +352,7 @@ export function updateUser(
 	`
 	).run(displayName, role, active, passwordHash, id)
 
-	return rowToUser(
-		db
-			.prepare(
-				`
-				SELECT id, username, password_hash, display_name, role, active
-				FROM users WHERE id = ?
-			`
-			)
-			.get(id) as unknown as UserRow
-	)
+	return rowToUser(db.prepare(`${USER_SELECT} WHERE id = ?`).get(id) as unknown as UserRow)
 }
 
 export function recordEntityEdit(

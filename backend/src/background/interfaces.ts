@@ -326,7 +326,7 @@ export interface ApplicationSettings {
 	dailyCloneTimezone?: string
 	/**
 	 * Default characters-per-second for script reading-time estimates.
-	 * Operators can override per user in the browser (localStorage).
+	 * Users can override with a personal CPS on their account (null = use this default).
 	 */
 	scriptCps?: number
 	/**

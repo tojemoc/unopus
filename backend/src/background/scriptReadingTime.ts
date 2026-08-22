@@ -72,3 +72,14 @@ export function pieceReceivesScriptDuration(pieceType: string | undefined | null
 export function partUsesMediaDuration(partType: string | undefined | null): boolean {
 	return MEDIA_DURATION_PART_TYPES.has((partType ?? '').trim().toLowerCase())
 }
+
+/** Per-user CPS when set; otherwise application default (or built-in default). */
+export function resolveEffectiveScriptCps(
+	userScriptCps: number | null | undefined,
+	settingsCps: number | undefined
+): number {
+	if (typeof userScriptCps === 'number' && Number.isFinite(userScriptCps) && userScriptCps > 0) {
+		return normalizeScriptCps(userScriptCps)
+	}
+	return normalizeScriptCps(settingsCps ?? DEFAULT_SCRIPT_CPS)
+}

@@ -6,6 +6,8 @@ export interface AuthUser {
 	displayName: string
 	role: UserRole
 	active: boolean
+	/** Personal script CPS; null = use site default from ApplicationSettings. */
+	scriptCps?: number | null
 }
 
 export interface SessionUser extends AuthUser {}

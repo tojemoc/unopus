@@ -23,9 +23,9 @@ export function RundownNavbar({ rundown }: { rundown: Rundown }) {
 	const pieces = useAppSelector((state) =>
 		state.pieces.pieces.filter((p) => p.rundownId === rundown.id)
 	)
-	const userId = useAppSelector((s) => s.auth.user?.id)
+	const userScriptCps = useAppSelector((s) => s.auth.user?.scriptCps)
 	const settingsCps = useAppSelector((s) => s.settings.settings?.scriptCps)
-	const scriptCps = resolveEffectiveScriptCps({ userId, settingsCps })
+	const scriptCps = resolveEffectiveScriptCps({ userScriptCps, settingsCps })
 
 	const insertTarget = usePartInsertTarget(rundown.id)
 
