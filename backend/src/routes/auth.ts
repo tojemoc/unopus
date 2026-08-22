@@ -10,9 +10,21 @@ import {
 	getUserFromSession,
 	listUsers,
 	parseSessionCookie,
-	updateUser
+	updateUser,
+	updateUserProfile
 } from '../background/auth/authStore'
 import type { SessionUser, UserRole } from '../background/auth/types'
+import { normalizeScriptCps } from '../background/scriptReadingTime'
+
+function publicUser(user: SessionUser) {
+	return {
+		id: user.id,
+		username: user.username,
+		displayName: user.displayName,
+		role: user.role,
+		scriptCps: user.scriptCps ?? null
+	}
+}
 
 function sendJson(res: Response, status: number, body: unknown): void {
 	res.status(status).json(body)
@@ -61,12 +73,7 @@ export function registerAuthRoutes(app: Application): void {
 		const { sessionId, expiresAt } = createSession(user.id)
 		res.setHeader('Set-Cookie', buildSessionCookie(sessionId, expiresAt))
 		sendJson(res, 200, {
-			user: {
-				id: user.id,
-				username: user.username,
-				displayName: user.displayName,
-				role: user.role
-			}
+			user: publicUser(user)
 		})
 	})
 
@@ -86,13 +93,45 @@ export function registerAuthRoutes(app: Application): void {
 			return
 		}
 		sendJson(res, 200, {
-			user: {
-				id: user.id,
-				username: user.username,
-				displayName: user.displayName,
-				role: user.role
-			}
+			user: publicUser(user)
 		})
+	})
+
+	app.patch('/api/auth/me', (req: Request, res: Response) => {
+		const user = requireAuth(req, res)
+		if (!user) {
+			return
+		}
+		if (
+			req.body === undefined ||
+			req.body === null ||
+			typeof req.body !== 'object' ||
+			Array.isArray(req.body)
+		) {
+			sendJson(res, 400, { error: 'Request body must be a JSON object' })
+			return
+		}
+		const body = req.body as { scriptCps?: number | null }
+		if (body.scriptCps !== undefined && body.scriptCps !== null) {
+			if (typeof body.scriptCps !== 'number' || !Number.isFinite(body.scriptCps)) {
+				sendJson(res, 400, { error: 'scriptCps must be a number or null' })
+				return
+			}
+			const normalized = normalizeScriptCps(body.scriptCps)
+			if (normalized !== body.scriptCps) {
+				sendJson(res, 400, { error: 'scriptCps must be between 5 and 40' })
+				return
+			}
+		}
+
+		const updated = updateUserProfile(user.id, {
+			scriptCps: body.scriptCps === undefined ? undefined : body.scriptCps
+		})
+		if (!updated) {
+			sendJson(res, 400, { error: 'Invalid profile update' })
+			return
+		}
+		sendJson(res, 200, { user: publicUser(updated) })
 	})
 
 	app.get('/api/auth/users', (req: Request, res: Response) => {

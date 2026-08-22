@@ -12,6 +12,8 @@ import { useToasts } from '../toasts/useToasts'
 import { findTypeManifest, normalizeTypeId, toolbarManifests } from '~/util/typeManifest'
 import { useRundownReadinessContext } from '~/hooks/RundownReadinessContext'
 import { ReadinessBadge } from './readinessBadge'
+import { EditorialStatusBadge } from './editorialStatusBadge'
+import { resolveEditorialStatus } from '~/util/editorialStatus'
 import { getPieceReadinessState } from './sidebar/partRow'
 import {
 	formatPieceOnAirDuration,
@@ -21,6 +23,7 @@ import {
 	WIPE_CUT_POINT_SECONDS,
 	formatSecondsPrecise
 } from '~/util/pieceDuration'
+import { resolveEffectiveScriptCps } from '~/util/scriptReadingTime'
 import { Button, Stack } from 'react-bootstrap'
 
 function sortPieces(pieces: Piece[]): Piece[] {
@@ -61,6 +64,9 @@ export function PiecesList({ part }: { part: Part }) {
 
 	const pieces = useAppSelector((state) => selectPiecesByPart(state, partIds))
 	const { readiness } = useRundownReadinessContext()
+	const userScriptCps = useAppSelector((s) => s.auth.user?.scriptCps)
+	const settings = useAppSelector((s) => s.settings.settings)
+	const scriptCps = resolveEffectiveScriptCps({ userScriptCps, settingsCps: settings?.scriptCps })
 
 	const showSourceColumn = pieces.some(
 		(piece: Piece) => getPieceSourceDurationSeconds(piece) !== undefined
@@ -72,10 +78,12 @@ export function PiecesList({ part }: { part: Part }) {
 				part,
 				pieces.map((piece: Piece) => ({
 					pieceType: piece.pieceType,
-					duration: piece.duration
-				}))
+					duration: piece.duration,
+					skip: piece.skip
+				})),
+				{ scriptCps }
 			),
-		[part, pieces]
+		[part, pieces, scriptCps]
 	)
 
 	const handleReorderPiece = (sourceIndex: number, targetIndex: number) => {
@@ -127,6 +135,8 @@ export function PiecesList({ part }: { part: Part }) {
 						effectivePartDuration={effectivePartDuration}
 						readiness={readiness}
 						showSourceColumn={showSourceColumn}
+						skipStatusUnlessEditorChecked={settings?.skipStatusUnlessEditorChecked !== false}
+						requireEditorCheckForAir={Boolean(settings?.requireEditorCheckForAir)}
 					/>
 				))}
 
@@ -148,7 +158,9 @@ function PieceRow({
 	onMoveDown,
 	effectivePartDuration,
 	readiness,
-	showSourceColumn
+	showSourceColumn,
+	skipStatusUnlessEditorChecked,
+	requireEditorCheckForAir
 }: {
 	piece: Piece
 	isFirst: boolean
@@ -158,6 +170,8 @@ function PieceRow({
 	effectivePartDuration: number | undefined
 	readiness: ReturnType<typeof useRundownReadinessContext>['readiness']
 	showSourceColumn: boolean
+	skipStatusUnlessEditorChecked: boolean
+	requireEditorCheckForAir: boolean
 }) {
 	const dispatch = useAppDispatch()
 	const navigate = useNavigate()
@@ -168,6 +182,12 @@ function PieceRow({
 	)
 
 	const pieceReadiness = getPieceReadinessState(piece.id, readiness)
+	const editorial = resolveEditorialStatus({
+		skip: piece.skip,
+		editorChecked: piece.editorChecked,
+		skipStatusUnlessEditorChecked,
+		requireEditorCheckForAir
+	})
 
 	const pieceRowClick = () => {
 		navigate({
@@ -209,7 +229,7 @@ function PieceRow({
 	}
 
 	return (
-		<tr onClick={pieceRowClick}>
+		<tr onClick={pieceRowClick} className={piece.skip ? 'piece-row--skipped' : undefined}>
 			<td onClick={(event) => event.stopPropagation()}>
 				<Stack direction="horizontal" gap={1} className="piece-order-controls">
 					<Button
@@ -233,9 +253,18 @@ function PieceRow({
 				</Stack>
 			</td>
 			<td>
-				{pieceReadiness ? (
-					<ReadinessBadge state={pieceReadiness.state} tooltip={pieceReadiness.tooltip} compact />
-				) : null}
+				<span className="d-inline-flex gap-1 align-items-center">
+					{pieceReadiness ? (
+						<ReadinessBadge state={pieceReadiness.state} tooltip={pieceReadiness.tooltip} compact />
+					) : null}
+					{editorial ? (
+						<EditorialStatusBadge
+							status={editorial.status}
+							tooltip={editorial.tooltip}
+							compact
+						/>
+					) : null}
+				</span>
 			</td>
 			<td className="piece-type piece-type-chip" style={{ backgroundColor: manifest?.colour }}>
 				{manifest?.shortName || piece.pieceType}

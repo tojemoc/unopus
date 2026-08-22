@@ -9,6 +9,7 @@ import {
 	type Piece
 } from '~backend/background/interfaces'
 import { MediaPickerField } from '~/components/rundown/mediaPickerField'
+import { ScriptReadingCounter } from '~/components/rundown/scriptReadingCounter'
 import { useAppDispatch, useAppSelector } from '~/store/app'
 import { updatePart } from '~/store/parts'
 import { updatePiece } from '~/store/pieces'
@@ -506,12 +507,15 @@ function RewriteRow({
 						onChange={onChange}
 					/>
 				) : row.kind === 'partScript' ? (
-					<Form.Control
-						as="textarea"
-						rows={3}
-						value={value}
-						onChange={(e) => onChange(e.target.value)}
-					/>
+					<>
+						<Form.Control
+							as="textarea"
+							rows={3}
+							value={value}
+							onChange={(e) => onChange(e.target.value)}
+						/>
+						<ScriptReadingCounter text={value} />
+					</>
 				) : row.kind === 'piece' && row.field.type === ManifestFieldType.Boolean ? (
 					<Form.Select value={value} onChange={(e) => onChange(e.target.value)}>
 						<option value="false">No</option>

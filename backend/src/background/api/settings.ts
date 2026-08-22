@@ -17,12 +17,36 @@ import {
 	isValidDailyCloneTime,
 	isValidIanaTimeZone
 } from '../dailyGenerationTime'
+import { DEFAULT_SCRIPT_CPS, normalizeScriptCps } from '../scriptReadingTime'
+import type { IluDurationMode } from '../interfaces'
+
+function normalizeEditorSettings(settings: ApplicationSettings): ApplicationSettings {
+	const normalized: ApplicationSettings = { ...settings }
+
+	if (normalized.scriptCps !== undefined && normalized.scriptCps !== null) {
+		normalized.scriptCps = normalizeScriptCps(Number(normalized.scriptCps))
+	} else {
+		normalized.scriptCps = DEFAULT_SCRIPT_CPS
+	}
+
+	const mode = normalized.iluDurationMode
+	if (mode !== 'auto' && mode !== 'manual') {
+		normalized.iluDurationMode = 'auto'
+	} else {
+		normalized.iluDurationMode = mode as IluDurationMode
+	}
+
+	normalized.skipStatusUnlessEditorChecked = normalized.skipStatusUnlessEditorChecked !== false
+	normalized.requireEditorCheckForAir = Boolean(normalized.requireEditorCheckForAir)
+
+	return normalized
+}
 
 async function validateDailyTemplateSettings(
 	settings: ApplicationSettings,
 	{ strictTemplateId = false }: { strictTemplateId?: boolean } = {}
 ): Promise<{ error?: Error; normalized: ApplicationSettings }> {
-	const normalized: ApplicationSettings = { ...settings }
+	const normalized: ApplicationSettings = normalizeEditorSettings({ ...settings })
 
 	const trimmedTimezone = normalized.dailyCloneTimezone?.trim()
 	if (!trimmedTimezone) {
@@ -171,6 +195,10 @@ export const mutations = {
 
 		const update: ApplicationSettings = {
 			...payload,
+			scriptCps: normalized.scriptCps,
+			iluDurationMode: normalized.iluDurationMode,
+			skipStatusUnlessEditorChecked: normalized.skipStatusUnlessEditorChecked,
+			requireEditorCheckForAir: normalized.requireEditorCheckForAir,
 			dailyCloneTimezone: normalized.dailyCloneTimezone,
 			dailyCloneTime: normalized.dailyCloneTime,
 			dailyTemplateRundownId: normalized.dailyTemplateRundownId
@@ -304,7 +332,11 @@ export function registerSettingsHandlers(socket: Socket, _io: Server) {
 const DEFAULT_SETTINGS: ApplicationSettings = {
 	coreUrl: '127.0.0.1',
 	corePort: 3000,
-	dailyCloneTimezone: DEFAULT_DAILY_CLONE_TIMEZONE
+	dailyCloneTimezone: DEFAULT_DAILY_CLONE_TIMEZONE,
+	scriptCps: DEFAULT_SCRIPT_CPS,
+	iluDurationMode: 'auto',
+	skipStatusUnlessEditorChecked: true,
+	requireEditorCheckForAir: false
 }
 
 async function deleteAllTypeManifests(): Promise<void> {

@@ -8,7 +8,8 @@
  */
 import {
 	resolvePieceOnAirDuration,
-	resolvePartOnAirDuration
+	resolvePartOnAirDuration,
+	type StoryDurationOptions
 } from '~backend/background/storyDuration'
 
 export { resolvePieceOnAirDuration, resolvePartOnAirDuration }
@@ -35,9 +36,13 @@ export function formatPieceOnAirDuration(
 	piece: {
 		pieceType: string
 		duration?: number
+		skip?: boolean
 	},
 	partDuration?: number
 ): string {
+	if (piece.skip) {
+		return ''
+	}
 	const effective = resolvePieceOnAirDuration(piece, partDuration)
 	if (typeof effective === 'number' && Number.isFinite(effective) && effective > 0) {
 		return formatSecondsClock(effective)
@@ -52,10 +57,11 @@ export function formatPieceOnAirDuration(
 }
 
 export function formatPartOnAirDuration(
-	part: { duration?: number },
-	pieces: Array<{ pieceType: string; duration?: number }>
+	part: { duration?: number; script?: string; partType?: string; skip?: boolean },
+	pieces: Array<{ pieceType: string; duration?: number; skip?: boolean }>,
+	options?: StoryDurationOptions
 ): string {
-	const effective = resolvePartOnAirDuration(part, pieces)
+	const effective = resolvePartOnAirDuration(part, pieces, options)
 	return effective ? formatSecondsClock(effective) : ''
 }
 

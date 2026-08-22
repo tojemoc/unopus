@@ -1,10 +1,12 @@
 import { db } from './db.js'
 import type { DBPart, DBPiece, Part, Piece } from './interfaces.js'
+import { readApplicationSettingsSync } from './settingsResolver.js'
 import {
 	isPositiveDurationSeconds,
 	planStoryDurationSync,
 	type StoryDurationPiece
 } from './storyDuration.js'
+import { resolveEffectiveScriptCps } from './scriptReadingTime.js'
 
 /** Serialize duration sync per story so concurrent saves cannot clobber each other. */
 const syncTailByPartId = new Map<string, Promise<void>>()
@@ -121,7 +123,36 @@ export function broadcastStoryDurationSync(
 	}
 }
 
-async function syncStoryDurationsForPartLocked(partId: string): Promise<void> {
+function applyPieceDuration(pieceId: string, duration: number, force: boolean): void {
+	const patch = JSON.stringify({ duration })
+	if (force) {
+		db.prepare(
+			`UPDATE pieces
+			 SET document = (SELECT json_patch(pieces.document, json(?)) FROM pieces WHERE id = ?)
+			 WHERE id = ?`
+		).run(patch, pieceId, pieceId)
+		return
+	}
+	applyPieceDurationIfUnset(pieceId, duration)
+}
+
+function applyPartDuration(partId: string, duration: number, force: boolean): void {
+	const patch = JSON.stringify({ duration })
+	if (force) {
+		db.prepare(
+			`UPDATE parts
+			 SET document = (SELECT json_patch(parts.document, json(?)) FROM parts WHERE id = ?)
+			 WHERE id = ?`
+		).run(patch, partId, partId)
+		return
+	}
+	applyPartDurationIfUnset(partId, duration)
+}
+
+async function syncStoryDurationsForPartLocked(
+	partId: string,
+	options?: { editorScriptCps?: number | null }
+): Promise<void> {
 	if (beforeLocked) {
 		await beforeLocked(partId)
 	}
@@ -131,15 +162,27 @@ async function syncStoryDurationsForPartLocked(partId: string): Promise<void> {
 		return
 	}
 
+	const settings = readApplicationSettingsSync()
+	const scriptCps = resolveEffectiveScriptCps(options?.editorScriptCps, settings?.scriptCps)
 	const pieces = readPiecesForPart(partId).map(
 		(piece): StoryDurationPiece => ({
 			id: piece.id,
 			pieceType: piece.pieceType,
-			duration: piece.duration
+			duration: piece.duration,
+			skip: piece.skip
 		})
 	)
 
-	const plan = planStoryDurationSync(part, pieces)
+	const plan = planStoryDurationSync(
+		{
+			duration: part.duration,
+			script: part.script,
+			partType: part.partType,
+			skip: part.skip
+		},
+		pieces,
+		{ scriptCps }
+	)
 
 	db.exec('BEGIN IMMEDIATE')
 	try {
@@ -151,13 +194,13 @@ async function syncStoryDurationsForPartLocked(partId: string): Promise<void> {
 				throw new Error(`Story duration sync failed: piece ${pieceUpdate.id} not found`)
 			}
 			const stored = JSON.parse(row.document) as { duration?: number }
-			if (isPositiveDurationSeconds(stored.duration)) {
-				continue
-			}
 			if (stored.duration === pieceUpdate.duration) {
 				continue
 			}
-			applyPieceDurationIfUnset(pieceUpdate.id, pieceUpdate.duration)
+			if (!pieceUpdate.force && isPositiveDurationSeconds(stored.duration)) {
+				continue
+			}
+			applyPieceDuration(pieceUpdate.id, pieceUpdate.duration, Boolean(pieceUpdate.force))
 		}
 
 		if (plan.partDuration !== undefined) {
@@ -168,8 +211,10 @@ async function syncStoryDurationsForPartLocked(partId: string): Promise<void> {
 				throw new Error(`Story duration sync failed: part ${partId} not found`)
 			}
 			const stored = JSON.parse(row.document) as { duration?: number }
-			if (!isPositiveDurationSeconds(stored.duration) && stored.duration !== plan.partDuration) {
-				applyPartDurationIfUnset(partId, plan.partDuration)
+			if (stored.duration === plan.partDuration) {
+				// already in sync
+			} else if (plan.forcePartDuration || !isPositiveDurationSeconds(stored.duration)) {
+				applyPartDuration(partId, plan.partDuration, Boolean(plan.forcePartDuration))
 			}
 		}
 
@@ -185,9 +230,12 @@ async function syncStoryDurationsForPartLocked(partId: string): Promise<void> {
 }
 
 /** Persist inherited story/piece durations after a part or piece edit. */
-export function syncStoryDurationsForPart(partId: string): Promise<void> {
+export function syncStoryDurationsForPart(
+	partId: string,
+	options?: { editorScriptCps?: number | null }
+): Promise<void> {
 	const previous = syncTailByPartId.get(partId) ?? Promise.resolve()
-	const run = previous.then(() => syncStoryDurationsForPartLocked(partId))
+	const run = previous.then(() => syncStoryDurationsForPartLocked(partId, options))
 	const tail = run.catch(() => undefined)
 	syncTailByPartId.set(partId, tail)
 	void tail.then(() => {

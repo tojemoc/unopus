@@ -18,6 +18,8 @@ import { sendPartUpdateToCore } from './parts'
 import { mutations as partsMutations } from './parts'
 import { syncStoryDurationsForPart, broadcastStoryDurationSync } from '../storyDurationSync'
 import { Server, Socket } from 'socket.io'
+import type { AuthenticatedSocket } from '../auth/socketAuth'
+import type { SessionUser } from '../auth/types'
 import { mutations as typeManifestMutations, resolveManifestId } from './typeManifests'
 import { resolveSourceEnabled, trimSourceText } from '../sourcePayload'
 import { spliceReorder, resolveReorderTargetIndex } from '../util'
@@ -504,7 +506,8 @@ export function registerPiecesHandlers(socket: Socket, io: Server) {
 		switch (action) {
 			case IpcOperationType.Create:
 				{
-					const { result, error } = await handleCreatePiece(payload, io)
+					const editor = (socket as AuthenticatedSocket).data.user
+					const { result, error } = await handleCreatePiece(payload, io, editor)
 					callback(result || error)
 				}
 				break
@@ -522,7 +525,8 @@ export function registerPiecesHandlers(socket: Socket, io: Server) {
 				break
 			case IpcOperationType.Update:
 				{
-					const { result, error } = await handleUpdatePiece(payload, io)
+					const editor = (socket as AuthenticatedSocket).data.user
+					const { result, error } = await handleUpdatePiece(payload, io, editor)
 					callback(result || error)
 				}
 				break
@@ -544,7 +548,7 @@ export function registerPiecesHandlers(socket: Socket, io: Server) {
 	})
 }
 
-async function handleCreatePiece(payload: MutationPieceCreate, io?: Server) {
+async function handleCreatePiece(payload: MutationPieceCreate, io?: Server, editor?: SessionUser) {
 	{
 		let returnedError: unknown | Error | undefined
 
@@ -554,7 +558,9 @@ async function handleCreatePiece(payload: MutationPieceCreate, io?: Server) {
 
 		if (result) {
 			try {
-				await syncStoryDurationsForPart(result.partId)
+				await syncStoryDurationsForPart(result.partId, {
+					editorScriptCps: editor?.scriptCps
+				})
 				if (io) broadcastStoryDurationSync(io, result.partId)
 			} catch (error) {
 				console.error('Failed to sync story durations for part', result.partId, error)
@@ -596,7 +602,7 @@ async function handleCopyPiece(payload: MutationPieceCopy) {
 	return { result, error: returnedError }
 }
 
-async function handleUpdatePiece(payload: MutationPieceUpdate, io?: Server) {
+async function handleUpdatePiece(payload: MutationPieceUpdate, io?: Server, editor?: SessionUser) {
 	{
 		let returnedError: unknown | Error | undefined
 
@@ -606,7 +612,9 @@ async function handleUpdatePiece(payload: MutationPieceUpdate, io?: Server) {
 
 		if (result) {
 			try {
-				await syncStoryDurationsForPart(result.partId)
+				await syncStoryDurationsForPart(result.partId, {
+					editorScriptCps: editor?.scriptCps
+				})
 				if (io) broadcastStoryDurationSync(io, result.partId)
 			} catch (error) {
 				console.error('Failed to sync story durations for part', result.partId, error)
@@ -727,7 +735,9 @@ export function mutatePieceForExport(piece: Piece): MutatedPiece {
 		clipName: undefined,
 		attributes: {
 			...normalizeGraphicAttributesForExport(piece.payload),
-			adlib: false
+			adlib: false,
+			skip: Boolean(piece.skip),
+			editorChecked: Boolean(piece.editorChecked)
 		},
 		position: undefined
 	}
@@ -737,7 +747,7 @@ export async function getMutatedPiecesFromPart(partId: string): Promise<MutatedP
 	const { result: pieces } = await mutations.read({ partId: partId })
 
 	if (pieces && Array.isArray(pieces)) {
-		return pieces.map((piece) => mutatePieceForExport(piece))
+		return pieces.filter((piece) => !piece.skip).map((piece) => mutatePieceForExport(piece))
 	}
 
 	return []

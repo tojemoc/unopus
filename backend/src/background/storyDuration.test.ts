@@ -3,7 +3,8 @@ import { describe, it } from 'node:test'
 import {
 	planStoryDurationSync,
 	resolvePartOnAirDuration,
-	resolvePieceOnAirDuration
+	resolvePieceOnAirDuration,
+	sumPartsOnAirDuration
 } from './storyDuration.js'
 
 describe('storyDuration', () => {
@@ -81,5 +82,78 @@ describe('storyDuration', () => {
 
 		assert.equal(plan.partDuration, 8)
 		assert.deepEqual(plan.pieceUpdates, [{ id: 'tema', duration: 8 }])
+	})
+
+	it('derives ILU part duration from script reading time', () => {
+		const script = 'a'.repeat(30) // 30 chars @ 15 CPS = 2s
+		assert.equal(
+			resolvePartOnAirDuration(
+				{ partType: 'ilu', script, duration: undefined },
+				[{ pieceType: 'headline', duration: undefined }],
+				{ scriptCps: 15 }
+			),
+			2
+		)
+	})
+
+	it('plans ILU script sync onto headline and part', () => {
+		const script = 'a'.repeat(30)
+		const plan = planStoryDurationSync(
+			{ partType: 'ilu', script, duration: 99 },
+			[
+				{ id: 'il', pieceType: 'headline', duration: 99 },
+				{ id: 'l3d', pieceType: 'l3d-headline' },
+				{ id: 'cam', pieceType: 'camera' }
+			],
+			{ scriptCps: 15 }
+		)
+
+		assert.equal(plan.partDuration, 2)
+		assert.equal(plan.forcePartDuration, true)
+		assert.deepEqual(plan.pieceUpdates, [
+			{ id: 'il', duration: 2, force: true },
+			{ id: 'l3d', duration: 2 }
+		])
+	})
+
+	it('excludes skipped pieces from duration and sync', () => {
+		assert.equal(
+			resolvePartOnAirDuration(
+				{ duration: undefined },
+				[
+					{ pieceType: 'video', duration: 12, skip: true },
+					{ pieceType: 'video', duration: 5 }
+				]
+			),
+			5
+		)
+
+		assert.equal(
+			resolvePieceOnAirDuration({ pieceType: 'headline', duration: 10, skip: true }, 10),
+			undefined
+		)
+
+		const plan = planStoryDurationSync({ duration: 6 }, [
+			{ id: 'il', pieceType: 'headline', skip: true },
+			{ id: 'l3d', pieceType: 'l3d-headline' }
+		])
+		assert.deepEqual(plan.pieceUpdates, [{ id: 'l3d', duration: 6 }])
+	})
+
+	it('skipped parts contribute nothing to rundown sum', () => {
+		const total = sumPartsOnAirDuration(
+			[
+				{
+					part: { partType: 'ilu', script: 'a'.repeat(30), skip: true },
+					pieces: []
+				},
+				{
+					part: { partType: 'syn', duration: 10 },
+					pieces: [{ pieceType: 'video', duration: 10 }]
+				}
+			],
+			{ scriptCps: 15 }
+		)
+		assert.equal(total, 10)
 	})
 })

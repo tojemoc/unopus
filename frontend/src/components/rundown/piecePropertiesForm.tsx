@@ -11,6 +11,7 @@ import { updatePart } from '~/store/parts'
 import { useToasts } from '../toasts/useToasts'
 import { MediaPickerField } from './mediaPickerField'
 import { GfxPreview } from './gfxPreview'
+import { ScriptReadingCounter } from './scriptReadingCounter'
 import { resolveSourceEnabled } from '~/util/sourcePayload'
 import {
 	DEFAULT_WIPE_DURATION_SECONDS,
@@ -131,6 +132,44 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 									value={field.state.value ?? ''}
 									onBlur={field.handleBlur}
 									onChange={(e) => field.handleChange(e.target.value)}
+								/>
+							</Form.Group>
+							<FieldInfo field={field} />
+						</>
+					)}
+				/>
+
+				<form.Field
+					name="skip"
+					children={(field) => (
+						<>
+							<Form.Group className="mb-3">
+								<Form.Label htmlFor={field.name}>Skipped (not in timing):</Form.Label>
+								<Form.Switch
+									name={field.name}
+									checked={Boolean(field.state.value)}
+									onBlur={field.handleBlur}
+									onChange={(e) => field.handleChange(e.target.checked)}
+								/>
+								<Form.Text className="text-muted">
+									Fades this piece and excludes it from the story length and Sofie export.
+								</Form.Text>
+							</Form.Group>
+							<FieldInfo field={field} />
+						</>
+					)}
+				/>
+				<form.Field
+					name="editorChecked"
+					children={(field) => (
+						<>
+							<Form.Group className="mb-3">
+								<Form.Label htmlFor={field.name}>Checked by editor:</Form.Label>
+								<Form.Switch
+									name={field.name}
+									checked={Boolean(field.state.value)}
+									onBlur={field.handleBlur}
+									onChange={(e) => field.handleChange(e.target.checked)}
 								/>
 							</Form.Group>
 							<FieldInfo field={field} />
@@ -350,14 +389,27 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 
 										{fieldInfo.type === ManifestFieldType.String &&
 											(!fieldInfo.options || fieldInfo.options.length === 0) && (
-												<Form.Control
-													name={field.name}
-													type="text"
-													// eslint-disable-next-line @typescript-eslint/no-explicit-any
-													value={field.state.value as any}
-													onBlur={field.handleBlur}
-													onChange={(e) => field.handleChange(e.target.value)}
-												/>
+												<>
+													<Form.Control
+														name={field.name}
+														type="text"
+														// eslint-disable-next-line @typescript-eslint/no-explicit-any
+														value={field.state.value as any}
+														onBlur={field.handleBlur}
+														onChange={(e) => field.handleChange(e.target.value)}
+													/>
+													{(fieldInfo.id === 'text' ||
+														fieldInfo.id === 'script' ||
+														fieldInfo.id === 'headline') && (
+														<ScriptReadingCounter
+															text={
+																typeof field.state.value === 'string'
+																	? field.state.value
+																	: String(field.state.value ?? '')
+															}
+														/>
+													)}
+												</>
 											)}
 
 										{fieldInfo.type === ManifestFieldType.Number && (

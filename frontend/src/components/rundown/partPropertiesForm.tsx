@@ -12,6 +12,8 @@ import { useAppDispatch, useAppSelector } from '~/store/app'
 import { removePart, updatePart } from '~/store/parts'
 import { useToasts } from '../toasts/useToasts'
 import { formatPartOnAirDuration, resolvePartOnAirDuration } from '~/util/pieceDuration'
+import { ScriptReadingCounter } from './scriptReadingCounter'
+import { partUsesScriptDuration, resolveEffectiveScriptCps } from '~/util/scriptReadingTime'
 
 export function PartPropertiesForm({ part }: { part: Part }) {
 	const dispatch = useAppDispatch()
@@ -24,16 +26,21 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 	const childPieces = useAppSelector((state) =>
 		state.pieces.pieces.filter((piece) => piece.partId === part.id)
 	)
+	const userScriptCps = useAppSelector((s) => s.auth.user?.scriptCps)
+	const settingsCps = useAppSelector((s) => s.settings.settings?.scriptCps)
+	const scriptCps = resolveEffectiveScriptCps({ userScriptCps, settingsCps })
 	const effectivePartDuration = useMemo(
 		() =>
 			resolvePartOnAirDuration(
 				livePart,
 				childPieces.map((piece) => ({
 					pieceType: piece.pieceType,
-					duration: piece.duration
-				}))
+					duration: piece.duration,
+					skip: piece.skip
+				})),
+				{ scriptCps }
 			),
-		[livePart, childPieces]
+		[livePart, childPieces, scriptCps]
 	)
 
 	useEffect(() => {
@@ -147,6 +154,46 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 						</>
 					)}
 				/>
+				<form.Field
+					name="skip"
+					children={(field) => (
+						<>
+							<Form.Group className="mb-3">
+								<Form.Label htmlFor={field.name}>{friendlyLabel('skip')}</Form.Label>
+								<Form.Switch
+									name={field.name}
+									checked={Boolean(field.state.value)}
+									onBlur={field.handleBlur}
+									onChange={(e) => field.handleChange(e.target.checked)}
+								/>
+								<Form.Text className="text-muted">
+									Fades the story, excludes it from timing, and removes it from Sofie while skipped.
+								</Form.Text>
+							</Form.Group>
+							<FieldInfo field={field} />
+						</>
+					)}
+				/>
+				<form.Field
+					name="editorChecked"
+					children={(field) => (
+						<>
+							<Form.Group className="mb-3">
+								<Form.Label htmlFor={field.name}>{friendlyLabel('editorChecked')}</Form.Label>
+								<Form.Switch
+									name={field.name}
+									checked={Boolean(field.state.value)}
+									onBlur={field.handleBlur}
+									onChange={(e) => field.handleChange(e.target.checked)}
+								/>
+								<Form.Text className="text-muted">
+									Manual editor confirmation. Can be required before on-air in Settings → Connection.
+								</Form.Text>
+							</Form.Group>
+							<FieldInfo field={field} />
+						</>
+					)}
+				/>
 
 				{!part.fromPreset && (
 					<form.Field
@@ -188,10 +235,11 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 							field.state.value > 0
 								? field.state.value
 								: undefined
+						const scriptDriven = partUsesScriptDuration(livePart.partType)
 						const effectiveHint =
 							effectivePartDuration &&
 							(!storedDuration || storedDuration !== effectivePartDuration)
-								? formatPartOnAirDuration(livePart, childPieces)
+								? formatPartOnAirDuration(livePart, childPieces, { scriptCps })
 								: undefined
 
 						return (
@@ -213,10 +261,16 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 											field.handleChange(raw === '' ? undefined : Number(raw))
 										}}
 									/>
-									{effectiveHint ? (
+									{scriptDriven ? (
 										<Form.Text className="text-muted">
+											ILU duration follows the script reading time (CPS). Saving the script
+											updates the story and ILU piece lengths.
+										</Form.Text>
+									) : null}
+									{effectiveHint ? (
+										<Form.Text className="text-muted d-block">
 											Effective on-air duration: {effectiveHint}
-											{!storedDuration ? ' (from child pieces until you set a value)' : ''}
+											{!storedDuration ? ' (from script or child pieces until you set a value)' : ''}
 										</Form.Text>
 									) : null}
 								</Form.Group>
@@ -239,6 +293,7 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 									onBlur={field.handleBlur}
 									onChange={(e) => field.handleChange(e.target.value)}
 								/>
+								<ScriptReadingCounter text={field.state.value} />
 							</Form.Group>
 							<FieldInfo field={field} />
 						</>

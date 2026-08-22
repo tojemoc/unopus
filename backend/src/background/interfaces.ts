@@ -79,6 +79,13 @@ export interface Part extends IHasPayload {
 	rank: number
 	/** Whether this part is floated */
 	float: boolean
+	/**
+	 * Editorial skip: faded in UI, excluded from timing, and omitted from Sofie like float.
+	 * Distinct from `float` so operators can mark intentional skips with status semantics.
+	 */
+	skip?: boolean
+	/** Manually confirmed by an editor (gate for on-air when settings require it). */
+	editorChecked?: boolean
 
 	script?: string
 	duration?: number
@@ -105,6 +112,10 @@ export interface Piece extends IHasPayload {
 	rank?: number
 
 	pieceType: string
+	/** Editorial skip: faded, excluded from story length and Sofie export. */
+	skip?: boolean
+	/** Manually confirmed by an editor for this piece. */
+	editorChecked?: boolean
 }
 
 export interface DBPlaylist {
@@ -288,6 +299,9 @@ export interface RundownReadiness {
 	diagnostics?: RundownReadinessDiagnostics
 }
 
+/** How ILU story duration is sent to Sofie (auto-take after time vs wait for take). */
+export type IluDurationMode = 'auto' | 'manual'
+
 export interface ApplicationSettings {
 	coreUrl?: string
 	corePort?: number
@@ -310,6 +324,26 @@ export interface ApplicationSettings {
 	 * IANA timezone for daily clone date/time (default `Europe/Bratislava`).
 	 */
 	dailyCloneTimezone?: string
+	/**
+	 * Default characters-per-second for script reading-time estimates.
+	 * Users can override with a personal CPS on their account (null = use this default).
+	 */
+	scriptCps?: number
+	/**
+	 * When `auto`, ILU parts export `autoNext: true` so Sofie can take after the reading time.
+	 * When `manual`, duration is still sent but auto-take is not requested.
+	 */
+	iluDurationMode?: IluDurationMode
+	/**
+	 * When true, skipped parts/pieces show a Skipped status unless `editorChecked` is set.
+	 * When false, skip never invents a status badge from skip alone.
+	 */
+	skipStatusUnlessEditorChecked?: boolean
+	/**
+	 * When true, parts that are not `editorChecked` are treated as not ready for air
+	 * (shown alongside media NR, and `editorChecked` is exported for blueprints).
+	 */
+	requireEditorCheckForAir?: boolean
 }
 
 export type DailyGenerationStatus = 'in_progress' | 'completed' | 'failed'
@@ -418,6 +452,10 @@ export interface MutatedPart {
 		name: string
 		type: string | undefined
 		float: boolean
+		skip?: boolean
+		editorChecked?: boolean
+		/** When true, Sofie may auto-take after `duration` (ILU auto mode). */
+		autoNext?: boolean
 		script: string | undefined
 		duration: number | undefined
 		pieces: MutatedPiece[]
