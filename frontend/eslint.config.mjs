@@ -21,6 +21,9 @@ export default [
 			},
 			rules: {
 				...reactHooks.configs.recommended.rules,
+				// v7 adds stricter rules; keep existing patterns until we adopt them deliberately.
+				'react-hooks/set-state-in-effect': 'off',
+				'react-hooks/refs': 'off',
 				'react-refresh/only-export-components': ['warn', { allowConstantExport: true }]
 			}
 		}
