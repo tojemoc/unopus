@@ -195,6 +195,10 @@ export const mutations = {
 
 		const update: ApplicationSettings = {
 			...payload,
+			scriptCps: normalized.scriptCps,
+			iluDurationMode: normalized.iluDurationMode,
+			skipStatusUnlessEditorChecked: normalized.skipStatusUnlessEditorChecked,
+			requireEditorCheckForAir: normalized.requireEditorCheckForAir,
 			dailyCloneTimezone: normalized.dailyCloneTimezone,
 			dailyCloneTime: normalized.dailyCloneTime,
 			dailyTemplateRundownId: normalized.dailyTemplateRundownId

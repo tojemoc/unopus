@@ -102,6 +102,15 @@ export function registerAuthRoutes(app: Application): void {
 		if (!user) {
 			return
 		}
+		if (
+			req.body === undefined ||
+			req.body === null ||
+			typeof req.body !== 'object' ||
+			Array.isArray(req.body)
+		) {
+			sendJson(res, 400, { error: 'Request body must be a JSON object' })
+			return
+		}
 		const body = req.body as { scriptCps?: number | null }
 		if (body.scriptCps !== undefined && body.scriptCps !== null) {
 			if (typeof body.scriptCps !== 'number' || !Number.isFinite(body.scriptCps)) {
