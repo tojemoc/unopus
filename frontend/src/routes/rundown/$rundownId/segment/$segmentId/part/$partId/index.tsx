@@ -1,11 +1,12 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { Stack } from 'react-bootstrap'
-import { RundownBreadcrumbs } from '~/components/rundown/breadcrumbs'
-import { PartPropertiesForm } from '~/components/rundown/partPropertiesForm'
-import { PiecesList } from '~/components/rundown/piecesList'
+import { useEffect } from 'react'
 import { usePresenceFocus } from '~/hooks/usePresence'
 import { useAppSelector } from '~/store/app'
 
+/**
+ * Part detail is shown inline in the script column (`PartExpandedPanel`).
+ * This route exists for deep links / presence and renders nothing.
+ */
 export const Route = createFileRoute('/rundown/$rundownId/segment/$segmentId/part/$partId/')({
 	component: RouteComponent
 })
@@ -22,30 +23,13 @@ function RouteComponent() {
 		)
 	)
 
-	if (!part) {
-		navigate({
-			to: `/rundown/${rundownId}/segment/${segmentId}`
-		})
-		return null
-	}
+	useEffect(() => {
+		if (!part) {
+			void navigate({
+				to: `/rundown/${rundownId}/segment/${segmentId}`
+			})
+		}
+	}, [part, navigate, rundownId, segmentId])
 
-	return (
-		<Stack className="rundown-main-content rundown-main-content-fill">
-			<RundownBreadcrumbs rundownId={rundownId} />
-			<div className="rundown-main-content-properties">
-				<Stack
-					direction="horizontal"
-					key={`form_${partId}`}
-					style={{ overflowY: 'auto', alignItems: 'stretch' }}
-				>
-					<Stack style={{ flexGrow: 2, minHeight: '100%' }} className="re-surface-form p-4">
-						<PartPropertiesForm key={`partForm_${partId}`} part={part} />
-					</Stack>
-					<Stack style={{ flexGrow: 1, minHeight: '100%' }} className="re-surface-panel p-4">
-						<PiecesList key={`piecesList_${partId}`} part={part} />
-					</Stack>
-				</Stack>
-			</div>
-		</Stack>
-	)
+	return null
 }

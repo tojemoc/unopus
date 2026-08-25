@@ -16,7 +16,7 @@ export const Route = createFileRoute('/rundown/$rundownId')({
 
 function RouteComponent() {
 	const { rundownId } = Route.useParams()
-	const pathname = useRouterState({ select: (s) => s.location.pathname })
+	const matches = useRouterState({ select: (s) => s.matches })
 
 	const dispatch = useAppDispatch()
 	const loadStatus = useAppSelector((state) => ({
@@ -59,11 +59,16 @@ function RouteComponent() {
 		)
 	}
 
-	// Part/piece detail lives inline in the script column. Keep the outlet only for
-	// rundown-level and segment-level settings (explicitly out of scope for redesign).
-	const showSettingsDrawer =
-		pathname === `/rundown/${rundownId}` ||
-		(/^\/rundown\/[^/]+\/segment\/[^/]+\/?$/.test(pathname) && !pathname.includes('/part/'))
+	const onPartOrPiece = matches.some(
+		(match) =>
+			typeof match.routeId === 'string' &&
+			(match.routeId.includes('/part/$partId') || match.routeId.includes('/piece/$pieceId'))
+	)
+	// Keep rundown/segment property forms available via Outlet, but do not cover the
+	// script column with a permanent drawer (settings stay reachable from the header).
+	const showSettingsDrawer = false
+	void onPartOrPiece
+	void showSettingsDrawer
 
 	return (
 		<RundownReadinessProvider rundownId={rundown.id}>
@@ -77,13 +82,12 @@ function RouteComponent() {
 					<RundownSidebar rundownId={rundown.id} playlistId={rundown.playlistId} />
 				</div>
 
-				{showSettingsDrawer ? (
-					<aside className="rundown-settings-drawer" aria-label="Rundown settings">
-						<MyErrorBoundary>
-							<Outlet />
-						</MyErrorBoundary>
-					</aside>
-				) : null}
+				{/* Mount matched child routes for presence / deep links without a side panel. */}
+				<div hidden aria-hidden>
+					<MyErrorBoundary>
+						<Outlet />
+					</MyErrorBoundary>
+				</div>
 			</div>
 		</RundownReadinessProvider>
 	)
