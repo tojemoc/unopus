@@ -34,6 +34,7 @@ export function RundownSidebar({
 	const { readiness, loading, error, refresh } = useRundownReadinessContext()
 
 	const [openSegments, setOpenSegments] = useState<Record<string, boolean>>({})
+	const [expandedPartId, setExpandedPartId] = useState<string | null>(null)
 
 	useEffect(() => {
 		setOpenSegments((prev) => {
@@ -116,6 +117,8 @@ export function RundownSidebar({
 								isOpen={isSegmentOpen(segment.id)}
 								onToggleOpen={() => toggleSegmentOpen(segment.id)}
 								readiness={readiness}
+								expandedPartId={expandedPartId}
+								onExpandPart={setExpandedPartId}
 							/>
 						)}
 						id={rundownId}

@@ -1,4 +1,3 @@
-import { useMatchRoute, useNavigate } from '@tanstack/react-router'
 import { useAppSelector } from '~/store/app'
 import type { Part, PieceReadiness, RundownReadiness } from '~backend/background/interfaces'
 import { TypeManifestEntity } from '~backend/background/interfaces'
@@ -63,7 +62,9 @@ function typeTint(hex: string | undefined): string {
 export function SidebarPartRow({
 	part,
 	readiness,
-	partPieces
+	partPieces,
+	expanded,
+	onToggle
 }: {
 	part: Part
 	readiness: RundownReadiness | null
@@ -74,28 +75,15 @@ export function SidebarPartRow({
 		duration?: number
 		skip?: boolean
 	}>
+	expanded: boolean
+	onToggle: () => void
 }) {
-	const navigate = useNavigate()
-	const matchRoute = useMatchRoute()
-
 	const partTypeManifest = useAppSelector((state) =>
 		findTypeManifest(state.typeManifests.manifests, part.partType, TypeManifestEntity.Part)
 	)
 	const userScriptCps = useAppSelector((s) => s.auth.user?.scriptCps)
 	const settings = useAppSelector((s) => s.settings.settings)
 	const scriptCps = resolveEffectiveScriptCps({ userScriptCps, settingsCps: settings?.scriptCps })
-
-	const isExpanded = Boolean(
-		matchRoute({
-			to: '/rundown/$rundownId/segment/$segmentId/part/$partId',
-			params: {
-				rundownId: part.rundownId,
-				segmentId: part.segmentId,
-				partId: part.id
-			},
-			fuzzy: true
-		})
-	)
 
 	const storyReadiness = getStoryReadiness(part.id, partPieces, readiness)
 	const locks = useRowLocks('part', part.id)
@@ -108,28 +96,10 @@ export function SidebarPartRow({
 
 	const typeColour = partTypeManifest?.colour ?? '#666'
 
-	const toggleExpand = () => {
-		if (isExpanded) {
-			void navigate({
-				to: '/rundown/$rundownId',
-				params: { rundownId: part.rundownId }
-			})
-			return
-		}
-		void navigate({
-			to: '/rundown/$rundownId/segment/$segmentId/part/$partId',
-			params: {
-				rundownId: part.rundownId,
-				segmentId: part.segmentId,
-				partId: part.id
-			}
-		})
-	}
-
 	const rowClass = [
 		'story-row',
 		'story-row--typed',
-		isExpanded ? 'active story-row--expanded' : '',
+		expanded ? 'active story-row--expanded' : '',
 		part.skip ? 'story-row--skipped' : '',
 		part.float ? 'story-row--floated' : '',
 		locks.length ? 'story-row--locked' : ''
@@ -142,11 +112,11 @@ export function SidebarPartRow({
 			<div
 				className={rowClass}
 				tabIndex={0}
-				onClick={toggleExpand}
+				onClick={onToggle}
 				onKeyDown={(event) => {
 					if (event.key === 'Enter' || event.key === ' ') {
 						event.preventDefault()
-						toggleExpand()
+						onToggle()
 					}
 				}}
 				style={{
@@ -200,7 +170,7 @@ export function SidebarPartRow({
 					) || '--:--'}
 				</div>
 			</div>
-			{isExpanded ? <PartExpandedPanel part={part} /> : null}
+			{expanded ? <PartExpandedPanel part={part} /> : null}
 		</div>
 	)
 }

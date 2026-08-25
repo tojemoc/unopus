@@ -28,12 +28,16 @@ export function SidebarSegment({
 	segment,
 	isOpen,
 	onToggleOpen,
-	readiness
+	readiness,
+	expandedPartId,
+	onExpandPart
 }: {
 	segment: Segment
 	isOpen: boolean
 	onToggleOpen: () => void
 	readiness: RundownReadiness | null
+	expandedPartId: string | null
+	onExpandPart: (partId: string | null) => void
 }) {
 	const dispatch = useAppDispatch()
 	const navigate = useNavigate()
@@ -169,6 +173,10 @@ export function SidebarSegment({
 								part={data}
 								readiness={readiness}
 								partPieces={allPieces}
+								expanded={expandedPartId === data.id}
+								onToggle={() =>
+									onExpandPart(expandedPartId === data.id ? null : data.id)
+								}
 							/>
 						)}
 					/>
