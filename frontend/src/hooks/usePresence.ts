@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { getSocket } from '~/lib/socket'
 import { useAppDispatch, useAppSelector } from '~/store/app'
 import {
@@ -44,12 +44,15 @@ export function useRowLocks(
 	entityId: string
 ): PresenceFocus[] {
 	const selfId = useAppSelector((state) => state.auth.user?.id)
-	return useAppSelector((state) =>
-		state.presence.focuses.filter(
-			(focus) =>
-				focus.entityType === entityType &&
-				focus.entityId === entityId &&
-				focus.userId !== selfId
-		)
+	const focuses = useAppSelector((state) => state.presence.focuses)
+	return useMemo(
+		() =>
+			focuses.filter(
+				(focus) =>
+					focus.entityType === entityType &&
+					focus.entityId === entityId &&
+					focus.userId !== selfId
+			),
+		[focuses, entityType, entityId, selfId]
 	)
 }
