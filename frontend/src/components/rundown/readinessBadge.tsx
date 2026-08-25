@@ -1,6 +1,5 @@
 import { OverlayTrigger, Tooltip } from 'react-bootstrap'
 import type { ReadinessStatusSource } from '~backend/background/interfaces'
-import { agentLog } from '~/debugAgentLog'
 import './readinessBadge.scss'
 
 export type ReadinessState = 'ready' | 'not-ready' | 'na'
@@ -39,14 +38,6 @@ export function ReadinessBadge({
 	if (!tooltip) {
 		return badge
 	}
-
-	// #region agent log
-	agentLog('D', 'readinessBadge.tsx:overlay', 'ReadinessBadge OverlayTrigger render', {
-		state,
-		tooltipLen: tooltip.length,
-		runId: 'post-fix-2'
-	})
-	// #endregion
 
 	return (
 		<OverlayTrigger

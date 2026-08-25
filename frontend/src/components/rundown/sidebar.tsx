@@ -13,7 +13,6 @@ import { StoryTableHeader } from './sidebar/partRow'
 import { useToasts } from '../toasts/useToasts'
 import { SegmentButtons } from './sidebar/segmentButtons'
 import { useRundownReadinessContext } from '~/hooks/RundownReadinessContext'
-import { agentLog } from '~/debugAgentLog'
 
 export function RundownSidebar({
 	rundownId,
@@ -39,12 +38,6 @@ export function RundownSidebar({
 	const [expandedPartId, setExpandedPartId] = useState<string | null>(null)
 
 	const onExpandPart = useCallback((partId: string | null) => {
-		// #region agent log
-		agentLog('E', 'sidebar.tsx:onExpandPart', 'expand part toggled', {
-			partId,
-			runId: 'post-fix-2'
-		})
-		// #endregion
 		setExpandedPartId(partId)
 	}, [])
 

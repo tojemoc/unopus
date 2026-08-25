@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo } from 'react'
 import { getSocket } from '~/lib/socket'
 import { useAppDispatch, useAppSelector } from '~/store/app'
 import {
@@ -6,7 +6,6 @@ import {
 	type PresenceEntityType,
 	type PresenceFocus
 } from '~/store/presence'
-import { agentLog } from '~/debugAgentLog'
 
 export function usePresenceSync(): void {
 	const dispatch = useAppDispatch()
@@ -14,11 +13,6 @@ export function usePresenceSync(): void {
 	useEffect(() => {
 		const socket = getSocket()
 		const onUpdate = (focuses: PresenceFocus[]) => {
-			// #region agent log
-			agentLog('C', 'usePresence.ts:presenceUpdate', 'presence:update received', {
-				count: Array.isArray(focuses) ? focuses.length : -1
-			})
-			// #endregion
 			dispatch(setPresenceFocuses(Array.isArray(focuses) ? focuses : []))
 		}
 		socket.on('presence:update', onUpdate)
@@ -37,14 +31,6 @@ export function usePresenceFocus(
 		if (!rundownId || !entityId) {
 			return
 		}
-		// #region agent log
-			agentLog('C', 'usePresence.ts:focus', 'presence:focus emit', {
-			entityType,
-			entityId,
-			rundownId,
-			runId: 'post-fix-2'
-		})
-		// #endregion
 		const socket = getSocket()
 		socket.emit('presence:focus', { entityType, entityId, rundownId })
 		return () => {
@@ -59,8 +45,7 @@ export function useRowLocks(
 ): PresenceFocus[] {
 	const selfId = useAppSelector((state) => state.auth.user?.id)
 	const focuses = useAppSelector((state) => state.presence.focuses)
-	const prevRef = useRef<PresenceFocus[] | null>(null)
-	const locks = useMemo(
+	return useMemo(
 		() =>
 			focuses.filter(
 				(focus) =>
@@ -70,17 +55,4 @@ export function useRowLocks(
 			),
 		[focuses, entityType, entityId, selfId]
 	)
-	// #region agent log
-	if (prevRef.current !== locks) {
-		agentLog('C', 'usePresence.ts:useRowLocks', 'locks ref changed', {
-			entityType,
-			entityId,
-			lockCount: locks.length,
-			focusCount: focuses.length,
-			runId: 'post-fix-2'
-		})
-		prevRef.current = locks
-	}
-	// #endregion
-	return locks
 }

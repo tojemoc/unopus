@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet } from '@tanstack/react-router'
-import { useEffect, useRef, type CSSProperties } from 'react'
+import { useEffect, type CSSProperties } from 'react'
 import { DuopusNavbar } from '~/components/navbar/duopusNavbar'
 import { RundownNavbar } from '~/components/rundown/navbar'
 import { RundownSidebar } from '~/components/rundown/sidebar'
@@ -9,7 +9,6 @@ import { loadPieces } from '~/store/pieces'
 import { loadSegments } from '~/store/segments'
 import { MyErrorBoundary } from '~/util/errorBoundary'
 import { RundownReadinessProvider } from '~/hooks/RundownReadinessContext'
-import { agentLog } from '~/debugAgentLog'
 
 export const Route = createFileRoute('/rundown/$rundownId')({
 	component: RouteComponent
@@ -28,18 +27,6 @@ function RouteComponent() {
 	const partsRundownId = useAppSelector((state) => state.parts.rundownId)
 	const piecesStatus = useAppSelector((state) => state.pieces.status)
 	const piecesRundownId = useAppSelector((state) => state.pieces.rundownId)
-
-	// #region agent log
-	const routeRenderRef = useRef(0)
-	routeRenderRef.current += 1
-	if (routeRenderRef.current <= 20 || routeRenderRef.current % 25 === 0) {
-		agentLog('F', 'rundownId.tsx:render', 'Rundown route render', {
-			rundownId,
-			renderN: routeRenderRef.current,
-			runId: 'post-fix-2'
-		})
-	}
-	// #endregion
 
 	useEffect(() => {
 		if (segmentsStatus === 'idle' || segmentsRundownId !== rundownId) {
