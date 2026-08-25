@@ -1,6 +1,5 @@
-import { createFileRoute, Outlet } from '@tanstack/react-router'
-import { useEffect } from 'react'
-import { Stack } from 'react-bootstrap'
+import { createFileRoute, Outlet, useRouterState } from '@tanstack/react-router'
+import { useEffect, type CSSProperties } from 'react'
 import { DuopusNavbar } from '~/components/navbar/duopusNavbar'
 import { RundownNavbar } from '~/components/rundown/navbar'
 import { RundownSidebar } from '~/components/rundown/sidebar'
@@ -17,6 +16,7 @@ export const Route = createFileRoute('/rundown/$rundownId')({
 
 function RouteComponent() {
 	const { rundownId } = Route.useParams()
+	const pathname = useRouterState({ select: (s) => s.location.pathname })
 
 	const dispatch = useAppDispatch()
 	const loadStatus = useAppSelector((state) => ({
@@ -28,7 +28,6 @@ function RouteComponent() {
 		piecesRundownId: state.pieces.rundownId
 	}))
 
-	// TODO: This is not the correct way to do this, but it works for now
 	useEffect(() => {
 		if (loadStatus.segmentsStatus === 'idle' || loadStatus.segmentsRundownId !== rundownId) {
 			dispatch(loadSegments({ rundownId }))
@@ -52,7 +51,6 @@ function RouteComponent() {
 
 	const rundown = useAppSelector((state) => state.rundowns.find((r) => r.id === rundownId))
 	if (!rundown) {
-		// Note: this can't redirect, or it gets stuck in a loop
 		return (
 			<>
 				<DuopusNavbar />
@@ -60,6 +58,12 @@ function RouteComponent() {
 			</>
 		)
 	}
+
+	// Part/piece detail lives inline in the script column. Keep the outlet only for
+	// rundown-level and segment-level settings (explicitly out of scope for redesign).
+	const showSettingsDrawer =
+		pathname === `/rundown/${rundownId}` ||
+		(/^\/rundown\/[^/]+\/segment\/[^/]+\/?$/.test(pathname) && !pathname.includes('/part/'))
 
 	return (
 		<RundownReadinessProvider rundownId={rundown.id}>
@@ -69,37 +73,34 @@ function RouteComponent() {
 					<RundownNavbar rundown={rundown} />
 				</div>
 
-				<Stack
-					direction="horizontal"
-					className="rundown-editor-panes align-items-stretch"
-					style={{
-						flex: 1,
-						minHeight: 0,
-						overflow: 'hidden'
-					}}
-				>
+				<div className="rundown-script-column">
 					<RundownSidebar rundownId={rundown.id} playlistId={rundown.playlistId} />
+				</div>
 
-					<MyErrorBoundary>
-						<div className="rundown-inspector-column">
+				{showSettingsDrawer ? (
+					<aside className="rundown-settings-drawer" aria-label="Rundown settings">
+						<MyErrorBoundary>
 							<Outlet />
-						</div>
-					</MyErrorBoundary>
-				</Stack>
+						</MyErrorBoundary>
+					</aside>
+				) : null}
 			</div>
 		</RundownReadinessProvider>
 	)
 }
 
-const rootStyle: React.CSSProperties = {
+const rootStyle: CSSProperties = {
 	display: 'grid',
 	height: '100%',
 	gridTemplateRows: 'auto 1fr',
-	overflowX: 'hidden'
+	gridTemplateColumns: '1fr',
+	overflowX: 'hidden',
+	position: 'relative'
 }
 
-const headerStyle: React.CSSProperties = {
+const headerStyle: CSSProperties = {
 	display: 'flex',
 	flexDirection: 'column',
-	flexShrink: 0
+	flexShrink: 0,
+	gridColumn: '1 / -1'
 }

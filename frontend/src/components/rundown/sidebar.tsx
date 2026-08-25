@@ -94,7 +94,7 @@ export function RundownSidebar({
 	return (
 		<div className="rundown-sidebar">
 			<div className="rundown-sidebar-toolbar">
-				<span className="rundown-sidebar-toolbar__title">Stories</span>
+				<span className="rundown-sidebar-toolbar__title">Script</span>
 				<span className="rundown-sidebar-toolbar__summary" title={error ?? undefined}>
 					{summaryText}
 				</span>
