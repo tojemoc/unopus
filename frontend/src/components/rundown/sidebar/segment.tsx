@@ -1,11 +1,13 @@
 import { useNavigate } from '@tanstack/react-router'
 import { createSelector } from '@reduxjs/toolkit'
+import { useCallback } from 'react'
 import { useAppDispatch, useAppSelector, type RootState } from '~/store/app'
 import { movePart, reorderParts } from '~/store/parts'
 import { copySegment } from '~/store/segments'
 import type { Part, RundownReadiness, Segment } from '~backend/background/interfaces'
 import { DragTypes } from '~/components/drag-and-drop/DragTypes'
 import { DraggableContainer } from '~/components/drag-and-drop/DraggableContainer'
+import type { DraggableWrappedComponent } from '~/components/drag-and-drop/DraggableComponentWrapper'
 import { SidebarPartRow } from './partRow'
 import { SidebarElementHeader } from './sidebarElementHeader'
 import { useToasts } from '~/components/toasts/useToasts'
@@ -115,6 +117,22 @@ export function SidebarSegment({
 				})
 			)
 
+	// Stable component type for DraggableContainer — an inline arrow remounts every
+	// row (and PartExpandedPanel) on each parent render, which paired with
+	// presence:focus created a Maximum update depth loop.
+	const PartRowComponent = useCallback<DraggableWrappedComponent<Part>>(
+		({ data }) => (
+			<SidebarPartRow
+				part={data}
+				readiness={readiness}
+				partPieces={allPieces}
+				expanded={expandedPartId === data.id}
+				onToggle={() => onExpandPart(expandedPartId === data.id ? null : data.id)}
+			/>
+		),
+		[readiness, allPieces, expandedPartId, onExpandPart]
+	)
+
 	return (
 		<div className={`sidebar-segment ${isOpen ? 'open' : 'closed'}`}>
 			<div className="copy-item segment-header-row">
@@ -168,17 +186,7 @@ export function SidebarSegment({
 						itemType={DragTypes.PART}
 						id={segment.id}
 						reorder={handleReorderPart}
-						Component={({ data }) => (
-							<SidebarPartRow
-								part={data}
-								readiness={readiness}
-								partPieces={allPieces}
-								expanded={expandedPartId === data.id}
-								onToggle={() =>
-									onExpandPart(expandedPartId === data.id ? null : data.id)
-								}
-							/>
-						)}
+						Component={PartRowComponent}
 					/>
 				) : (
 					<div className="story-table-empty px-2 py-2 text-muted">

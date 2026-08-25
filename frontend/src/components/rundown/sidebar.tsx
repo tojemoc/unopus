@@ -5,6 +5,7 @@ import type { Segment } from '~backend/background/interfaces'
 import './sidebar.scss'
 import { DragTypes } from '~/components/drag-and-drop/DragTypes'
 import { DraggableContainer } from '../drag-and-drop/DraggableContainer'
+import type { DraggableWrappedComponent } from '../drag-and-drop/DraggableComponentWrapper'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import ImportSegmentModal from './importSegmentModal/importSegmentModal'
 import { SidebarSegment } from './sidebar/segment'
@@ -12,6 +13,7 @@ import { StoryTableHeader } from './sidebar/partRow'
 import { useToasts } from '../toasts/useToasts'
 import { SegmentButtons } from './sidebar/segmentButtons'
 import { useRundownReadinessContext } from '~/hooks/RundownReadinessContext'
+import { agentLog } from '~/debugAgentLog'
 
 export function RundownSidebar({
 	rundownId,
@@ -35,6 +37,16 @@ export function RundownSidebar({
 
 	const [openSegments, setOpenSegments] = useState<Record<string, boolean>>({})
 	const [expandedPartId, setExpandedPartId] = useState<string | null>(null)
+
+	const onExpandPart = useCallback((partId: string | null) => {
+		// #region agent log
+		agentLog('E', 'sidebar.tsx:onExpandPart', 'expand part toggled', {
+			partId,
+			runId: 'post-fix-2'
+		})
+		// #endregion
+		setExpandedPartId(partId)
+	}, [])
 
 	useEffect(() => {
 		setOpenSegments((prev) => {
@@ -62,27 +74,41 @@ export function RundownSidebar({
 		}))
 	}, [])
 
-	const handleReorderSegment = (
-		_targetSegment: Segment,
-		sourceSegment: Segment,
-		sourceIndex: number,
-		targetIndex: number
-	) => {
-		return dispatch(reorderSegments({ element: sourceSegment, sourceIndex, targetIndex }))
-			.unwrap()
-			.then(async () => {
-				await navigate({
-					to: `/rundown/${sourceSegment.rundownId}/segment/${sourceSegment.id}`
+	const handleReorderSegment = useCallback(
+		(_targetSegment: Segment, sourceSegment: Segment, sourceIndex: number, targetIndex: number) => {
+			return dispatch(reorderSegments({ element: sourceSegment, sourceIndex, targetIndex }))
+				.unwrap()
+				.then(async () => {
+					await navigate({
+						to: `/rundown/${sourceSegment.rundownId}/segment/${sourceSegment.id}`
+					})
 				})
-			})
-			.catch((e) => {
-				console.error(e)
-				toasts.show({
-					headerContent: 'Reordering Segment',
-					bodyContent: 'Encountered an unexpected error'
+				.catch((e) => {
+					console.error(e)
+					toasts.show({
+						headerContent: 'Reordering Segment',
+						bodyContent: 'Encountered an unexpected error'
+					})
 				})
-			})
-	}
+		},
+		[dispatch, navigate, toasts]
+	)
+
+	// Stable component type — inline Component={...} remounts all segments on every
+	// sidebar render (and cascades into part-row remounts / presence:focus loops).
+	const SegmentComponent = useCallback<DraggableWrappedComponent<Segment>>(
+		({ data: segment }) => (
+			<SidebarSegment
+				segment={segment}
+				isOpen={isSegmentOpen(segment.id)}
+				onToggleOpen={() => toggleSegmentOpen(segment.id)}
+				readiness={readiness}
+				expandedPartId={expandedPartId}
+				onExpandPart={onExpandPart}
+			/>
+		),
+		[isSegmentOpen, toggleSegmentOpen, readiness, expandedPartId, onExpandPart]
+	)
 
 	const readyCount = readiness?.summary.readyMediaPieces ?? 0
 	const totalCount = readiness?.summary.totalMediaPieces ?? 0
@@ -110,17 +136,7 @@ export function RundownSidebar({
 					<DraggableContainer
 						items={sortedSegments}
 						itemType={DragTypes.SEGMENT}
-						Component={({ data: segment }) => (
-							<SidebarSegment
-								key={segment.id}
-								segment={segment}
-								isOpen={isSegmentOpen(segment.id)}
-								onToggleOpen={() => toggleSegmentOpen(segment.id)}
-								readiness={readiness}
-								expandedPartId={expandedPartId}
-								onExpandPart={setExpandedPartId}
-							/>
-						)}
+						Component={SegmentComponent}
 						id={rundownId}
 						reorder={handleReorderSegment}
 					/>

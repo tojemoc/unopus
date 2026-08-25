@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button, Form, Stack } from 'react-bootstrap'
 import type { Part, Piece } from '~backend/background/interfaces'
 import { TypeManifestEntity } from '~backend/background/interfaces'
@@ -23,13 +23,13 @@ export function PartExpandedPanel({ part }: { part: Part }) {
 	usePresenceFocus(part.rundownId, 'part', part.id)
 
 	// #region agent log
-	const renderCountRef = useState(() => ({ n: 0 }))[0]
-	renderCountRef.n += 1
-	if (renderCountRef.n <= 30 || renderCountRef.n % 50 === 0) {
+	const renderCountRef = useRef(0)
+	renderCountRef.current += 1
+	if (renderCountRef.current <= 30 || renderCountRef.current % 50 === 0) {
 		agentLog('A', 'partExpandedPanel.tsx:render', 'PartExpandedPanel render', {
 			partId: part.id,
-			renderN: renderCountRef.n,
-			runId: 'post-fix'
+			renderN: renderCountRef.current,
+			runId: 'post-fix-2'
 		})
 	}
 	// #endregion
@@ -43,7 +43,7 @@ export function PartExpandedPanel({ part }: { part: Part }) {
 			found: Boolean(found),
 			sameAsProp: result === part,
 			refKey: found ? `store:${found.id}` : `prop:${part.id}`,
-			runId: 'post-fix'
+			runId: 'post-fix-2'
 		})
 		// #endregion
 		return result
@@ -60,7 +60,7 @@ export function PartExpandedPanel({ part }: { part: Part }) {
 			partId: part.id,
 			count: next.length,
 			allPiecesLen: allPieces.length,
-			runId: 'post-fix'
+			runId: 'post-fix-2'
 		})
 		// #endregion
 		return next
@@ -84,7 +84,7 @@ export function PartExpandedPanel({ part }: { part: Part }) {
 		agentLog('B', 'partExpandedPanel.tsx:livePartEffect', 'livePart effect setState', {
 			partId: part.id,
 			name: livePart.name,
-			runId: 'post-fix'
+			runId: 'post-fix-2'
 		})
 		// #endregion
 		setName(livePart.name)
