@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useAppSelector } from '~/store/app'
 import type { Part, PieceReadiness, RundownReadiness } from '~backend/background/interfaces'
 import { TypeManifestEntity } from '~backend/background/interfaces'
@@ -8,6 +9,8 @@ import { formatPartOnAirDuration } from '~/util/pieceDuration'
 import { resolveEffectiveScriptCps } from '~/util/scriptReadingTime'
 import { resolveEditorialStatus } from '~/util/editorialStatus'
 import { useRowLocks } from '~/hooks/usePresence'
+import { useRundownReadinessContext } from '~/hooks/RundownReadinessContext'
+import { useScriptExpand } from '~/hooks/ScriptExpandContext'
 import { PartExpandedPanel } from '../partExpandedPanel'
 
 function getStoryReadiness(
@@ -59,30 +62,21 @@ function typeTint(hex: string | undefined): string {
 	return `rgba(${r}, ${g}, ${b}, 0.22)`
 }
 
-export function SidebarPartRow({
-	part,
-	readiness,
-	partPieces,
-	expanded,
-	onToggle
-}: {
-	part: Part
-	readiness: RundownReadiness | null
-	partPieces: Array<{
-		id: string
-		partId: string
-		pieceType: string
-		duration?: number
-		skip?: boolean
-	}>
-	expanded: boolean
-	onToggle: () => void
-}) {
+export function SidebarPartRow({ part }: { part: Part }) {
+	const { readiness } = useRundownReadinessContext()
+	const { expandedPartId, toggleExpandedPart } = useScriptExpand()
+	const expanded = expandedPartId === part.id
+
 	const partTypeManifest = useAppSelector((state) =>
 		findTypeManifest(state.typeManifests.manifests, part.partType, TypeManifestEntity.Part)
 	)
 	const userScriptCps = useAppSelector((s) => s.auth.user?.scriptCps)
 	const settings = useAppSelector((s) => s.settings.settings)
+	const allPieces = useAppSelector((s) => s.pieces.pieces)
+	const partPieces = useMemo(
+		() => allPieces.filter((piece) => piece.partId === part.id),
+		[allPieces, part.id]
+	)
 	const scriptCps = resolveEffectiveScriptCps({ userScriptCps, settingsCps: settings?.scriptCps })
 
 	const storyReadiness = getStoryReadiness(part.id, partPieces, readiness)
@@ -112,11 +106,11 @@ export function SidebarPartRow({
 			<div
 				className={rowClass}
 				tabIndex={0}
-				onClick={onToggle}
+				onClick={() => toggleExpandedPart(part.id)}
 				onKeyDown={(event) => {
 					if (event.key === 'Enter' || event.key === ' ') {
 						event.preventDefault()
-						onToggle()
+						toggleExpandedPart(part.id)
 					}
 				}}
 				style={{

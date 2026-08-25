@@ -6,13 +6,19 @@ import './sidebar.scss'
 import { DragTypes } from '~/components/drag-and-drop/DragTypes'
 import { DraggableContainer } from '../drag-and-drop/DraggableContainer'
 import type { DraggableWrappedComponent } from '../drag-and-drop/DraggableComponentWrapper'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import ImportSegmentModal from './importSegmentModal/importSegmentModal'
 import { SidebarSegment } from './sidebar/segment'
 import { StoryTableHeader } from './sidebar/partRow'
 import { useToasts } from '../toasts/useToasts'
 import { SegmentButtons } from './sidebar/segmentButtons'
 import { useRundownReadinessContext } from '~/hooks/RundownReadinessContext'
+import { ScriptExpandProvider } from '~/hooks/ScriptExpandContext'
+
+/** Stable DnD row type — must not change identity when expand/readiness updates. */
+const SegmentComponent: DraggableWrappedComponent<Segment> = ({ data: segment }) => (
+	<SidebarSegment segment={segment} />
+)
 
 export function RundownSidebar({
 	rundownId,
@@ -34,39 +40,6 @@ export function RundownSidebar({
 
 	const { readiness, loading, error, refresh } = useRundownReadinessContext()
 
-	const [openSegments, setOpenSegments] = useState<Record<string, boolean>>({})
-	const [expandedPartId, setExpandedPartId] = useState<string | null>(null)
-
-	const onExpandPart = useCallback((partId: string | null) => {
-		setExpandedPartId(partId)
-	}, [])
-
-	useEffect(() => {
-		setOpenSegments((prev) => {
-			let changed = false
-			const next = { ...prev }
-			for (const segment of sortedSegments) {
-				if (next[segment.id] === undefined) {
-					next[segment.id] = true
-					changed = true
-				}
-			}
-			return changed ? next : prev
-		})
-	}, [sortedSegments])
-
-	const isSegmentOpen = useCallback(
-		(segmentId: string) => openSegments[segmentId] ?? true,
-		[openSegments]
-	)
-
-	const toggleSegmentOpen = useCallback((segmentId: string) => {
-		setOpenSegments((prev) => ({
-			...prev,
-			[segmentId]: !(prev[segmentId] ?? true)
-		}))
-	}, [])
-
 	const handleReorderSegment = useCallback(
 		(_targetSegment: Segment, sourceSegment: Segment, sourceIndex: number, targetIndex: number) => {
 			return dispatch(reorderSegments({ element: sourceSegment, sourceIndex, targetIndex }))
@@ -87,22 +60,6 @@ export function RundownSidebar({
 		[dispatch, navigate, toasts]
 	)
 
-	// Stable component type — inline Component={...} remounts all segments on every
-	// sidebar render (and cascades into part-row remounts / presence:focus loops).
-	const SegmentComponent = useCallback<DraggableWrappedComponent<Segment>>(
-		({ data: segment }) => (
-			<SidebarSegment
-				segment={segment}
-				isOpen={isSegmentOpen(segment.id)}
-				onToggleOpen={() => toggleSegmentOpen(segment.id)}
-				readiness={readiness}
-				expandedPartId={expandedPartId}
-				onExpandPart={onExpandPart}
-			/>
-		),
-		[isSegmentOpen, toggleSegmentOpen, readiness, expandedPartId, onExpandPart]
-	)
-
 	const readyCount = readiness?.summary.readyMediaPieces ?? 0
 	const totalCount = readiness?.summary.totalMediaPieces ?? 0
 	const summaryText = error
@@ -112,42 +69,48 @@ export function RundownSidebar({
 			: `${readyCount}/${totalCount} media items ready`
 
 	return (
-		<div className="rundown-sidebar">
-			<div className="rundown-sidebar-toolbar">
-				<span className="rundown-sidebar-toolbar__title">Script</span>
-				<span className="rundown-sidebar-toolbar__summary" title={error ?? undefined}>
-					{summaryText}
-				</span>
-				<button type="button" className="rundown-sidebar-toolbar__refresh" onClick={() => void refresh()}>
-					Refresh
-				</button>
-			</div>
-
-			<div className="rundown-sidebar-scroll">
-				<div className="story-table story-table--sidebar">
-					<StoryTableHeader />
-					<DraggableContainer
-						items={sortedSegments}
-						itemType={DragTypes.SEGMENT}
-						Component={SegmentComponent}
-						id={rundownId}
-						reorder={handleReorderSegment}
-					/>
+		<ScriptExpandProvider>
+			<div className="rundown-sidebar">
+				<div className="rundown-sidebar-toolbar">
+					<span className="rundown-sidebar-toolbar__title">Script</span>
+					<span className="rundown-sidebar-toolbar__summary" title={error ?? undefined}>
+						{summaryText}
+					</span>
+					<button
+						type="button"
+						className="rundown-sidebar-toolbar__refresh"
+						onClick={() => void refresh()}
+					>
+						Refresh
+					</button>
 				</div>
 
-				<SegmentButtons
-					rundownId={rundownId}
-					playlistId={playlistId}
-					rank={sortedSegments.length}
-					setShowImportModal={setShowImportModal}
-				/>
+				<div className="rundown-sidebar-scroll">
+					<div className="story-table story-table--sidebar">
+						<StoryTableHeader />
+						<DraggableContainer
+							items={sortedSegments}
+							itemType={DragTypes.SEGMENT}
+							Component={SegmentComponent}
+							id={rundownId}
+							reorder={handleReorderSegment}
+						/>
+					</div>
 
-				<ImportSegmentModal
-					rank={showImportModal}
-					onClose={() => setShowImportModal(undefined)}
-					targetRundownId={rundownId}
-				/>
+					<SegmentButtons
+						rundownId={rundownId}
+						playlistId={playlistId}
+						rank={sortedSegments.length}
+						setShowImportModal={setShowImportModal}
+					/>
+
+					<ImportSegmentModal
+						rank={showImportModal}
+						onClose={() => setShowImportModal(undefined)}
+						targetRundownId={rundownId}
+					/>
+				</div>
 			</div>
-		</div>
+		</ScriptExpandProvider>
 	)
 }

@@ -1,10 +1,10 @@
 import { useNavigate } from '@tanstack/react-router'
 import { createSelector } from '@reduxjs/toolkit'
-import { useCallback } from 'react'
+import { useMemo, useState } from 'react'
 import { useAppDispatch, useAppSelector, type RootState } from '~/store/app'
 import { movePart, reorderParts } from '~/store/parts'
 import { copySegment } from '~/store/segments'
-import type { Part, RundownReadiness, Segment } from '~backend/background/interfaces'
+import type { Part, Segment } from '~backend/background/interfaces'
 import { DragTypes } from '~/components/drag-and-drop/DragTypes'
 import { DraggableContainer } from '~/components/drag-and-drop/DraggableContainer'
 import type { DraggableWrappedComponent } from '~/components/drag-and-drop/DraggableComponentWrapper'
@@ -26,31 +26,21 @@ const selectPartsBySegmentId = createSelector(
 	(parts, segmentId) => parts.filter((p) => p.segmentId === segmentId)
 )
 
-export function SidebarSegment({
-	segment,
-	isOpen,
-	onToggleOpen,
-	readiness,
-	expandedPartId,
-	onExpandPart
-}: {
-	segment: Segment
-	isOpen: boolean
-	onToggleOpen: () => void
-	readiness: RundownReadiness | null
-	expandedPartId: string | null
-	onExpandPart: (partId: string | null) => void
-}) {
+/** Stable DnD row type — expand/readiness must not change this identity. */
+const PartRowComponent: DraggableWrappedComponent<Part> = ({ data }) => <SidebarPartRow part={data} />
+
+export function SidebarSegment({ segment }: { segment: Segment }) {
 	const dispatch = useAppDispatch()
 	const navigate = useNavigate()
 	const toasts = useToasts()
+	const [isOpen, setIsOpen] = useState(true)
 
 	const parts = useAppSelector((s) => selectPartsBySegmentId(s, segment.id))
 	const allPieces = useAppSelector(selectAllPieces)
 	const userScriptCps = useAppSelector((s) => s.auth.user?.scriptCps)
 	const settingsCps = useAppSelector((s) => s.settings.settings?.scriptCps)
 	const scriptCps = resolveEffectiveScriptCps({ userScriptCps, settingsCps })
-	const sortedParts = [...parts].sort((a, b) => a.rank - b.rank)
+	const sortedParts = useMemo(() => [...parts].sort((a, b) => a.rank - b.rank), [parts])
 
 	const segmentDuration = sortedParts.reduce((acc, part) => {
 		const partPieces = allPieces
@@ -117,22 +107,6 @@ export function SidebarSegment({
 				})
 			)
 
-	// Stable component type for DraggableContainer — an inline arrow remounts every
-	// row (and PartExpandedPanel) on each parent render, which paired with
-	// presence:focus created a Maximum update depth loop.
-	const PartRowComponent = useCallback<DraggableWrappedComponent<Part>>(
-		({ data }) => (
-			<SidebarPartRow
-				part={data}
-				readiness={readiness}
-				partPieces={allPieces}
-				expanded={expandedPartId === data.id}
-				onToggle={() => onExpandPart(expandedPartId === data.id ? null : data.id)}
-			/>
-		),
-		[readiness, allPieces, expandedPartId, onExpandPart]
-	)
-
 	return (
 		<div className={`sidebar-segment ${isOpen ? 'open' : 'closed'}`}>
 			<div className="copy-item segment-header-row">
@@ -142,7 +116,7 @@ export function SidebarSegment({
 						onClick={(e) => {
 							e.preventDefault()
 							e.stopPropagation()
-							onToggleOpen()
+							setIsOpen((open) => !open)
 						}}
 						aria-label={isOpen ? 'Collapse segment' : 'Expand segment'}
 					>
@@ -179,21 +153,23 @@ export function SidebarSegment({
 				</Stack>
 			</div>
 
-			<div className="segment-content">
-				{sortedParts.length > 0 ? (
-					<DraggableContainer
-						items={sortedParts}
-						itemType={DragTypes.PART}
-						id={segment.id}
-						reorder={handleReorderPart}
-						Component={PartRowComponent}
-					/>
-				) : (
-					<div className="story-table-empty px-2 py-2 text-muted">
-						No stories yet — use the toolbar above to add one.
-					</div>
-				)}
-			</div>
+			{isOpen ? (
+				<div className="segment-content">
+					{sortedParts.length > 0 ? (
+						<DraggableContainer
+							items={sortedParts}
+							itemType={DragTypes.PART}
+							id={segment.id}
+							reorder={handleReorderPart}
+							Component={PartRowComponent}
+						/>
+					) : (
+						<div className="story-table-empty px-2 py-2 text-muted">
+							No stories yet — use the toolbar above to add one.
+						</div>
+					)}
+				</div>
+			) : null}
 		</div>
 	)
 }

@@ -44,7 +44,9 @@ function RootRoute() {
 					<Outlet />
 				</ToastsProvider>
 			</MyErrorBoundary>
-			<TanStackRouterDevtools position="top-left" />
+			{import.meta.env.DEV && localStorage.getItem('unopus:routerDevtools') === '1' ? (
+				<TanStackRouterDevtools position="top-left" />
+			) : null}
 		</>
 	)
 }
