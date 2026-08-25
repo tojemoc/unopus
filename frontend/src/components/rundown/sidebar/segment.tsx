@@ -13,6 +13,8 @@ import { BsCaretDownFill, BsFillTrashFill, BsTrash } from 'react-icons/bs'
 import { Stack, type ButtonProps } from 'react-bootstrap'
 import { HoverIconButton } from '~/components/rundownList/hoverIconButton'
 import { DeleteSegmentButton } from '../deleteSegmentButton'
+import { resolvePartOnAirDuration } from '~/util/pieceDuration'
+import { resolveEffectiveScriptCps } from '~/util/scriptReadingTime'
 
 const selectAllParts = (state: RootState) => state.parts.parts
 const selectAllPieces = (state: RootState) => state.pieces.pieces
@@ -39,9 +41,21 @@ export function SidebarSegment({
 
 	const parts = useAppSelector((s) => selectPartsBySegmentId(s, segment.id))
 	const allPieces = useAppSelector(selectAllPieces)
+	const userScriptCps = useAppSelector((s) => s.auth.user?.scriptCps)
+	const settingsCps = useAppSelector((s) => s.settings.settings?.scriptCps)
+	const scriptCps = resolveEffectiveScriptCps({ userScriptCps, settingsCps })
 	const sortedParts = [...parts].sort((a, b) => a.rank - b.rank)
 
-	const segmentDuration = sortedParts.reduce((acc, part) => acc + (part.duration ?? 0), 0)
+	const segmentDuration = sortedParts.reduce((acc, part) => {
+		const partPieces = allPieces
+			.filter((piece) => piece.partId === part.id)
+			.map((piece) => ({
+				pieceType: piece.pieceType,
+				duration: piece.duration,
+				skip: piece.skip
+			}))
+		return acc + (resolvePartOnAirDuration(part, partPieces, { scriptCps }) ?? 0)
+	}, 0)
 
 	const handleReorderPart = (
 		targetPart: Part,

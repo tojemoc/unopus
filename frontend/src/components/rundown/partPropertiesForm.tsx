@@ -102,7 +102,7 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 	}, [livePart, form])
 
 	return (
-		<div>
+		<div className="part-properties-form">
 			<h2>Story</h2>
 			{lastEdit && (
 				<p className="text-muted small">

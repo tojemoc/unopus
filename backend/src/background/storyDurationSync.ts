@@ -169,7 +169,8 @@ async function syncStoryDurationsForPartLocked(
 			id: piece.id,
 			pieceType: piece.pieceType,
 			duration: piece.duration,
-			skip: piece.skip
+			skip: piece.skip,
+			payload: piece.payload
 		})
 	)
 

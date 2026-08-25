@@ -8,6 +8,7 @@ import { EditorialStatusBadge } from '../editorialStatusBadge'
 import { resolveEditorialStatus } from '~/util/editorialStatus'
 import { formatPartOnAirDuration } from '~/util/pieceDuration'
 import { resolveEffectiveScriptCps } from '~/util/scriptReadingTime'
+import { useRowLocks } from '~/hooks/usePresence'
 
 function getStoryReadiness(
 	partId: string,
@@ -83,6 +84,7 @@ export function SidebarPartRow({
 	)
 
 	const storyReadiness = getStoryReadiness(part.id, partPieces, readiness)
+	const locks = useRowLocks('part', part.id)
 	const editorial = resolveEditorialStatus({
 		skip: part.skip,
 		editorChecked: part.editorChecked,
@@ -105,7 +107,10 @@ export function SidebarPartRow({
 		'story-row',
 		isActive ? 'active' : '',
 		part.skip ? 'story-row--skipped' : '',
-		part.float ? 'story-row--floated' : ''
+		part.float ? 'story-row--floated' : '',
+		storyReadiness?.state === 'ready' ? 'story-row--ready' : '',
+		storyReadiness?.state === 'not-ready' ? 'story-row--not-ready' : '',
+		locks.length ? 'story-row--locked' : ''
 	]
 		.filter(Boolean)
 		.join(' ')
@@ -147,7 +152,15 @@ export function SidebarPartRow({
 				</span>
 			</div>
 			<div className="col-title" title={part.name}>
-				{part.name}
+				<span className="story-row__title">{part.name}</span>
+				{locks.length ? (
+					<span
+						className="story-row__lock"
+						title={locks.map((lock) => `${lock.displayName} is editing this story`).join(', ')}
+					>
+						🔒 {locks.map((lock) => lock.displayName).join(', ')}
+					</span>
+				) : null}
 			</div>
 			<div className="col-duration">
 				{formatPartOnAirDuration(

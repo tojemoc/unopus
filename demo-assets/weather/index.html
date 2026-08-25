@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Weather Preview</title>
+		<style>
+			* { box-sizing: border-box; margin: 0; padding: 0; }
+			body {
+				background: #0b1c2c;
+				color: #fff;
+				font-family: Arial, Helvetica, sans-serif;
+				min-height: 100vh;
+				padding: 32px;
+			}
+			h1 { font-size: 22px; margin-bottom: 16px; }
+			.city {
+				display: flex;
+				justify-content: space-between;
+				max-width: 420px;
+				padding: 8px 0;
+				border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+			}
+			.muted { color: #9ad; font-size: 14px; }
+		</style>
+	</head>
+	<body>
+		<h1>Weather</h1>
+		<div id="cities"></div>
+		<script>
+			const params = new URLSearchParams(window.location.search)
+			const root = document.getElementById('cities')
+			let cities = []
+			try {
+				const raw = params.get('cities')
+				if (raw) {
+					const parsed = JSON.parse(raw)
+					cities = Array.isArray(parsed) ? parsed : []
+				}
+			} catch {
+				cities = []
+			}
+			if (!cities.length) {
+				root.innerHTML = '<div class="muted">No city data — paste Cities JSON on the piece.</div>'
+			} else {
+				root.innerHTML = cities
+					.map((city) => {
+						const name = city.name || city.city || 'City'
+						const temp = city.temp ?? city.temperature ?? ''
+						return `<div class="city"><span>${name}</span><span>${temp}</span></div>`
+					})
+					.join('')
+			}
+		</script>
+	</body>
+</html>

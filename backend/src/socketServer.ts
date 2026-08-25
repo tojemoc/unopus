@@ -20,7 +20,7 @@ import { registerMediaRoutes } from './routes/media'
 import { registerReadinessRoutes } from './routes/readiness'
 import { registerCoreDiagnosticsRoutes } from './routes/coreDiagnostics'
 import { registerConfigRoutes } from './routes/config'
-import { registerDailyGenerationRoutes } from './routes/dailyGeneration'
+import { registerPresenceHandlers } from './background/api/presence'
 
 const frontendPath = path.resolve(__dirname, '../../frontend/dist')
 const demoAssetsInDist = path.join(frontendPath, 'demo-assets')
@@ -95,7 +95,8 @@ export async function initSocketServer(port: number = 3010) {
 			registerPlaylistsHandlers,
 			registerRundownsHandlers,
 			registerPiecesHandlers,
-			registerPartsHandlers
+			registerPartsHandlers,
+			registerPresenceHandlers
 		]
 
 		io.use((socket, next) => {

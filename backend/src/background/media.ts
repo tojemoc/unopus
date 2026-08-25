@@ -7,7 +7,7 @@ import { normalizeBaseUrl, readApplicationSettingsSync } from './settingsResolve
 
 const DEFAULT_INGEST_MEDIA_ROOT = '../ingest'
 const DEFAULT_SUBDIR = 'clips'
-const DEFAULT_PREVIEW_BASE_URL = 'http://localhost:3010/demo-assets'
+const DEFAULT_PREVIEW_BASE_URL = '/demo-assets'
 const VIDEO_EXTENSIONS = /\.(mp4|mov|mxf|mkv|webm|m4v|avi)$/i
 
 export function getIngestMediaRoot(): string {

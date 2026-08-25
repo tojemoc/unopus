@@ -8,6 +8,8 @@ import { loadSettings } from './settings'
 import { pushPiece } from './pieces'
 import { pushPart } from './parts'
 import { pushSegment } from './segments'
+import { setPresenceFocuses, type PresenceFocus } from './presence'
+import { getSocket } from '~/lib/socket'
 
 export function initStore(dispatch: AppDispatch): void {
 	ipcAPI
@@ -58,5 +60,9 @@ export function initStore(dispatch: AppDispatch): void {
 	})
 	ipcAPI.onSegmentsUpdate((update) => {
 		dispatch(pushSegment(update.segments ? update.segments : []))
+	})
+
+	getSocket().on('presence:update', (focuses: PresenceFocus[]) => {
+		dispatch(setPresenceFocuses(Array.isArray(focuses) ? focuses : []))
 	})
 }

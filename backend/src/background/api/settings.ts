@@ -11,7 +11,7 @@ import { defaultRundownManifest, TYPE_MANIFESTS } from '../manifest'
 import { mutations as typeManifestMutations } from './typeManifests'
 import { mutations as rundownMutations } from './rundowns'
 import { Server, Socket } from 'socket.io'
-import { isValidHttpUrl, normalizeBaseUrl } from '../settingsResolver'
+import { isValidPreviewBaseUrl, normalizeBaseUrl } from '../settingsResolver'
 import {
 	DEFAULT_DAILY_CLONE_TIMEZONE,
 	isValidDailyCloneTime,
@@ -206,8 +206,12 @@ export const mutations = {
 
 		if (update.previewBaseUrl !== undefined && update.previewBaseUrl !== '') {
 			const normalizedUrl = normalizeBaseUrl(update.previewBaseUrl)
-			if (!isValidHttpUrl(normalizedUrl)) {
-				return { error: new Error('Preview base URL must be a valid http or https URL') }
+			if (!isValidPreviewBaseUrl(normalizedUrl)) {
+				return {
+					error: new Error(
+						'Preview base URL must be a valid http(s) URL or a same-origin path such as /demo-assets'
+					)
+				}
 			}
 			update.previewBaseUrl = normalizedUrl
 		}

@@ -24,6 +24,7 @@ import {
 	formatSecondsPrecise
 } from '~/util/pieceDuration'
 import { resolveEffectiveScriptCps } from '~/util/scriptReadingTime'
+import { useRowLocks } from '~/hooks/usePresence'
 import { Button, Stack } from 'react-bootstrap'
 
 function sortPieces(pieces: Piece[]): Piece[] {
@@ -182,6 +183,7 @@ function PieceRow({
 	)
 
 	const pieceReadiness = getPieceReadinessState(piece.id, readiness)
+	const locks = useRowLocks('piece', piece.id)
 	const editorial = resolveEditorialStatus({
 		skip: piece.skip,
 		editorChecked: piece.editorChecked,
@@ -228,8 +230,17 @@ function PieceRow({
 			})
 	}
 
+	const rowClass = [
+		piece.skip ? 'piece-row--skipped' : '',
+		pieceReadiness?.state === 'ready' ? 'piece-row--ready' : '',
+		pieceReadiness?.state === 'not-ready' ? 'piece-row--not-ready' : '',
+		locks.length ? 'piece-row--locked' : ''
+	]
+		.filter(Boolean)
+		.join(' ')
+
 	return (
-		<tr onClick={pieceRowClick} className={piece.skip ? 'piece-row--skipped' : undefined}>
+		<tr onClick={pieceRowClick} className={rowClass || undefined}>
 			<td onClick={(event) => event.stopPropagation()}>
 				<Stack direction="horizontal" gap={1} className="piece-order-controls">
 					<Button
@@ -269,7 +280,17 @@ function PieceRow({
 			<td className="piece-type piece-type-chip" style={{ backgroundColor: manifest?.colour }}>
 				{manifest?.shortName || piece.pieceType}
 			</td>
-			<td className="piece-name">{piece.name}</td>
+			<td className="piece-name">
+				<span className="piece-name__label">{piece.name}</span>
+				{locks.length ? (
+					<span
+						className="story-row__lock"
+						title={locks.map((lock) => `${lock.displayName} is editing this piece`).join(', ')}
+					>
+						🔒 {locks.map((lock) => lock.displayName).join(', ')}
+					</span>
+				) : null}
+			</td>
 			<td>
 				<IconButton onClick={performCopyPiece} />
 			</td>

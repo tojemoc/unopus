@@ -81,16 +81,7 @@ function RouteComponent() {
 					<RundownSidebar rundownId={rundown.id} playlistId={rundown.playlistId} />
 
 					<MyErrorBoundary>
-						<div
-							className="rundown-main-content flex-grow-1"
-							style={{
-								minWidth: 0,
-								minHeight: 0,
-								display: 'flex',
-								flexDirection: 'column',
-								overflow: 'hidden'
-							}}
-						>
+						<div className="rundown-inspector-column">
 							<Outlet />
 						</div>
 					</MyErrorBoundary>

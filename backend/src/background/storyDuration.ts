@@ -38,11 +38,49 @@ export function pieceInheritsPartDuration(pieceType: string): boolean {
 	return STORY_DURATION_INHERIT_PIECE_TYPES.has(pieceType.trim().toLowerCase())
 }
 
+const MEDIA_VIDEO_PIECE_TYPES = new Set(['video'])
+
+export function isMediaVideoPieceType(pieceType: string): boolean {
+	return MEDIA_VIDEO_PIECE_TYPES.has(pieceType.trim().toLowerCase())
+}
+
+function positiveNumber(value: unknown): number | undefined {
+	if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+		return undefined
+	}
+	return value
+}
+
+/**
+ * On-air seconds for a SYN/VO/VT clip after trim-in / trim-out.
+ * `sourceDuration` is milliseconds (ffprobe); trim fields are seconds.
+ */
+export function resolveTrimmedSourceDurationSeconds(piece: {
+	pieceType: string
+	payload?: Record<string, unknown> | null
+}): number | undefined {
+	if (!isMediaVideoPieceType(piece.pieceType)) {
+		return undefined
+	}
+	const sourceMs = positiveNumber(piece.payload?.sourceDuration)
+	if (!sourceMs) {
+		return undefined
+	}
+	const trimIn = positiveNumber(piece.payload?.trimIn) ?? 0
+	const trimOut = positiveNumber(piece.payload?.trimOut) ?? 0
+	const seconds = sourceMs / 1000 - trimIn - trimOut
+	if (!Number.isFinite(seconds) || seconds <= 0) {
+		return undefined
+	}
+	return Math.round(seconds * 10) / 10
+}
+
 export type StoryDurationPiece = {
 	id: string
 	pieceType: string
 	duration?: number
 	skip?: boolean
+	payload?: Record<string, unknown> | null
 }
 
 export type StoryDurationPart = {
@@ -198,6 +236,17 @@ export function planStoryDurationSync(
 	}
 
 	let partDuration = part.duration
+
+	for (const piece of livePieces) {
+		const trimmed = resolveTrimmedSourceDurationSeconds(piece)
+		if (!trimmed) {
+			continue
+		}
+		if (piece.duration !== trimmed) {
+			pieceUpdates.push({ id: piece.id, duration: trimmed, force: true })
+			piece.duration = trimmed
+		}
+	}
 
 	if (isPositiveDurationSeconds(partDuration)) {
 		for (const piece of livePieces) {
