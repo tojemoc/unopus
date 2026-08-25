@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet, useRouterState } from '@tanstack/react-router'
+import { createFileRoute, Outlet } from '@tanstack/react-router'
 import { useEffect, type CSSProperties } from 'react'
 import { DuopusNavbar } from '~/components/navbar/duopusNavbar'
 import { RundownNavbar } from '~/components/rundown/navbar'
@@ -16,7 +16,6 @@ export const Route = createFileRoute('/rundown/$rundownId')({
 
 function RouteComponent() {
 	const { rundownId } = Route.useParams()
-	const matches = useRouterState({ select: (s) => s.matches })
 
 	const dispatch = useAppDispatch()
 	const loadStatus = useAppSelector((state) => ({
@@ -59,17 +58,6 @@ function RouteComponent() {
 		)
 	}
 
-	const onPartOrPiece = matches.some(
-		(match) =>
-			typeof match.routeId === 'string' &&
-			(match.routeId.includes('/part/$partId') || match.routeId.includes('/piece/$pieceId'))
-	)
-	// Keep rundown/segment property forms available via Outlet, but do not cover the
-	// script column with a permanent drawer (settings stay reachable from the header).
-	const showSettingsDrawer = false
-	void onPartOrPiece
-	void showSettingsDrawer
-
 	return (
 		<RundownReadinessProvider rundownId={rundown.id}>
 			<div style={rootStyle}>
@@ -82,7 +70,7 @@ function RouteComponent() {
 					<RundownSidebar rundownId={rundown.id} playlistId={rundown.playlistId} />
 				</div>
 
-				{/* Mount matched child routes for presence / deep links without a side panel. */}
+				{/* Child routes stay mounted for presence; UI is inline in the script column. */}
 				<div hidden aria-hidden>
 					<MyErrorBoundary>
 						<Outlet />
