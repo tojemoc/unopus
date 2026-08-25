@@ -13,6 +13,7 @@ import { findTypeManifest, toolbarManifests } from '~/util/typeManifest'
 import { resolveEffectiveScriptCps } from '~/util/scriptReadingTime'
 import { usePresenceFocus } from '~/hooks/usePresence'
 import { useRundownReadinessContext } from '~/hooks/RundownReadinessContext'
+import { agentLog } from '~/debugAgentLog'
 
 export function PartExpandedPanel({ part }: { part: Part }) {
 	const dispatch = useAppDispatch()
@@ -21,10 +22,49 @@ export function PartExpandedPanel({ part }: { part: Part }) {
 
 	usePresenceFocus(part.rundownId, 'part', part.id)
 
-	const livePart = useAppSelector((s) => s.parts.parts.find((p) => p.id === part.id) ?? part)
-	const pieces = useAppSelector((s) =>
-		s.pieces.pieces.filter((p) => p.partId === part.id).sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0))
-	)
+	// #region agent log
+	const renderCountRef = useState(() => ({ n: 0 }))[0]
+	renderCountRef.n += 1
+	if (renderCountRef.n <= 30 || renderCountRef.n % 50 === 0) {
+		agentLog('A', 'partExpandedPanel.tsx:render', 'PartExpandedPanel render', {
+			partId: part.id,
+			renderN: renderCountRef.n,
+			runId: 'post-fix'
+		})
+	}
+	// #endregion
+
+	const livePart = useAppSelector((s) => {
+		const found = s.parts.parts.find((p) => p.id === part.id)
+		const result = found ?? part
+		// #region agent log
+		agentLog('B', 'partExpandedPanel.tsx:livePart', 'livePart selector', {
+			partId: part.id,
+			found: Boolean(found),
+			sameAsProp: result === part,
+			refKey: found ? `store:${found.id}` : `prop:${part.id}`,
+			runId: 'post-fix'
+		})
+		// #endregion
+		return result
+	})
+	// Select the store array by reference; filter/sort in useMemo so useAppSelector
+	// does not see a new array every call (that forces an infinite re-render loop).
+	const allPieces = useAppSelector((s) => s.pieces.pieces)
+	const pieces = useMemo(() => {
+		const next = allPieces
+			.filter((p) => p.partId === part.id)
+			.sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0))
+		// #region agent log
+		agentLog('A', 'partExpandedPanel.tsx:pieces', 'pieces memo (filter+sort)', {
+			partId: part.id,
+			count: next.length,
+			allPiecesLen: allPieces.length,
+			runId: 'post-fix'
+		})
+		// #endregion
+		return next
+	}, [allPieces, part.id])
 	const manifests = useAppSelector((s) => s.typeManifests.manifests)
 	const userScriptCps = useAppSelector((s) => s.auth.user?.scriptCps)
 	const settingsCps = useAppSelector((s) => s.settings.settings?.scriptCps)
@@ -40,13 +80,20 @@ export function PartExpandedPanel({ part }: { part: Part }) {
 	const [saving, setSaving] = useState(false)
 
 	useEffect(() => {
+		// #region agent log
+		agentLog('B', 'partExpandedPanel.tsx:livePartEffect', 'livePart effect setState', {
+			partId: part.id,
+			name: livePart.name,
+			runId: 'post-fix'
+		})
+		// #endregion
 		setName(livePart.name)
 		setScript(livePart.script ?? '')
 		setFloat(livePart.float)
 		setSkip(Boolean(livePart.skip))
 		setEditorChecked(Boolean(livePart.editorChecked))
 		setDuration(livePart.duration)
-	}, [livePart])
+	}, [livePart, part.id])
 
 	const expandedPiece = useMemo(
 		() => pieces.find((p) => p.id === expandedPieceId) ?? null,
