@@ -177,4 +177,14 @@ describe('storyDuration', () => {
 		assert.equal(plan.partDuration, 9)
 		assert.deepEqual(plan.pieceUpdates, [{ id: 'syn', duration: 9, force: true }])
 	})
+
+	it('rejects trimmed durations that round to zero', () => {
+		assert.equal(
+			resolveTrimmedSourceDurationSeconds({
+				pieceType: 'video',
+				payload: { sourceDuration: 40 }
+			}),
+			undefined
+		)
+	})
 })

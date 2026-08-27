@@ -14,4 +14,11 @@ describe('preview base URL', () => {
 		assert.equal(isValidPreviewBaseUrl(''), false)
 		assert.equal(normalizeBaseUrl('/demo-assets/'), '/demo-assets')
 	})
+
+	it('keeps same-origin root as / after trimming trailing slashes', () => {
+		assert.equal(normalizeBaseUrl('/'), '/')
+		assert.equal(normalizeBaseUrl('///'), '/')
+		assert.equal(normalizeBaseUrl(''), '')
+		assert.equal(isValidPreviewBaseUrl(normalizeBaseUrl('/')), true)
+	})
 })

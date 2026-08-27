@@ -1,8 +1,14 @@
 /**
  * Remove trailing slashes from a URL string.
+ * Same-origin root (`/` / `///`) stays as `/` rather than becoming `''`.
  */
 export function normalizeBaseUrl(url: string): string {
-	return url.trim().replace(/\/+$/, '')
+	const trimmed = url.trim()
+	if (!trimmed) {
+		return ''
+	}
+	const withoutTrailing = trimmed.replace(/\/+$/, '')
+	return withoutTrailing === '' ? '/' : withoutTrailing
 }
 
 /**

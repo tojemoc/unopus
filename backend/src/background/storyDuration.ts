@@ -84,7 +84,8 @@ export function resolveTrimmedSourceDurationSeconds(piece: {
 	if (!Number.isFinite(seconds) || seconds <= 0) {
 		return undefined
 	}
-	return Math.round(seconds * 10) / 10
+	const rounded = Math.round(seconds * 10) / 10
+	return rounded > 0 ? rounded : undefined
 }
 
 export type StoryDurationPiece = {
