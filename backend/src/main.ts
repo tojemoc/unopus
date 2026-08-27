@@ -3,6 +3,9 @@
 import { initializeDefaults as initializeSettingsDefaults } from './background/api/settings'
 import { ControlAPI } from './background'
 
+/**
+ * Starts the rundown editor server by initializing settings defaults and the control API.
+ */
 async function startRundownEditorServer() {
 	const portNumber: number | undefined = process.env.PORT
 		? parseInt(process.env.PORT, 10)

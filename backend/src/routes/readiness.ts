@@ -10,11 +10,21 @@ import { mutations as typeManifestMutations } from '../background/api/typeManife
 import { coreHandler } from '../background/coreHandler'
 import { TypeManifestEntity } from '../background/interfaces'
 
+/**
+ * Retrieves the session user from the request's cookie.
+ * @param req - The Express request object.
+ * @returns The user object if found, undefined otherwise.
+ */
 function getSessionUser(req: Request) {
 	const sessionId = parseSessionCookie(req.headers.cookie)
 	return getUserFromSession(sessionId)
 }
 
+/**
+ * Registers the readiness API routes on the Express application.
+ * Provides endpoints to check media readiness status for rundowns.
+ * @param app - The Express application instance.
+ */
 export function registerReadinessRoutes(app: Application): void {
 	app.get('/api/rundowns/:rundownId/readiness', async (req: Request, res: Response) => {
 		if (!getSessionUser(req)) {

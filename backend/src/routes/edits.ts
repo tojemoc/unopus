@@ -6,11 +6,21 @@ import {
 	parseSessionCookie
 } from '../background/auth/authStore'
 
+/**
+ * Retrieves the session user from the request's cookie.
+ * @param req - The Express request object.
+ * @returns The user object if found, undefined otherwise.
+ */
 function getSessionUser(req: Request) {
 	const sessionId = parseSessionCookie(req.headers.cookie)
 	return getUserFromSession(sessionId)
 }
 
+/**
+ * Registers the edits API routes on the Express application.
+ * Provides endpoints to retrieve edit history for entities.
+ * @param app - The Express application instance.
+ */
 export function registerEditsRoutes(app: Application): void {
 	app.get('/api/edits/rundown/:rundownId', (req: Request, res: Response) => {
 		if (!getSessionUser(req)) {
