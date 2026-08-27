@@ -16,6 +16,9 @@ import {
 import type { SessionUser, UserRole } from '../background/auth/types'
 import { normalizeScriptCps } from '../background/scriptReadingTime'
 
+/**
+ * Convert a session user to a safe public user object (omits sensitive fields).
+ */
 function publicUser(user: SessionUser) {
 	return {
 		id: user.id,
@@ -26,15 +29,24 @@ function publicUser(user: SessionUser) {
 	}
 }
 
+/**
+ * Send a JSON response with the given status code and body.
+ */
 function sendJson(res: Response, status: number, body: unknown): void {
 	res.status(status).json(body)
 }
 
+/**
+ * Extract the authenticated user from the request session cookie.
+ */
 function getSessionUser(req: Request): SessionUser | null {
 	const sessionId = parseSessionCookie(req.headers.cookie)
 	return getUserFromSession(sessionId)
 }
 
+/**
+ * Require authentication for a route. Sends 401 if not authenticated.
+ */
 function requireAuth(req: Request, res: Response): SessionUser | null {
 	const user = getSessionUser(req)
 	if (!user) {
@@ -44,6 +56,9 @@ function requireAuth(req: Request, res: Response): SessionUser | null {
 	return user
 }
 
+/**
+ * Require admin role for a route. Sends 401 or 403 as appropriate.
+ */
 function requireAdmin(req: Request, res: Response): SessionUser | null {
 	const user = requireAuth(req, res)
 	if (!user) {
@@ -56,6 +71,9 @@ function requireAdmin(req: Request, res: Response): SessionUser | null {
 	return user
 }
 
+/**
+ * Register authentication HTTP routes (login, logout, profile, user management).
+ */
 export function registerAuthRoutes(app: Application): void {
 	app.post('/api/auth/login', (req: Request, res: Response) => {
 		const body = req.body as { username?: string; password?: string }

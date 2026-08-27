@@ -31,6 +31,9 @@ const demoAssetsPath = fs.existsSync(demoAssetsInDist)
 
 const PUBLIC_API_PREFIXES = ['/api/auth/login']
 
+/**
+ * Check if a URL path is a public API endpoint (no authentication required).
+ */
 function isPublicApiPath(url: string | undefined): boolean {
 	if (!url) {
 		return false
@@ -38,6 +41,9 @@ function isPublicApiPath(url: string | undefined): boolean {
 	return PUBLIC_API_PREFIXES.some((prefix) => url === prefix || url.startsWith(`${prefix}?`))
 }
 
+/**
+ * Check if a URL path is a static SPA asset (should not require authentication).
+ */
 function isSpaAssetPath(url: string | undefined): boolean {
 	if (!url) {
 		return false
@@ -52,6 +58,9 @@ function isSpaAssetPath(url: string | undefined): boolean {
 	)
 }
 
+/**
+ * Initialize the Express + Socket.IO server with all routes and handlers.
+ */
 export async function initSocketServer(port: number = 3010) {
 	const app = express()
 	app.use(express.json())

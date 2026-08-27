@@ -10,6 +10,10 @@ const DEFAULT_SUBDIR = 'clips'
 const DEFAULT_PREVIEW_BASE_URL = '/demo-assets'
 const VIDEO_EXTENSIONS = /\.(mp4|mov|mxf|mkv|webm|m4v|avi)$/i
 
+/**
+ * Get the absolute path to the ingest media root directory.
+ * Checks application settings and environment variables, falling back to default.
+ */
 export function getIngestMediaRoot(): string {
 	const settings = readApplicationSettingsSync()
 	const configured = settings?.ingestMediaRoot?.trim() || process.env.INGEST_MEDIA_ROOT?.trim()
@@ -19,6 +23,10 @@ export function getIngestMediaRoot(): string {
 	return path.resolve(process.cwd(), DEFAULT_INGEST_MEDIA_ROOT)
 }
 
+/**
+ * Get the base URL for media preview/playback.
+ * Checks application settings and environment variables, falling back to default.
+ */
 export function getPreviewBaseUrl(): string {
 	const settings = readApplicationSettingsSync()
 	const configured = settings?.previewBaseUrl?.trim() || process.env.PREVIEW_BASE_URL?.trim()
@@ -28,6 +36,10 @@ export function getPreviewBaseUrl(): string {
 	return DEFAULT_PREVIEW_BASE_URL
 }
 
+/**
+ * Resolve and validate a subdirectory path within the ingest root.
+ * Throws if the path attempts directory traversal.
+ */
 function resolveIngestSubdir(subdir: string): string {
 	const ingestRoot = path.resolve(getIngestMediaRoot())
 	const safeSubdir = subdir.replace(/[/\\]/g, '')
@@ -40,15 +52,25 @@ function resolveIngestSubdir(subdir: string): string {
 	return targetDir
 }
 
+/**
+ * Get the absolute path to the media folder for a rundown.
+ */
 function getRundownMediaFolder(_rundownId: string, subdir: string = DEFAULT_SUBDIR): string {
 	return resolveIngestSubdir(subdir)
 }
 
+/**
+ * Get the relative media folder path (sanitized subdirectory name).
+ */
 function getRelativeRundownMediaFolder(_rundownId: string, subdir: string): string {
 	const safeSubdir = subdir.replace(/[/\\]/g, '')
 	return safeSubdir
 }
 
+/**
+ * Convert an ingest-relative path to absolute filesystem path.
+ * Validates against directory traversal attacks.
+ */
 export function resolveMediaAbsolutePath(relativePath: string): string {
 	const ingestRoot = path.resolve(getIngestMediaRoot())
 	const normalized = relativePath.replace(/^\/+/, '').replace(/\\/g, '/')
@@ -81,6 +103,10 @@ const inFlightDurationProbes = new Map<string, Promise<number | undefined>>()
 let activeProbeCount = 0
 const probeWaitQueue: Array<() => void> = []
 
+/**
+ * Execute an ffprobe operation with concurrency limiting.
+ * Waits in queue if max concurrent probes are already running.
+ */
 async function withFfprobeSlot<T>(run: () => Promise<T>): Promise<T> {
 	if (activeProbeCount >= FFPROBE_CONCURRENCY) {
 		await new Promise<void>((resolve) => {
@@ -99,6 +125,9 @@ async function withFfprobeSlot<T>(run: () => Promise<T>): Promise<T> {
 	}
 }
 
+/**
+ * Add or update a duration cache entry using LRU eviction.
+ */
 function setDurationCacheEntry(relativePath: string, entry: DurationCacheEntry): void {
 	// LRU: re-insert so the entry becomes the newest.
 	durationSecondsCache.delete(relativePath)
@@ -112,6 +141,9 @@ function setDurationCacheEntry(relativePath: string, entry: DurationCacheEntry):
 	}
 }
 
+/**
+ * Retrieve a cached duration entry if valid (matches mtime/size and not expired).
+ */
 function readDurationCacheEntry(
 	relativePath: string,
 	mtime: number,
@@ -132,6 +164,9 @@ function readDurationCacheEntry(
 	return cached
 }
 
+/**
+ * Remove stale or deleted file entries from the duration cache.
+ */
 function pruneDurationCache(liveRelativePaths: Set<string>, folderPrefix: string): void {
 	const folderRoot = folderPrefix.endsWith('/') ? folderPrefix : `${folderPrefix}/`
 	const now = Date.now()
@@ -145,6 +180,9 @@ function pruneDurationCache(liveRelativePaths: Set<string>, folderPrefix: string
 	}
 }
 
+/**
+ * Probe media duration with caching and in-flight deduplication.
+ */
 async function probeDurationCached(
 	relativePath: string,
 	filePath: string,
@@ -242,6 +280,9 @@ export async function probeMediaDurationSeconds(absolutePath: string): Promise<n
 	})
 }
 
+/**
+ * Probe duration for a media file specified by ingest-relative path.
+ */
 export async function probeRelativeMediaDurationSeconds(
 	relativePath: string
 ): Promise<number | undefined> {
@@ -267,6 +308,9 @@ export interface RundownMediaListing {
 	ingestMediaRoot: string
 }
 
+/**
+ * List all media files in the rundown's ingest folder with probed durations.
+ */
 export async function listRundownMedia(
 	rundownId: string,
 	subdir: string = DEFAULT_SUBDIR

@@ -26,6 +26,9 @@ interface SessionRow {
 
 const USER_SELECT = `SELECT id, username, password_hash, display_name, role, active, script_cps FROM users`
 
+/**
+ * Add script_cps column to users table if missing (migration).
+ */
 function migrateUsersScriptCpsColumn(): void {
 	const columns = db.prepare(`PRAGMA table_info(users)`).all() as Array<{ name: string }>
 	if (columns.some((column) => column.name === 'script_cps')) {
@@ -34,6 +37,9 @@ function migrateUsersScriptCpsColumn(): void {
 	db.exec(`ALTER TABLE users ADD COLUMN script_cps REAL`)
 }
 
+/**
+ * Convert database user row to AuthUser object.
+ */
 function rowToUser(row: UserRow): AuthUser {
 	return {
 		id: row.id,
@@ -45,6 +51,9 @@ function rowToUser(row: UserRow): AuthUser {
 	}
 }
 
+/**
+ * Initialize authentication tables and seed default admin user if needed.
+ */
 export function initAuthTables(): void {
 	db.exec(`
 		CREATE TABLE IF NOT EXISTS users (
@@ -105,10 +114,16 @@ export function initAuthTables(): void {
 	}
 }
 
+/**
+ * Get the session cookie name used for authentication.
+ */
 export function getSessionCookieName(): string {
 	return SESSION_COOKIE
 }
 
+/**
+ * Authenticate a user by username and password. Returns user if valid, null otherwise.
+ */
 export function authenticateUser(
 	username: string,
 	password: string
@@ -129,6 +144,9 @@ export function authenticateUser(
 	return rowToUser(row)
 }
 
+/**
+ * Create a new session for the given user ID. Returns session ID and expiration.
+ */
 export function createSession(userId: string): { sessionId: string; expiresAt: number } {
 	const sessionId = uuid()
 	const expiresAt = Date.now() + SESSION_TTL_MS
@@ -141,14 +159,23 @@ export function createSession(userId: string): { sessionId: string; expiresAt: n
 	return { sessionId, expiresAt }
 }
 
+/**
+ * Delete a session by ID (used for logout).
+ */
 export function deleteSession(sessionId: string): void {
 	db.prepare(`DELETE FROM sessions WHERE id = ?`).run(sessionId)
 }
 
+/**
+ * Remove all expired sessions from the database.
+ */
 export function purgeExpiredSessions(): void {
 	db.prepare(`DELETE FROM sessions WHERE expires_at < ?`).run(Date.now())
 }
 
+/**
+ * Retrieve user from a session ID. Returns null if session is invalid or expired.
+ */
 export function getUserFromSession(sessionId: string | undefined): SessionUser | null {
 	if (!sessionId) {
 		return null
@@ -183,6 +210,9 @@ export function getUserFromSession(sessionId: string | undefined): SessionUser |
 	})
 }
 
+/**
+ * Extract session ID from HTTP Cookie header.
+ */
 export function parseSessionCookie(cookieHeader: string | undefined): string | undefined {
 	if (!cookieHeader) {
 		return undefined
@@ -201,6 +231,9 @@ export function parseSessionCookie(cookieHeader: string | undefined): string | u
 	return undefined
 }
 
+/**
+ * Determine if session cookies should use the Secure flag.
+ */
 function shouldUseSecureSessionCookie(): boolean {
 	const override = process.env.SESSION_COOKIE_SECURE?.trim().toLowerCase()
 	if (override === 'false' || override === '0') {
@@ -212,19 +245,31 @@ function shouldUseSecureSessionCookie(): boolean {
 	return process.env.NODE_ENV === 'production'
 }
 
+/**
+ * Get the Secure attribute string for session cookies.
+ */
 function sessionCookieSecureAttribute(): string {
 	return shouldUseSecureSessionCookie() ? '; Secure' : ''
 }
 
+/**
+ * Build a Set-Cookie header value for a new session.
+ */
 export function buildSessionCookie(sessionId: string, expiresAt: number): string {
 	const maxAge = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000))
 	return `${SESSION_COOKIE}=${encodeURIComponent(sessionId)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${sessionCookieSecureAttribute()}`
 }
 
+/**
+ * Build a Set-Cookie header value to clear the session cookie.
+ */
 export function buildClearSessionCookie(): string {
 	return `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0${sessionCookieSecureAttribute()}`
 }
 
+/**
+ * List all users (both active and inactive).
+ */
 export function listUsers(): AuthUser[] {
 	const rows = db
 		.prepare(
@@ -244,6 +289,9 @@ export class DuplicateUsernameError extends Error {
 	}
 }
 
+/**
+ * Check if an error is a SQLite unique constraint violation.
+ */
 function isUniqueConstraintError(err: unknown): boolean {
 	if (!(err instanceof Error)) {
 		return false
@@ -255,6 +303,9 @@ function isUniqueConstraintError(err: unknown): boolean {
 	)
 }
 
+/**
+ * Create a new user. Throws DuplicateUsernameError if username already exists.
+ */
 export function createUser(payload: {
 	username: string
 	password: string
@@ -292,6 +343,9 @@ export function createUser(payload: {
 	)
 }
 
+/**
+ * Update user profile settings (script CPS). Returns null if user not found.
+ */
 export function updateUserProfile(
 	userId: string,
 	updates: { scriptCps?: number | null }
@@ -323,6 +377,9 @@ export function updateUserProfile(
 	)
 }
 
+/**
+ * Update user account (admin operation). Returns null if user not found.
+ */
 export function updateUser(
 	id: string,
 	updates: {

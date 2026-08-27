@@ -1,5 +1,9 @@
 export type EditorialStatus = 'checked' | 'skipped' | 'unchecked'
 
+/**
+ * Determine the editorial status badge and tooltip for a part/piece.
+ * Returns null if no badge should be shown.
+ */
 export function resolveEditorialStatus(options: {
 	skip?: boolean
 	editorChecked?: boolean

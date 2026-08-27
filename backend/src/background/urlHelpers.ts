@@ -1,7 +1,13 @@
+/**
+ * Remove trailing slashes from a URL string.
+ */
 export function normalizeBaseUrl(url: string): string {
 	return url.trim().replace(/\/+$/, '')
 }
 
+/**
+ * Check if a string is a valid HTTP or HTTPS URL.
+ */
 export function isValidHttpUrl(url: string): boolean {
 	try {
 		const parsed = new URL(url)

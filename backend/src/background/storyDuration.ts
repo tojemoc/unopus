@@ -28,22 +28,34 @@ export const STORY_DURATION_INHERIT_PIECE_TYPES = new Set([
 	'l3d-odporucanie'
 ])
 
+/**
+ * Type guard: check if a duration value is a positive finite number.
+ */
 export function isPositiveDurationSeconds(
 	duration: number | undefined | null
 ): duration is number {
 	return typeof duration === 'number' && Number.isFinite(duration) && duration > 0
 }
 
+/**
+ * Check if a piece type inherits duration from its parent part.
+ */
 export function pieceInheritsPartDuration(pieceType: string): boolean {
 	return STORY_DURATION_INHERIT_PIECE_TYPES.has(pieceType.trim().toLowerCase())
 }
 
 const MEDIA_VIDEO_PIECE_TYPES = new Set(['video'])
 
+/**
+ * Check if a piece type is a media video piece (eligible for ffprobe duration).
+ */
 export function isMediaVideoPieceType(pieceType: string): boolean {
 	return MEDIA_VIDEO_PIECE_TYPES.has(pieceType.trim().toLowerCase())
 }
 
+/**
+ * Extract a positive number from an unknown value, or return undefined.
+ */
 function positiveNumber(value: unknown): number | undefined {
 	if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
 		return undefined
@@ -95,6 +107,9 @@ export type StoryDurationOptions = {
 	scriptCps?: number
 }
 
+/**
+ * Filter out skipped pieces, returning only active ones.
+ */
 function activePieces<T extends { skip?: boolean }>(pieces: T[]): T[] {
 	return pieces.filter((piece) => !piece.skip)
 }

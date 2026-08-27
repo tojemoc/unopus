@@ -29,6 +29,9 @@ export function resolveEffectiveScriptCps(options: {
 	return resolveEffectiveScriptCpsBackend(options.userScriptCps, options.settingsCps)
 }
 
+/**
+ * Estimate script reading time and format it as clock display with character count.
+ */
 export function formatScriptReadingEstimate(
 	text: string | undefined | null,
 	cps: number

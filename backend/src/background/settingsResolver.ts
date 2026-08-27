@@ -7,6 +7,10 @@ export {
 	normalizeBaseUrl
 } from './urlHelpers'
 
+/**
+ * Synchronously read application settings from the database.
+ * Returns undefined if settings are not found or on error.
+ */
 export function readApplicationSettingsSync(): ApplicationSettings | undefined {
 	try {
 		const stmt = db.prepare(`
