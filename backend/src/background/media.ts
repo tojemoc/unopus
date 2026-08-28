@@ -3,7 +3,7 @@ import fs from 'fs/promises'
 import path from 'path'
 import process from 'node:process'
 import type { MediaFileEntry } from './interfaces'
-import { normalizeBaseUrl, readApplicationSettingsSync } from './settingsResolver'
+import { isValidPreviewBaseUrl, normalizeBaseUrl, readApplicationSettingsSync } from './settingsResolver'
 
 const DEFAULT_INGEST_MEDIA_ROOT = '../ingest'
 const DEFAULT_SUBDIR = 'clips'
@@ -31,7 +31,10 @@ export function getPreviewBaseUrl(): string {
 	const settings = readApplicationSettingsSync()
 	const configured = settings?.previewBaseUrl?.trim() || process.env.PREVIEW_BASE_URL?.trim()
 	if (configured) {
-		return normalizeBaseUrl(configured)
+		const normalized = normalizeBaseUrl(configured)
+		if (normalized && isValidPreviewBaseUrl(normalized)) {
+			return normalized
+		}
 	}
 	return DEFAULT_PREVIEW_BASE_URL
 }
