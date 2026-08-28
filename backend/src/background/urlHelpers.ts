@@ -8,6 +8,9 @@ export function normalizeBaseUrl(url: string): string {
 		return ''
 	}
 	const suffixIndex = trimmed.search(/[?#]/)
+	if (suffixIndex === 0) {
+		return ''
+	}
 	const path = suffixIndex === -1 ? trimmed : trimmed.slice(0, suffixIndex)
 	const suffix = suffixIndex === -1 ? '' : trimmed.slice(suffixIndex)
 	const withoutTrailing = path.replace(/\/+$/, '')
@@ -30,6 +33,9 @@ export function isValidHttpUrl(url: string): boolean {
 export function isValidPreviewBaseUrl(url: string): boolean {
 	const trimmed = url.trim()
 	if (!trimmed) {
+		return false
+	}
+	if (trimmed.startsWith('?') || trimmed.startsWith('#')) {
 		return false
 	}
 	if (trimmed.startsWith('/')) {

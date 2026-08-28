@@ -27,4 +27,12 @@ describe('preview base URL', () => {
 		assert.equal(normalizeBaseUrl('/demo-assets/#/'), '/demo-assets#/')
 		assert.equal(normalizeBaseUrl('/demo-assets/foo/?q=1'), '/demo-assets/foo?q=1')
 	})
+
+	it('rejects suffix-only query or fragment inputs', () => {
+		for (const input of ['?cache=/', '#/', '?q=1', '#frag']) {
+			assert.equal(normalizeBaseUrl(input), '')
+			assert.equal(isValidPreviewBaseUrl(input), false)
+			assert.equal(isValidPreviewBaseUrl(normalizeBaseUrl(input)), false)
+		}
+	})
 })
