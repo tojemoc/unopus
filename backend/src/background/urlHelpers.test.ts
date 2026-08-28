@@ -21,4 +21,10 @@ describe('preview base URL', () => {
 		assert.equal(normalizeBaseUrl(''), '')
 		assert.equal(isValidPreviewBaseUrl(normalizeBaseUrl('/')), true)
 	})
+
+	it('trims trailing slashes from the path only, not query or fragment', () => {
+		assert.equal(normalizeBaseUrl('/demo-assets?cache=/'), '/demo-assets?cache=/')
+		assert.equal(normalizeBaseUrl('/demo-assets/#/'), '/demo-assets#/')
+		assert.equal(normalizeBaseUrl('/demo-assets/foo/?q=1'), '/demo-assets/foo?q=1')
+	})
 })

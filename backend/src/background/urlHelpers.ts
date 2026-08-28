@@ -7,8 +7,11 @@ export function normalizeBaseUrl(url: string): string {
 	if (!trimmed) {
 		return ''
 	}
-	const withoutTrailing = trimmed.replace(/\/+$/, '')
-	return withoutTrailing === '' ? '/' : withoutTrailing
+	const suffixIndex = trimmed.search(/[?#]/)
+	const path = suffixIndex === -1 ? trimmed : trimmed.slice(0, suffixIndex)
+	const suffix = suffixIndex === -1 ? '' : trimmed.slice(suffixIndex)
+	const withoutTrailing = path.replace(/\/+$/, '')
+	return `${withoutTrailing === '' ? '/' : withoutTrailing}${suffix}`
 }
 
 /**

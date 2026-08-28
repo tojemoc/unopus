@@ -40,6 +40,7 @@
 			} catch {
 				cities = []
 			}
+			cities = cities.filter((city) => city && typeof city === 'object')
 			if (!cities.length) {
 				const empty = document.createElement('div')
 				empty.className = 'muted'

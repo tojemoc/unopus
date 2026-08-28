@@ -10,7 +10,7 @@ import { mutations as rundownMutations } from '../background/api/rundowns'
 /**
  * Retrieves the session user from the request's cookie.
  * @param req - The Express request object.
- * @returns The user object if found, undefined otherwise.
+ * @returns The user object if found, null otherwise.
  */
 function getSessionUser(req: Request) {
 	const sessionId = parseSessionCookie(req.headers.cookie)
