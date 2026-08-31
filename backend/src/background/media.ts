@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process'
-import fs from 'fs/promises'
+import fsSync from 'node:fs'
+import fs from 'node:fs/promises'
 import path from 'path'
 import process from 'node:process'
 import type { MediaFileEntry } from './interfaces'
@@ -8,6 +9,8 @@ import { isValidPreviewBaseUrl, normalizeBaseUrl, readApplicationSettingsSync } 
 const DEFAULT_INGEST_MEDIA_ROOT = '../ingest'
 const DEFAULT_SUBDIR = 'clips'
 const DEFAULT_PREVIEW_BASE_URL = '/demo-assets'
+/** Subfolder under ingest media root for copied GFX HTML templates (NAS-friendly). */
+export const GFX_TEMPLATES_INGEST_SUBDIR = 'gfx-templates'
 const VIDEO_EXTENSIONS = /\.(mp4|mov|mxf|mkv|webm|m4v|avi)$/i
 
 /**
@@ -26,6 +29,9 @@ export function getIngestMediaRoot(): string {
 /**
  * Get the base URL for media preview/playback.
  * Checks application settings and environment variables, falling back to default.
+ *
+ * Same-origin `/demo-assets` is preferred. Absolute `http://localhost:…` values stored in
+ * older installs are rewritten to `/demo-assets` so browsers load templates from the app host.
  */
 export function getPreviewBaseUrl(): string {
 	const settings = readApplicationSettingsSync()
@@ -33,10 +39,70 @@ export function getPreviewBaseUrl(): string {
 	if (configured) {
 		const normalized = normalizeBaseUrl(configured)
 		if (normalized && isValidPreviewBaseUrl(normalized)) {
-			return normalized
+			return normalizePreviewBaseUrlForClient(normalized)
 		}
 	}
 	return DEFAULT_PREVIEW_BASE_URL
+}
+
+/** Bundled stub templates shipped with the app (demo-assets/ copied into frontend/dist on build). */
+export function getBundledGfxTemplatesRoot(): string {
+	const frontendDist = path.resolve(process.cwd(), 'frontend/dist/demo-assets')
+	if (fsSync.existsSync(frontendDist)) {
+		return frontendDist
+	}
+	// backend/dist/background/media.js → ../../../demo-assets
+	const fromBackendDist = path.resolve(__dirname, '../../../demo-assets')
+	if (fsSync.existsSync(fromBackendDist)) {
+		return fromBackendDist
+	}
+	return path.resolve(process.cwd(), 'demo-assets')
+}
+
+/**
+ * Ordered GFX template roots — first match wins when serving `/demo-assets/<template>/index.html`.
+ *
+ * 1. `GFX_TEMPLATES_ROOT` env (Docker bind mount to sofie-demo-assets, etc.)
+ * 2. `{INGEST_MEDIA_ROOT}/gfx-templates/` (copy HTML templates onto the NAS ingest share)
+ * 3. Bundled demo-assets stubs in the app image
+ */
+export function resolveGfxTemplateRoots(): string[] {
+	const roots: string[] = []
+	const seen = new Set<string>()
+
+	const addRoot = (candidate: string | undefined) => {
+		if (!candidate?.trim()) {
+			return
+		}
+		const resolved = path.resolve(candidate.trim())
+		if (seen.has(resolved) || !fsSync.existsSync(resolved)) {
+			return
+		}
+		roots.push(resolved)
+		seen.add(resolved)
+	}
+
+	addRoot(process.env.GFX_TEMPLATES_ROOT?.trim())
+	addRoot(path.join(getIngestMediaRoot(), GFX_TEMPLATES_INGEST_SUBDIR))
+	addRoot(getBundledGfxTemplatesRoot())
+
+	return roots
+}
+
+function normalizePreviewBaseUrlForClient(url: string): string {
+	if (url.startsWith('/')) {
+		return url
+	}
+	try {
+		const parsed = new URL(url)
+		const isLocalhost = parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1'
+		if (isLocalhost && parsed.pathname.replace(/\/+$/, '') === '/demo-assets') {
+			return DEFAULT_PREVIEW_BASE_URL
+		}
+	} catch {
+		// keep original
+	}
+	return url
 }
 
 /**

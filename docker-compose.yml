@@ -11,10 +11,20 @@ services:
       - PORT=3010
       - DATA_DIR=/app/data
       - NODE_ENV=production
+      # Same-origin GFX preview (HTML templates with query-param payload).
+      - PREVIEW_BASE_URL=/demo-assets
       # Required for HTTP-only deployments; omit or set true when behind HTTPS.
       - SESSION_COOKIE_SECURE=false
+      # Ingest media root — mount your NAS share so clips + gfx-templates are visible.
+      # - INGEST_MEDIA_ROOT=/app/ingest
+      # Optional: bind-mount full sofie-demo-assets (or hand-copied HTML) instead of copying to ingest.
+      # - GFX_TEMPLATES_ROOT=/app/gfx-templates
     ports:
       - '3010:3010'
     volumes:
       - ./data:/app/data
+      # NAS ingest share (clips/, gfx-templates/, loops/, …):
+      # - /mnt/nas/ingest:/app/ingest:ro
+      # Sofie demo GFX templates (alternative to {ingest}/gfx-templates/):
+      # - /mnt/nas/sofie-demo-assets:/app/gfx-templates:ro
     restart: unless-stopped

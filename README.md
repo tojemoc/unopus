@@ -104,13 +104,45 @@ Set `INGEST_MEDIA_ROOT` in `backend/.env`, or override it in **Settings → Conn
 
 ### GFX preview
 
-Preview iframes load templates from `PREVIEW_BASE_URL` (default `http://localhost:3010/demo-assets`). Override in **Settings → Connection** for production template hosts.
-
-The build copies lightweight preview HTML stubs into `frontend/dist/demo-assets/` so they ship with the static bundle. Each piece type with `previewTemplate` loads:
+Preview iframes load **HTML template files** directly from the same host as the editor — no Caspar required. Each piece type with `previewTemplate` opens:
 
 ```text
 {previewBaseUrl}/{previewTemplate}/index.html?{payload query params}
 ```
+
+The bundled stubs in `demo-assets/` read those query params in plain JavaScript. Full-fidelity templates from [sofie-demo-assets](https://github.com/SuperFlyTV/sofie-demo-assets) work the same way when copied or bind-mounted.
+
+**Default:** `PREVIEW_BASE_URL=/demo-assets` (same-origin). Avoid `http://localhost:…` in production — browsers load that from the operator's machine, not the server.
+
+**Template roots** (first match wins; all served at `/demo-assets/`):
+
+| Priority | Source | Setup |
+|----------|--------|--------|
+| 1 | `GFX_TEMPLATES_ROOT` env | Docker bind-mount sofie-demo-assets → `/app/gfx-templates` |
+| 2 | `{INGEST_MEDIA_ROOT}/gfx-templates/` | Copy `headline/`, `l3d-tema/`, … onto the NAS ingest share |
+| 3 | Bundled `demo-assets/` | Shipped in the Docker image / frontend build |
+
+Example NAS layout:
+
+```text
+<INGEST_MEDIA_ROOT>/gfx-templates/headline/index.html
+<INGEST_MEDIA_ROOT>/gfx-templates/l3d-tema/index.html
+<INGEST_MEDIA_ROOT>/clips/<file>.mp4
+```
+
+**Docker Compose** (see `docker-compose.yml` for commented volume examples):
+
+```yaml
+environment:
+  - PREVIEW_BASE_URL=/demo-assets
+  - INGEST_MEDIA_ROOT=/app/ingest
+  # - GFX_TEMPLATES_ROOT=/app/gfx-templates
+volumes:
+  - /mnt/nas/ingest:/app/ingest:ro
+  # - /mnt/nas/sofie-demo-assets:/app/gfx-templates:ro
+```
+
+Override per install in **Settings → Connection → GFX preview base URL** only when templates live on another host (absolute `https://…` URL).
 
 **Production behind nginx:** if nginx serves `frontend/dist` directly, add a location so `/demo-assets/` does not fall through to the SPA `index.html` (which causes MIME type errors on `./assets/*.js`):
 

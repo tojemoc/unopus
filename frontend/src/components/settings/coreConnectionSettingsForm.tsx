@@ -167,9 +167,11 @@ export function CoreConnectionSettingsForm({ settings }: { settings: Application
 								/>
 								<Form.Text className="text-muted">
 									Base URL for GFX preview iframe templates (must serve{' '}
-									<code>&lt;template&gt;/index.html</code> files). Leave empty to use the bundled{' '}
-									<code>/demo-assets</code> stubs (proxied by Vite in dev). Absolute http(s) URLs
-									also work, e.g. <code>https://duopus.tjm.sk/demo-assets</code>. Overrides{' '}
+									<code>&lt;template&gt;/index.html</code> files). Leave empty to use bundled
+									stubs at <code>/demo-assets</code> on the same host. Templates can also live
+									under <code>{'{ingest}'}/gfx-templates/</code> on the NAS or at{' '}
+									<code>GFX_TEMPLATES_ROOT</code> (Docker bind mount) — no separate preview
+									server needed. Avoid <code>http://localhost:…</code> in production. Overrides{' '}
 									<code>PREVIEW_BASE_URL</code> in backend <code>.env</code> when set.
 								</Form.Text>
 							</Form.Group>
