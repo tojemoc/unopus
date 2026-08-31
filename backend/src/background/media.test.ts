@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { db } from './db.js'
-import { getPreviewBaseUrl } from './media.js'
+import {
+	getBundledGfxTemplatesRoot,
+	getPreviewBaseUrl,
+	resolveGfxTemplateRoots
+} from './media.js'
 import { readApplicationSettingsSync } from './settingsResolver.js'
 
 function clearSettingsPreviewBaseUrl(): () => void {
@@ -42,5 +46,31 @@ describe('getPreviewBaseUrl', () => {
 			}
 			restoreSettings()
 		}
+	})
+
+	it('rewrites localhost absolute preview URLs to same-origin /demo-assets', () => {
+		const restoreSettings = clearSettingsPreviewBaseUrl()
+		const previousPreviewBaseUrl = process.env.PREVIEW_BASE_URL
+		try {
+			process.env.PREVIEW_BASE_URL = 'http://localhost:3010/demo-assets'
+			assert.equal(getPreviewBaseUrl(), '/demo-assets')
+			process.env.PREVIEW_BASE_URL = 'http://127.0.0.1:3010/demo-assets/'
+			assert.equal(getPreviewBaseUrl(), '/demo-assets')
+		} finally {
+			if (previousPreviewBaseUrl === undefined) {
+				delete process.env.PREVIEW_BASE_URL
+			} else {
+				process.env.PREVIEW_BASE_URL = previousPreviewBaseUrl
+			}
+			restoreSettings()
+		}
+	})
+})
+
+describe('resolveGfxTemplateRoots', () => {
+	it('always includes bundled demo-assets as a fallback root', () => {
+		const bundled = getBundledGfxTemplatesRoot()
+		const roots = resolveGfxTemplateRoots()
+		assert.ok(roots.includes(bundled), `expected bundled root ${bundled} in ${roots.join(', ')}`)
 	})
 })

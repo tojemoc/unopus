@@ -19,6 +19,8 @@ export interface DraggableContainerProps<T extends DraggableItemData> {
 	itemType: DragTypes
 	Component: DraggableWrappedComponent<T>
 	reorder: (target: T, source: T, sourceIndex: number, targetIndex: number) => unknown
+	/** When provided, return false to disable dragging for that item (drop target remains). */
+	canDragItem?: (item: T) => boolean
 }
 
 export type HoverPosition = 'above' | 'below' | null
@@ -34,7 +36,8 @@ export const DraggableContainer = <T extends DraggableItemData>({
 	items,
 	itemType,
 	Component,
-	reorder
+	reorder,
+	canDragItem
 }: DraggableContainerProps<T> & ComponentProps<'div'>): ReactElement => {
 	const [hoverState, setHoverState] = useState<HoverState<T>>({
 		hoveredItem: null,
@@ -137,9 +140,10 @@ export const DraggableContainer = <T extends DraggableItemData>({
 				hoverState={hoverState}
 				endDrag={endDrag}
 				parentId={id}
+				canDrag={canDragItem ? canDragItem(item) : true}
 			/>
 		),
-		[hover, itemType, Component, hoverState, endDrag, id]
+		[hover, itemType, Component, hoverState, endDrag, id, canDragItem]
 	)
 
 	return <div>{items.map(renderContainedItem)}</div>

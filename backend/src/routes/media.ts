@@ -1,9 +1,11 @@
 import type { Application, Request, Response } from 'express'
 import { getUserFromSession, parseSessionCookie } from '../background/auth/authStore'
+import fs from 'fs/promises'
 import {
 	ensureRundownMediaFolder,
 	listRundownMedia,
-	probeRelativeMediaDurationSeconds
+	probeRelativeMediaDurationSeconds,
+	resolveMediaAbsolutePath
 } from '../background/media'
 import { enrichMediaListingWithCoreReadiness } from '../background/mediaListingReadiness'
 
@@ -39,6 +41,28 @@ export function registerMediaRoutes(app: Application): void {
 		} catch (error) {
 			console.error(error)
 			res.status(400).json({ error: (error as Error).message })
+		}
+	})
+
+	app.get('/api/media/file', async (req: Request, res: Response) => {
+		if (!getSessionUser(req)) {
+			res.status(401).json({ error: 'Not authenticated' })
+			return
+		}
+
+		const mediaPath = typeof req.query.path === 'string' ? req.query.path.trim() : ''
+		if (!mediaPath) {
+			res.status(400).json({ error: 'Missing path query parameter' })
+			return
+		}
+
+		try {
+			const absolutePath = resolveMediaAbsolutePath(mediaPath)
+			await fs.access(absolutePath)
+			res.sendFile(absolutePath)
+		} catch (error) {
+			console.error(error)
+			res.status(404).json({ error: 'Media file not found' })
 		}
 	})
 

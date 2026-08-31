@@ -1,5 +1,4 @@
 import express from 'express'
-import fs from 'fs'
 import http from 'http'
 import path from 'path'
 import { Server, Socket } from 'socket.io'
@@ -22,12 +21,9 @@ import { registerCoreDiagnosticsRoutes } from './routes/coreDiagnostics'
 import { registerConfigRoutes } from './routes/config'
 import { registerDailyGenerationRoutes } from './routes/dailyGeneration'
 import { registerPresenceHandlers } from './background/api/presence'
+import { resolveGfxTemplateRoots } from './background/media'
 
 const frontendPath = path.resolve(__dirname, '../../frontend/dist')
-const demoAssetsInDist = path.join(frontendPath, 'demo-assets')
-const demoAssetsPath = fs.existsSync(demoAssetsInDist)
-	? demoAssetsInDist
-	: path.resolve(__dirname, '../../demo-assets')
 
 const PUBLIC_API_PREFIXES = ['/api/auth/login']
 
@@ -127,7 +123,27 @@ export async function initSocketServer(port: number = 3010) {
 			handlers.map((handler: SocketIOHandler) => handler(socket, io))
 		})
 
-		app.use('/demo-assets', express.static(demoAssetsPath, { fallthrough: false }))
+		app.use('/demo-assets', (req, res, next) => {
+			res.setHeader('Cache-Control', 'no-cache')
+			next()
+		})
+
+		const gfxTemplateRoots = resolveGfxTemplateRoots()
+		if (gfxTemplateRoots.length === 0) {
+			console.warn('GFX preview: no template roots found — /demo-assets will 404')
+		} else {
+			console.log(`GFX preview templates (${gfxTemplateRoots.length} root(s)):`)
+			for (const root of gfxTemplateRoots) {
+				console.log(`  • ${root}`)
+			}
+			for (let i = 0; i < gfxTemplateRoots.length - 1; i++) {
+				app.use('/demo-assets', express.static(gfxTemplateRoots[i], { fallthrough: true }))
+			}
+			app.use(
+				'/demo-assets',
+				express.static(gfxTemplateRoots[gfxTemplateRoots.length - 1], { fallthrough: false })
+			)
+		}
 		app.use(express.static(frontendPath))
 
 		app.get('/favicon.png', (_, res) => {

@@ -8,6 +8,7 @@ import {
 	sortPiecesByScriptOffset
 } from '~/util/pieceScriptOffset'
 import { useAppSelector } from '~/store/app'
+import { resolvePieceName } from '~/util/pieceName'
 import { getPieceReadinessState } from './sidebar/partRow'
 import { ReadinessBadge } from './readinessBadge'
 
@@ -50,6 +51,7 @@ export function ScriptPieceFlow({
 		const cue = formatPieceCueOffset(script, piece, cps)
 		const pieceReady = getPieceReadinessState(piece.id, readiness)
 		const selected = expandedPieceId === piece.id
+		const displayName = resolvePieceName(manifest, piece.payload, piece.name)
 
 		nodes.push(
 			<button
@@ -57,7 +59,7 @@ export function ScriptPieceFlow({
 				type="button"
 				className={`script-flow__chip${selected ? ' script-flow__chip--open' : ''}${piece.skip ? ' script-flow__chip--skip' : ''}`}
 				style={{ borderColor: colour, backgroundColor: colorMix(colour, 0.22) }}
-				title={`${piece.name} · ${cue}`}
+				title={`${displayName} · ${cue}`}
 				onClick={(e) => {
 					e.stopPropagation()
 					onSelectPiece(selected ? null : piece.id)
@@ -66,7 +68,7 @@ export function ScriptPieceFlow({
 				<span className="script-flow__chip-type" style={{ backgroundColor: colour }}>
 					{manifest?.shortName ?? piece.pieceType.slice(0, 4).toUpperCase()}
 				</span>
-				<span className="script-flow__chip-name">{piece.name}</span>
+				<span className="script-flow__chip-name">{displayName}</span>
 				<span className="script-flow__chip-cue">{cue}</span>
 				{pieceReady && pieceReady.state !== 'na' ? (
 					<ReadinessBadge state={pieceReady.state} tooltip={pieceReady.tooltip} compact />
