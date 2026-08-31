@@ -3,6 +3,10 @@ import { Server as SocketIOServer } from 'socket.io'
 
 let ioInstance: SocketIOServer | null = null
 
+/**
+ * Initialize Socket.IO server instance with the HTTP server.
+ * Returns undefined if already initialized.
+ */
 export function initSocket(server: HTTPServer): SocketIOServer | undefined {
 	if (ioInstance) {
 		return
@@ -22,6 +26,10 @@ export function initSocket(server: HTTPServer): SocketIOServer | undefined {
 	return ioInstance
 }
 
+/**
+ * Get the initialized Socket.IO server instance.
+ * Returns undefined if not yet initialized.
+ */
 export function getSocketIO(): SocketIOServer | undefined {
 	if (!ioInstance) {
 		return

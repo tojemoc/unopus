@@ -11,6 +11,12 @@ export const defaultRundownManifest: TypeManifest = {
 	payload: []
 }
 
+/**
+ * Resolves the file path for a manifest file by checking multiple candidate locations.
+ * @param filename - The name of the manifest file to locate.
+ * @returns The resolved file path.
+ * @throws Error if the manifest file is not found in any of the candidate locations.
+ */
 function resolveManifestPath(filename: string): string {
 	const candidates = [
 		// Explicit override (CI / standalone checkout)
@@ -34,6 +40,11 @@ function resolveManifestPath(filename: string): string {
 	)
 }
 
+/**
+ * Loads and parses a manifest JSON file.
+ * @param filename - The name of the manifest file to load.
+ * @returns An array of TypeManifest objects parsed from the file.
+ */
 function loadManifestJson(filename: string): TypeManifest[] {
 	const filePath = resolveManifestPath(filename)
 	const raw = readFileSync(filePath, 'utf-8')

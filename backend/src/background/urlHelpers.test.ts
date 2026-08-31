@@ -14,4 +14,25 @@ describe('preview base URL', () => {
 		assert.equal(isValidPreviewBaseUrl(''), false)
 		assert.equal(normalizeBaseUrl('/demo-assets/'), '/demo-assets')
 	})
+
+	it('keeps same-origin root as / after trimming trailing slashes', () => {
+		assert.equal(normalizeBaseUrl('/'), '/')
+		assert.equal(normalizeBaseUrl('///'), '/')
+		assert.equal(normalizeBaseUrl(''), '')
+		assert.equal(isValidPreviewBaseUrl(normalizeBaseUrl('/')), true)
+	})
+
+	it('trims trailing slashes from the path only, not query or fragment', () => {
+		assert.equal(normalizeBaseUrl('/demo-assets?cache=/'), '/demo-assets?cache=/')
+		assert.equal(normalizeBaseUrl('/demo-assets/#/'), '/demo-assets#/')
+		assert.equal(normalizeBaseUrl('/demo-assets/foo/?q=1'), '/demo-assets/foo?q=1')
+	})
+
+	it('rejects suffix-only query or fragment inputs', () => {
+		for (const input of ['?cache=/', '#/', '?q=1', '#frag']) {
+			assert.equal(normalizeBaseUrl(input), '')
+			assert.equal(isValidPreviewBaseUrl(input), false)
+			assert.equal(isValidPreviewBaseUrl(normalizeBaseUrl(input)), false)
+		}
+	})
 })

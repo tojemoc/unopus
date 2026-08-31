@@ -28,6 +28,10 @@ const LABELS: Record<string, string> = {
 	requireEditorCheckForAir: 'Require editor check before on-air'
 }
 
+/**
+ * Convert a field name to a human-friendly label.
+ * Falls back to title-cased field name if no mapping exists.
+ */
 export function friendlyLabel(fieldName: string): string {
 	return LABELS[fieldName] ?? fieldName.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase())
 }

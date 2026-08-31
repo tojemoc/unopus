@@ -40,16 +40,25 @@
 			} catch {
 				cities = []
 			}
+			cities = cities.filter((city) => city && typeof city === 'object')
 			if (!cities.length) {
-				root.innerHTML = '<div class="muted">No city data — paste Cities JSON on the piece.</div>'
+				const empty = document.createElement('div')
+				empty.className = 'muted'
+				empty.textContent = 'No city data — paste Cities JSON on the piece.'
+				root.appendChild(empty)
 			} else {
-				root.innerHTML = cities
-					.map((city) => {
-						const name = city.name || city.city || 'City'
-						const temp = city.temp ?? city.temperature ?? ''
-						return `<div class="city"><span>${name}</span><span>${temp}</span></div>`
-					})
-					.join('')
+				for (const city of cities) {
+					const name = city.name || city.city || 'City'
+					const temp = city.temp ?? city.temperature ?? ''
+					const row = document.createElement('div')
+					row.className = 'city'
+					const nameEl = document.createElement('span')
+					nameEl.textContent = String(name)
+					const tempEl = document.createElement('span')
+					tempEl.textContent = String(temp)
+					row.append(nameEl, tempEl)
+					root.appendChild(row)
+				}
 			}
 		</script>
 	</body>

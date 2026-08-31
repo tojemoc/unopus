@@ -32,6 +32,10 @@ export interface CoreDeviceAuthInfo {
 	usingUnsecureToken: boolean
 }
 
+/**
+ * Manages the connection and communication with Sofie Core.
+ * Handles device authentication, subscriptions, and command execution.
+ */
 export class CoreHandler {
 	public core: CoreConnection
 	public get connectionInfo(): Readonly<CoreConnectionInfo> {
@@ -67,6 +71,10 @@ export class CoreHandler {
 		)
 	}
 
+	/**
+	 * Initializes the core connection with the configured settings.
+	 * Sets up event handlers and establishes connection to Sofie Core.
+	 */
 	async init() {
 		const { result: settings } = await settingsMutations.read()
 
@@ -147,6 +155,12 @@ export class CoreHandler {
 		this.setupObserverForPeripheralDeviceCommands()
 	}
 
+	/**
+	 * Builds the CoreOptions configuration object with device credentials.
+	 * @param deviceOptions - The device configuration with ID and token.
+	 * @param name - The device name.
+	 * @returns The CoreOptions object for establishing connection.
+	 */
 	getCoreConnectionOptions(deviceOptions: DeviceConfig, name: string): CoreOptions {
 		let credentials: CoreCredentials = {
 			deviceId: protectString('SofieRundownEditor'),
@@ -192,6 +206,11 @@ export class CoreHandler {
 		return options
 	}
 
+	/**
+	 * Sets the status of the peripheral device in Sofie Core.
+	 * @param statusCode - The status code to set.
+	 * @param messages - Array of status messages.
+	 */
 	setStatus(statusCode: StatusCode, messages: string[]) {
 		this.core
 			.setStatus({
@@ -202,7 +221,7 @@ export class CoreHandler {
 	}
 
 	/**
-	 * Listen for commands and execute.
+	 * Sets up an observer to listen for peripheral device commands and execute them.
 	 */
 	setupObserverForPeripheralDeviceCommands() {
 		const observer = this.core.observe(
@@ -250,6 +269,11 @@ export class CoreHandler {
 		})
 	}
 
+	/**
+	 * Handles the killProcess command from Sofie Core.
+	 * @param actually - If 1, initiates shutdown; otherwise returns 0.
+	 * @returns True if shutdown initiated, 0 otherwise.
+	 */
 	killProcess(actually: number) {
 		if (actually === 1) {
 			console.log('KillProcess command received, shutting down in 1000ms!')
@@ -261,6 +285,12 @@ export class CoreHandler {
 		return 0
 	}
 
+	/**
+	 * Triggers a reload of a rundown by its ID.
+	 * @param rundownId - The ID of the rundown to reload.
+	 * @returns The mutated rundown result.
+	 * @throws Error if the rundown is not found or multiple rundowns match the ID.
+	 */
 	async triggerReloadRundown(rundownId: string) {
 		const { result, error } = await rundownMutations.read({ id: rundownId })
 		if (error) {
@@ -275,6 +305,11 @@ export class CoreHandler {
 		return await mutateRundown(result)
 	}
 
+	/**
+	 * Executes a peripheral device command received from Sofie Core.
+	 * @param cmd - The command to execute.
+	 * @param fcnObject - The object containing the function to call.
+	 */
 	executeFunction(cmd: PeripheralDeviceCommand, fcnObject: CoreHandler) {
 		if (cmd) {
 			if (this._executedFunctions.has(cmd._id)) return // prevent it from running multiple times
@@ -314,10 +349,18 @@ export class CoreHandler {
 			}
 		}
 	}
+	/**
+	 * Marks a command as retired/completed so it can be executed again if needed.
+	 * @param cmdId - The ID of the command to retire.
+	 */
 	retireExecuteFunction(cmdId: PeripheralDeviceCommandId): void {
 		this._executedFunctions.delete(cmdId)
 	}
 
+	/**
+	 * Gets version information for the peripheral device.
+	 * @returns An object containing version information.
+	 */
 	private _getVersions() {
 		const versions: { [packageName: string]: string } = {}
 

@@ -7,6 +7,9 @@ import {
 	type PresenceFocus
 } from '~/store/presence'
 
+/**
+ * Subscribe to presence updates from the server and sync to Redux store.
+ */
 export function usePresenceSync(): void {
 	const dispatch = useAppDispatch()
 
@@ -22,6 +25,9 @@ export function usePresenceSync(): void {
 	}, [dispatch])
 }
 
+/**
+ * Emit presence focus for the current component and clear on unmount.
+ */
 export function usePresenceFocus(
 	rundownId: string | undefined,
 	entityType: PresenceEntityType,
@@ -39,6 +45,10 @@ export function usePresenceFocus(
 	}, [rundownId, entityType, entityId])
 }
 
+/**
+ * Get all presence focuses for a specific row, excluding self.
+ * Used to show who else is viewing/editing a part or piece.
+ */
 export function useRowLocks(
 	entityType: PresenceEntityType,
 	entityId: string

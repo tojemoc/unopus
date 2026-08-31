@@ -96,6 +96,8 @@ export function SidebarPartRow({ part }: { part: Part }) {
 		expanded ? 'active story-row--expanded' : '',
 		part.skip ? 'story-row--skipped' : '',
 		part.float ? 'story-row--floated' : '',
+		storyReadiness?.state === 'ready' ? 'story-row--ready' : '',
+		storyReadiness?.state === 'not-ready' ? 'story-row--not-ready' : '',
 		locks.length ? 'story-row--locked' : ''
 	]
 		.filter(Boolean)

@@ -7,11 +7,21 @@ import {
 import { mutations as settingsMutations } from '../background/api/settings'
 import { mutations as rundownMutations } from '../background/api/rundowns'
 
+/**
+ * Retrieves the session user from the request's cookie.
+ * @param req - The Express request object.
+ * @returns The user object if found, null otherwise.
+ */
 function getSessionUser(req: Request) {
 	const sessionId = parseSessionCookie(req.headers.cookie)
 	return getUserFromSession(sessionId)
 }
 
+/**
+ * Determines the appropriate HTTP status code based on the error message.
+ * @param error - The error object or message.
+ * @returns The HTTP status code (409, 400, or 500).
+ */
 function statusForError(error: unknown): number {
 	const msg = error instanceof Error ? error.message : String(error)
 	if (/still in progress/i.test(msg)) return 409
@@ -20,6 +30,11 @@ function statusForError(error: unknown): number {
 	return 500
 }
 
+/**
+ * Registers the daily generation API routes on the Express application.
+ * Provides endpoints for generating daily rundowns from templates and checking generation status.
+ * @param app - The Express application instance.
+ */
 export function registerDailyGenerationRoutes(app: Application): void {
 	app.get('/api/daily-generation/status', async (req: Request, res: Response) => {
 		if (!getSessionUser(req)) {

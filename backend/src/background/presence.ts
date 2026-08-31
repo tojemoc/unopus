@@ -19,6 +19,9 @@ type PresenceListener = (focuses: PresenceFocus[]) => void
 const focuses = new Map<string, PresenceFocus>()
 const listeners = new Set<PresenceListener>()
 
+/**
+ * Notify all registered listeners with the current presence snapshot.
+ */
 function emit(): void {
 	const snapshot = [...focuses.values()]
 	for (const listener of listeners) {
@@ -26,6 +29,9 @@ function emit(): void {
 	}
 }
 
+/**
+ * Register a listener for presence changes. Returns unsubscribe function.
+ */
 export function onPresenceChange(listener: PresenceListener): () => void {
 	listeners.add(listener)
 	return () => {
@@ -33,11 +39,17 @@ export function onPresenceChange(listener: PresenceListener): () => void {
 	}
 }
 
+/**
+ * Set or update the presence focus for a socket connection.
+ */
 export function setPresenceFocus(focus: PresenceFocus): void {
 	focuses.set(focus.socketId, focus)
 	emit()
 }
 
+/**
+ * Remove the presence focus for a socket connection.
+ */
 export function clearPresenceFocus(socketId: string): void {
 	if (!focuses.delete(socketId)) {
 		return
@@ -45,6 +57,9 @@ export function clearPresenceFocus(socketId: string): void {
 	emit()
 }
 
+/**
+ * List all active presence focuses, optionally filtered by rundown.
+ */
 export function listPresenceFocuses(rundownId?: string): PresenceFocus[] {
 	const all = [...focuses.values()]
 	if (!rundownId) {
@@ -53,6 +68,9 @@ export function listPresenceFocuses(rundownId?: string): PresenceFocus[] {
 	return all.filter((focus) => focus.rundownId === rundownId)
 }
 
+/**
+ * Clear all presence data. Test-only utility.
+ */
 export function resetPresenceForTests(): void {
 	focuses.clear()
 }

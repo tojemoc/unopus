@@ -20,6 +20,9 @@ import {
 import { DEFAULT_SCRIPT_CPS, normalizeScriptCps } from '../scriptReadingTime'
 import type { IluDurationMode } from '../interfaces'
 
+/**
+ * Normalize editor settings to valid ranges and defaults.
+ */
 function normalizeEditorSettings(settings: ApplicationSettings): ApplicationSettings {
 	const normalized: ApplicationSettings = { ...settings }
 
@@ -42,6 +45,9 @@ function normalizeEditorSettings(settings: ApplicationSettings): ApplicationSett
 	return normalized
 }
 
+/**
+ * Validate daily template settings (timezone, time format, template existence).
+ */
 async function validateDailyTemplateSettings(
 	settings: ApplicationSettings,
 	{ strictTemplateId = false }: { strictTemplateId?: boolean } = {}
@@ -292,6 +298,9 @@ export interface ReloadTypeManifestsOptions {
 	removeOrphans?: boolean
 }
 
+/**
+ * Register Socket.IO handlers for settings CRUD operations.
+ */
 export function registerSettingsHandlers(socket: Socket, _io: Server) {
 	socket.on('settings', async (action, payload, callback) => {
 		switch (action) {
@@ -343,6 +352,9 @@ const DEFAULT_SETTINGS: ApplicationSettings = {
 	requireEditorCheckForAir: false
 }
 
+/**
+ * Delete all type manifests from the database.
+ */
 async function deleteAllTypeManifests(): Promise<void> {
 	const { result } = await typeManifestMutations.read({})
 	if (!Array.isArray(result)) return
@@ -352,6 +364,9 @@ async function deleteAllTypeManifests(): Promise<void> {
 	}
 }
 
+/**
+ * Seed default type manifests from bundled assets.
+ */
 async function seedDefaultTypeManifests(): Promise<void> {
 	const { error: rundownError } = await typeManifestMutations.create({
 		id: 'rundown',
@@ -375,6 +390,9 @@ async function seedDefaultTypeManifests(): Promise<void> {
 	}
 }
 
+/**
+ * Update type manifests from bundled assets, optionally removing orphans.
+ */
 async function upsertTypeManifestsFromAssets(
 	options?: ReloadTypeManifestsOptions
 ): Promise<void> {
@@ -449,11 +467,17 @@ async function upsertTypeManifestsFromAssets(
 	}
 }
 
+/**
+ * Reset type manifests to bundled defaults (delete all, then seed).
+ */
 async function resetTypeManifestsToDefaults(): Promise<void> {
 	await deleteAllTypeManifests()
 	await seedDefaultTypeManifests()
 }
 
+/**
+ * Initialize default settings and type manifests if they don't exist.
+ */
 export async function initializeDefaults() {
 	const { result: settings } = await mutations.readRaw()
 	if (!settings) {

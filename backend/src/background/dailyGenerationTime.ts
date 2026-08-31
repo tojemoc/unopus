@@ -5,11 +5,22 @@ export const DAILY_CLONE_TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/
 const UTC_OFFSET_RE = /^[+-]\d{2}(:?\d{2})?$/i
 const GMT_OFFSET_RE = /^GMT[+-]\d{1,2}(:?\d{2})?$/i
 
+/**
+ * Validates if a string is a valid daily clone time in HH:mm format.
+ * @param value - The time string to validate.
+ * @returns True if valid or undefined/empty, false otherwise.
+ */
 export function isValidDailyCloneTime(value: string | undefined): boolean {
 	if (value === undefined || value === '') return true
 	return DAILY_CLONE_TIME_RE.test(value)
 }
 
+/**
+ * Validates if a string is a valid IANA timezone identifier.
+ * Rejects UTC offset and GMT offset formats.
+ * @param timeZone - The timezone string to validate.
+ * @returns True if valid IANA timezone, false otherwise.
+ */
 export function isValidIanaTimeZone(timeZone: string): boolean {
 	if (!timeZone || typeof timeZone !== 'string') {
 		return false
@@ -27,6 +38,12 @@ export function isValidIanaTimeZone(timeZone: string): boolean {
 	}
 }
 
+/**
+ * Gets the local wall clock time components (hours, minutes, date) for a given date in a specific timezone.
+ * @param now - The date to convert.
+ * @param timeZone - The IANA timezone identifier.
+ * @returns An object with hours, minutes, and date (YYYY-MM-DD) in the specified timezone.
+ */
 export function getLocalWallClockParts(
 	now: Date,
 	timeZone: string

@@ -8,10 +8,16 @@ import {
 	type PresenceEntityType
 } from '../presence'
 
+/**
+ * Type guard to validate presence entity type.
+ */
 function isEntityType(value: unknown): value is PresenceEntityType {
 	return value === 'part' || value === 'piece'
 }
 
+/**
+ * Register Socket.IO handlers for presence tracking (focus/blur/disconnect).
+ */
 export function registerPresenceHandlers(socket: Socket, io: Server): void {
 	const authSocket = socket as AuthenticatedSocket
 	const user = authSocket.data.user
