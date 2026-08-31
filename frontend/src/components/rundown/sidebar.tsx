@@ -13,7 +13,6 @@ import { StoryTableHeader } from './sidebar/partRow'
 import { useToasts } from '../toasts/useToasts'
 import { SegmentButtons } from './sidebar/segmentButtons'
 import { useRundownReadinessContext } from '~/hooks/RundownReadinessContext'
-import { ScriptExpandProvider } from '~/hooks/ScriptExpandContext'
 
 /** Stable DnD row type — must not change identity when expand/readiness updates. */
 const SegmentComponent: DraggableWrappedComponent<Segment> = ({ data: segment }) => (
@@ -69,48 +68,46 @@ export function RundownSidebar({
 			: `${readyCount}/${totalCount} media items ready`
 
 	return (
-		<ScriptExpandProvider>
-			<div className="rundown-sidebar">
-				<div className="rundown-sidebar-toolbar">
-					<span className="rundown-sidebar-toolbar__title">Script</span>
-					<span className="rundown-sidebar-toolbar__summary" title={error ?? undefined}>
-						{summaryText}
-					</span>
-					<button
-						type="button"
-						className="rundown-sidebar-toolbar__refresh"
-						onClick={() => void refresh()}
-					>
-						Refresh
-					</button>
-				</div>
-
-				<div className="rundown-sidebar-scroll">
-					<div className="story-table story-table--sidebar">
-						<StoryTableHeader />
-						<DraggableContainer
-							items={sortedSegments}
-							itemType={DragTypes.SEGMENT}
-							Component={SegmentComponent}
-							id={rundownId}
-							reorder={handleReorderSegment}
-						/>
-					</div>
-
-					<SegmentButtons
-						rundownId={rundownId}
-						playlistId={playlistId}
-						rank={sortedSegments.length}
-						setShowImportModal={setShowImportModal}
-					/>
-
-					<ImportSegmentModal
-						rank={showImportModal}
-						onClose={() => setShowImportModal(undefined)}
-						targetRundownId={rundownId}
-					/>
-				</div>
+		<div className="rundown-sidebar">
+			<div className="rundown-sidebar-toolbar">
+				<span className="rundown-sidebar-toolbar__title">Script</span>
+				<span className="rundown-sidebar-toolbar__summary" title={error ?? undefined}>
+					{summaryText}
+				</span>
+				<button
+					type="button"
+					className="rundown-sidebar-toolbar__refresh"
+					onClick={() => void refresh()}
+				>
+					Refresh
+				</button>
 			</div>
-		</ScriptExpandProvider>
+
+			<div className="rundown-sidebar-scroll">
+				<div className="story-table story-table--sidebar">
+					<StoryTableHeader />
+					<DraggableContainer
+						items={sortedSegments}
+						itemType={DragTypes.SEGMENT}
+						Component={SegmentComponent}
+						id={rundownId}
+						reorder={handleReorderSegment}
+					/>
+				</div>
+
+				<SegmentButtons
+					rundownId={rundownId}
+					playlistId={playlistId}
+					rank={sortedSegments.length}
+					setShowImportModal={setShowImportModal}
+				/>
+
+				<ImportSegmentModal
+					rank={showImportModal}
+					onClose={() => setShowImportModal(undefined)}
+					targetRundownId={rundownId}
+				/>
+			</div>
+		</div>
 	)
 }

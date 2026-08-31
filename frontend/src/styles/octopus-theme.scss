@@ -507,6 +507,11 @@
 	border: 1px solid var(--re-border);
 	color: var(--re-text);
 	background: color-mix(in srgb, var(--re-surface-1) 80%, transparent);
+
+	&:focus-visible {
+		outline: 2px solid var(--re-accent);
+		outline-offset: 2px;
+	}
 }
 
 .script-flow {

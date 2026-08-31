@@ -9,6 +9,7 @@ import { loadPieces } from '~/store/pieces'
 import { loadSegments } from '~/store/segments'
 import { MyErrorBoundary } from '~/util/errorBoundary'
 import { RundownReadinessProvider } from '~/hooks/RundownReadinessContext'
+import { ScriptExpandProvider } from '~/hooks/ScriptExpandContext'
 
 export const Route = createFileRoute('/rundown/$rundownId')({
 	component: RouteComponent
@@ -61,23 +62,25 @@ function RouteComponent() {
 
 	return (
 		<RundownReadinessProvider rundownId={rundown.id}>
-			<div style={rootStyle}>
-				<div style={headerStyle}>
-					<DuopusNavbar rundownName={rundown.name} />
-					<RundownNavbar rundown={rundown} />
-				</div>
+			<ScriptExpandProvider>
+				<div style={rootStyle}>
+					<div style={headerStyle}>
+						<DuopusNavbar rundownName={rundown.name} />
+						<RundownNavbar rundown={rundown} />
+					</div>
 
-				<div className="rundown-script-column">
-					<RundownSidebar rundownId={rundown.id} playlistId={rundown.playlistId} />
-				</div>
+					<div className="rundown-script-column">
+						<RundownSidebar rundownId={rundown.id} playlistId={rundown.playlistId} />
+					</div>
 
-				{/* Child routes stay mounted for presence; UI is inline in the script column. */}
-				<div hidden aria-hidden>
-					<MyErrorBoundary>
-						<Outlet />
-					</MyErrorBoundary>
+					{/* Child routes stay mounted for presence; UI is inline in the script column. */}
+					<div hidden aria-hidden>
+						<MyErrorBoundary>
+							<Outlet />
+						</MyErrorBoundary>
+					</div>
 				</div>
-			</div>
+			</ScriptExpandProvider>
 		</RundownReadinessProvider>
 	)
 }
