@@ -28,7 +28,8 @@ import {
 	isPrimaryContentField,
 	isSourceField,
 	resolveClipPreviewPath,
-	resolvePieceName
+	resolvePieceName,
+	previewPayloadSnapshotKey
 } from '~/util/pieceName'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -122,6 +123,7 @@ function PayloadField({
 							(!fieldInfo.options || fieldInfo.options.length === 0) && (
 								<>
 									<Form.Control
+										id={field.name}
 										name={field.name}
 										type="text"
 										// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -145,16 +147,27 @@ function PayloadField({
 
 						{fieldInfo.type === ManifestFieldType.Number && (
 							<Form.Control
+								id={field.name}
 								name={field.name}
 								type="number"
-								value={Number(field.state.value)}
+								value={
+									field.state.value === undefined ||
+									field.state.value === null ||
+									field.state.value === ''
+										? ''
+										: Number(field.state.value)
+								}
 								onBlur={field.handleBlur}
-								onChange={(e) => field.handleChange(Number(e.target.value))}
+								onChange={(e) => {
+									const val = e.target.value
+									field.handleChange(val === '' ? undefined : Number(val))
+								}}
 							/>
 						)}
 
 						{fieldInfo.type === ManifestFieldType.Boolean && (
 							<Form.Switch
+								id={field.name}
 								name={field.name}
 								type="text"
 								checked={Boolean(field.state.value)}
@@ -344,170 +357,182 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 
 	return (
 		<div className="piece-properties-form">
-			<form.Subscribe
-				selector={(state) => state.values.payload}
-				children={(payload) => {
-					const payloadRecord = (payload ?? {}) as Record<string, unknown>
-					const displayName = resolvePieceName(manifest, payloadRecord, piece.name)
-					const clipPath = resolveClipPreviewPath(manifest, payloadRecord)
-
-					return (
-						<>
+			<Form
+				onSubmit={(e) => {
+					e.preventDefault()
+					e.stopPropagation()
+					form.handleSubmit()
+				}}
+			>
+				<form.Subscribe
+					selector={(state) => previewPayloadSnapshotKey(manifest, state.values.payload)}
+					children={(snapshotKey) => {
+						const payloadRecord = (snapshotKey ? JSON.parse(snapshotKey) : {}) as Record<
+							string,
+							unknown
+						>
+						const displayName = resolvePieceName(manifest, payloadRecord, piece.name)
+						return (
 							<div className="piece-properties-form__header mb-3">
 								<h2 className="mb-1">{displayName}</h2>
 								<Form.Text>{manifest?.name ?? piece.pieceType}</Form.Text>
 							</div>
+						)
+					}}
+				/>
 
-							<Form
-								onSubmit={(e) => {
-									e.preventDefault()
-									e.stopPropagation()
-									form.handleSubmit()
-								}}
-							>
-								{clip.map((fieldInfo) => (
-									<PayloadField
-										key={fieldInfo.id}
-										form={form}
-										fieldInfo={fieldInfo}
-										piece={piece}
-										durationFromMediaRef={durationFromMediaRef}
-									/>
-								))}
+				{clip.map((fieldInfo) => (
+					<PayloadField
+						key={fieldInfo.id}
+						form={form}
+						fieldInfo={fieldInfo}
+						piece={piece}
+						durationFromMediaRef={durationFromMediaRef}
+					/>
+				))}
 
-								{headline.map((fieldInfo) => (
-									<PayloadField
-										key={fieldInfo.id}
-										form={form}
-										fieldInfo={fieldInfo}
-										piece={piece}
-										durationFromMediaRef={durationFromMediaRef}
-									/>
-								))}
+				{headline.map((fieldInfo) => (
+					<PayloadField
+						key={fieldInfo.id}
+						form={form}
+						fieldInfo={fieldInfo}
+						piece={piece}
+						durationFromMediaRef={durationFromMediaRef}
+					/>
+				))}
 
-								{content.map((fieldInfo) => (
-									<PayloadField
-										key={fieldInfo.id}
-										form={form}
-										fieldInfo={fieldInfo}
-										piece={piece}
-										durationFromMediaRef={durationFromMediaRef}
-									/>
-								))}
+				{content.map((fieldInfo) => (
+					<PayloadField
+						key={fieldInfo.id}
+						form={form}
+						fieldInfo={fieldInfo}
+						piece={piece}
+						durationFromMediaRef={durationFromMediaRef}
+					/>
+				))}
 
-								<div className="piece-properties-form__previews">
-									<GfxPreview
-										piece={piece}
-										manifest={manifest}
-										payload={payloadRecord}
-									/>
-									<ClipPreview clipPath={clipPath} />
-								</div>
+				<form.Subscribe
+					selector={(state) => previewPayloadSnapshotKey(manifest, state.values.payload)}
+					children={(snapshotKey) => {
+						const payloadRecord = (snapshotKey ? JSON.parse(snapshotKey) : {}) as Record<
+							string,
+							unknown
+						>
+						const clipPath = resolveClipPreviewPath(manifest, payloadRecord)
+						return (
+							<div className="piece-properties-form__previews">
+								<GfxPreview piece={piece} manifest={manifest} payload={payloadRecord} />
+								<ClipPreview clipPath={clipPath} />
+							</div>
+						)
+					}}
+				/>
 
-								<Row className="g-2 mb-3 piece-properties-form__timing">
-									<Col xs={6}>
-										<form.Field
-											name="start"
-											children={(field) => (
-												<>
-													<Form.Group>
-														<Form.Label htmlFor={field.name} className="small mb-1">
-															Start (s)
-														</Form.Label>
-														<Form.Control
-															size="sm"
-															name={field.name}
-															type="number"
-															value={field.state.value ?? ''}
-															onBlur={field.handleBlur}
-															onChange={(e) => {
-																const val = e.target.value
-																field.handleChange(val === '' ? undefined : Number(val))
-															}}
-														/>
-													</Form.Group>
-													<FieldInfo field={field} />
-												</>
-											)}
-										/>
-									</Col>
-									<Col xs={6}>
-										<form.Field
-											name="duration"
-											children={(field) => {
-												const isWipeDefault =
-													piece.pieceType === 'wipe' &&
-													(field.state.value === undefined ||
-														field.state.value === null ||
-														field.state.value === 0)
-
-												return (
-													<>
-														<Form.Group>
-															<Form.Label htmlFor={field.name} className="small mb-1">
-																On air (s)
-															</Form.Label>
-															<Form.Control
-																size="sm"
-																id={field.name}
-																name={field.name}
-																type="number"
-																value={field.state.value ?? ''}
-																placeholder={
-																	piece.pieceType === 'wipe'
-																		? String(DEFAULT_WIPE_DURATION_SECONDS)
-																		: undefined
-																}
-																onBlur={field.handleBlur}
-																onChange={(e) => {
-																	const val = e.target.value
-																	field.handleChange(val === '' ? undefined : Number(val))
-																}}
-															/>
-															{isWipeDefault ? (
-																<Form.Text muted className="small">
-																	Default {DEFAULT_WIPE_DURATION_SECONDS}s · cut at{' '}
-																	{formatSecondsPrecise(WIPE_CUT_POINT_SECONDS)}
-																</Form.Text>
-															) : null}
-														</Form.Group>
-														<FieldInfo field={field} />
-													</>
-												)
+				<Row className="g-2 mb-3 piece-properties-form__timing">
+					<Col xs={6}>
+						<form.Field
+							name="start"
+							children={(field) => (
+								<>
+									<Form.Group>
+										<Form.Label htmlFor={field.name} className="small mb-1">
+											Start (s)
+										</Form.Label>
+										<Form.Control
+											size="sm"
+											id={field.name}
+											name={field.name}
+											type="number"
+											value={field.state.value ?? ''}
+											onBlur={field.handleBlur}
+											onChange={(e) => {
+												const val = e.target.value
+												field.handleChange(val === '' ? undefined : Number(val))
 											}}
 										/>
-									</Col>
-								</Row>
+									</Form.Group>
+									<FieldInfo field={field} />
+								</>
+							)}
+						/>
+					</Col>
+					<Col xs={6}>
+						<form.Field
+							name="duration"
+							children={(field) => {
+								const isWipeDefault =
+									piece.pieceType === 'wipe' &&
+									(field.state.value === undefined ||
+										field.state.value === null ||
+										field.state.value === 0)
 
-								<form.Subscribe
-									selector={(state) => state.values.payload?.sourceDuration}
-									children={(sourceDurationMs) => {
-										const sourceDurationSeconds = getPieceSourceDurationSeconds({
-											payload: { sourceDuration: sourceDurationMs }
-										})
-										if (sourceDurationSeconds === undefined) {
-											return null
-										}
-										return (
-											<Form.Group className="mb-3">
-												<Form.Label className="small mb-1">Source length (s)</Form.Label>
-												<Form.Control
-													size="sm"
-													style={{ maxWidth: '8rem' }}
-													type="number"
-													value={sourceDurationSeconds}
-													readOnly
-													disabled
-												/>
+								return (
+									<>
+										<Form.Group>
+											<Form.Label htmlFor={field.name} className="small mb-1">
+												On air (s)
+											</Form.Label>
+											<Form.Control
+												size="sm"
+												id={field.name}
+												name={field.name}
+												type="number"
+												value={field.state.value ?? ''}
+												placeholder={
+													piece.pieceType === 'wipe'
+														? String(DEFAULT_WIPE_DURATION_SECONDS)
+														: undefined
+												}
+												onBlur={field.handleBlur}
+												onChange={(e) => {
+													const val = e.target.value
+													field.handleChange(val === '' ? undefined : Number(val))
+												}}
+											/>
+											{isWipeDefault ? (
 												<Form.Text muted className="small">
-													From media probe (read-only)
+													Default {DEFAULT_WIPE_DURATION_SECONDS}s · cut at{' '}
+													{formatSecondsPrecise(WIPE_CUT_POINT_SECONDS)}
 												</Form.Text>
-											</Form.Group>
-										)
-									}}
-								/>
+											) : null}
+										</Form.Group>
+										<FieldInfo field={field} />
+									</>
+								)
+							}}
+						/>
+					</Col>
+				</Row>
 
-								<Row className="g-2 mb-3 piece-properties-form__editorial">
+				<form.Subscribe
+					selector={(state) => state.values.payload?.sourceDuration}
+					children={(sourceDurationMs) => {
+						const sourceDurationSeconds = getPieceSourceDurationSeconds({
+							payload: { sourceDuration: sourceDurationMs }
+						})
+						if (sourceDurationSeconds === undefined) {
+							return null
+						}
+						return (
+							<Form.Group className="mb-3">
+								<Form.Label className="small mb-1">Source length (s)</Form.Label>
+								<Form.Control
+									size="sm"
+									style={{ maxWidth: '8rem' }}
+									type="number"
+									value={sourceDurationSeconds}
+									readOnly
+									disabled
+								/>
+								<Form.Text muted className="small">
+									From media probe (read-only)
+								</Form.Text>
+							</Form.Group>
+						)
+					}}
+				/>
+
+				<Row className="g-2 mb-3 piece-properties-form__editorial">
 									<Col xs={6}>
 										<form.Field
 											name="editorChecked"
@@ -562,7 +587,15 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 													form={form}
 													fieldInfo={fieldInfo}
 												/>
-											) : null
+											) : (
+												<PayloadField
+													key={fieldInfo.id}
+													form={form}
+													fieldInfo={fieldInfo}
+													piece={piece}
+													durationFromMediaRef={durationFromMediaRef}
+												/>
+											)
 										)}
 										{bypass.map((fieldInfo) => (
 											<PayloadField
@@ -625,11 +658,7 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 										</div>
 									)}
 								/>
-							</Form>
-						</>
-					)
-				}}
-			/>
+			</Form>
 		</div>
 	)
 }

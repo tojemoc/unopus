@@ -40,12 +40,46 @@ export function isSourceField(field: PayloadManifest): boolean {
 	return field.id === 'sourceEnabled' || field.id === 'source'
 }
 
-/** Bypass clip picker paired with a bypass toggle (e.g. weather). */
+/** Bypass clip picker paired with a bypass toggle (e.g. weather assets clip). */
 export function isBypassClipField(field: PayloadManifest, manifest: TypeManifest | undefined): boolean {
-	if (field.id !== 'fileName') {
+	if (field.id !== 'fileName' || field.subdir === 'clips') {
 		return false
 	}
-	return manifest?.payload?.some((f) => f.id === 'bypass') ?? false
+	return manifest?.payload?.some((f) => isBypassField(f)) ?? false
+}
+
+/** Payload keys that affect derived name, clip preview, or GFX preview URL. */
+export function collectPreviewSubscribeKeys(manifest: TypeManifest | undefined): string[] {
+	if (!manifest?.payload) {
+		return []
+	}
+	return manifest.payload
+		.map((field) => field.id)
+		.filter((id) => id !== 'sourceDuration' && id !== 'scriptOffset')
+}
+
+export function previewPayloadSnapshot(
+	manifest: TypeManifest | undefined,
+	payload: Record<string, unknown> | undefined
+): Record<string, unknown> {
+	if (!payload) {
+		return {}
+	}
+	const snapshot: Record<string, unknown> = {}
+	for (const key of collectPreviewSubscribeKeys(manifest)) {
+		if (key in payload) {
+			snapshot[key] = payload[key]
+		}
+	}
+	return snapshot
+}
+
+/** Stable selector value — only changes when preview-relevant payload fields change. */
+export function previewPayloadSnapshotKey(
+	manifest: TypeManifest | undefined,
+	payload: Record<string, unknown> | undefined
+): string {
+	return JSON.stringify(previewPayloadSnapshot(manifest, payload))
 }
 
 function formatIncludeInNameValue(field: PayloadManifest, raw: unknown): string | undefined {

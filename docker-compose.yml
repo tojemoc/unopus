@@ -13,8 +13,8 @@ services:
       - NODE_ENV=production
       # Same-origin GFX preview (HTML templates with query-param payload).
       - PREVIEW_BASE_URL=/demo-assets
-      # Required for HTTP-only deployments; omit or set true when behind HTTPS.
-      - SESSION_COOKIE_SECURE=false
+      # Required for HTTP-only deployments; set SESSION_COOKIE_SECURE=false explicitly.
+      # - SESSION_COOKIE_SECURE=false
       # Ingest media root — mount your NAS share so clips + gfx-templates are visible.
       # - INGEST_MEDIA_ROOT=/app/ingest
       # Optional: bind-mount full sofie-demo-assets (or hand-copied HTML) instead of copying to ingest.
