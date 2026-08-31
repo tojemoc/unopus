@@ -1,14 +1,17 @@
-import { useNavigate, useMatchRoute } from '@tanstack/react-router'
+import { useMemo } from 'react'
 import { useAppSelector } from '~/store/app'
 import type { Part, PieceReadiness, RundownReadiness } from '~backend/background/interfaces'
 import { TypeManifestEntity } from '~backend/background/interfaces'
 import { findTypeManifest } from '~/util/typeManifest'
 import { ReadinessBadge, getPieceReadinessTooltip } from '../readinessBadge'
 import { EditorialStatusBadge } from '../editorialStatusBadge'
-import { resolveEditorialStatus } from '~/util/editorialStatus'
 import { formatPartOnAirDuration } from '~/util/pieceDuration'
 import { resolveEffectiveScriptCps } from '~/util/scriptReadingTime'
+import { resolveEditorialStatus } from '~/util/editorialStatus'
 import { useRowLocks } from '~/hooks/usePresence'
+import { useRundownReadinessContext } from '~/hooks/RundownReadinessContext'
+import { useScriptExpand } from '~/hooks/ScriptExpandContext'
+import { PartExpandedPanel } from '../partExpandedPanel'
 
 function getStoryReadiness(
 	partId: string,
@@ -47,41 +50,34 @@ function getStoryReadiness(
 	}
 }
 
-export function SidebarPartRow({
-	part,
-	readiness,
-	partPieces
-}: {
-	part: Part
-	readiness: RundownReadiness | null
-	partPieces: Array<{
-		id: string
-		partId: string
-		pieceType: string
-		duration?: number
-		skip?: boolean
-	}>
-}) {
-	const navigate = useNavigate()
-	const matchRoute = useMatchRoute()
+function typeTint(hex: string | undefined): string {
+	if (!hex) return 'transparent'
+	const cleaned = hex.replace('#', '')
+	if (cleaned.length !== 6) {
+		return `color-mix(in srgb, ${hex} 22%, transparent)`
+	}
+	const r = parseInt(cleaned.slice(0, 2), 16)
+	const g = parseInt(cleaned.slice(2, 4), 16)
+	const b = parseInt(cleaned.slice(4, 6), 16)
+	return `rgba(${r}, ${g}, ${b}, 0.22)`
+}
+
+export function SidebarPartRow({ part }: { part: Part }) {
+	const { readiness } = useRundownReadinessContext()
+	const { expandedPartId, toggleExpandedPart } = useScriptExpand()
+	const expanded = expandedPartId === part.id
 
 	const partTypeManifest = useAppSelector((state) =>
 		findTypeManifest(state.typeManifests.manifests, part.partType, TypeManifestEntity.Part)
 	)
 	const userScriptCps = useAppSelector((s) => s.auth.user?.scriptCps)
 	const settings = useAppSelector((s) => s.settings.settings)
-	const scriptCps = resolveEffectiveScriptCps({ userScriptCps, settingsCps: settings?.scriptCps })
-
-	const isActive = Boolean(
-		matchRoute({
-			to: '/rundown/$rundownId/segment/$segmentId/part/$partId',
-			params: {
-				rundownId: part.rundownId,
-				segmentId: part.segmentId,
-				partId: part.id
-			}
-		})
+	const allPieces = useAppSelector((s) => s.pieces.pieces)
+	const partPieces = useMemo(
+		() => allPieces.filter((piece) => piece.partId === part.id),
+		[allPieces, part.id]
 	)
+	const scriptCps = resolveEffectiveScriptCps({ userScriptCps, settingsCps: settings?.scriptCps })
 
 	const storyReadiness = getStoryReadiness(part.id, partPieces, readiness)
 	const locks = useRowLocks('part', part.id)
@@ -92,20 +88,12 @@ export function SidebarPartRow({
 		requireEditorCheckForAir: Boolean(settings?.requireEditorCheckForAir)
 	})
 
-	const openPart = () => {
-		void navigate({
-			to: '/rundown/$rundownId/segment/$segmentId/part/$partId',
-			params: {
-				rundownId: part.rundownId,
-				segmentId: part.segmentId,
-				partId: part.id
-			}
-		})
-	}
+	const typeColour = partTypeManifest?.colour ?? '#666'
 
 	const rowClass = [
 		'story-row',
-		isActive ? 'active' : '',
+		'story-row--typed',
+		expanded ? 'active story-row--expanded' : '',
 		part.skip ? 'story-row--skipped' : '',
 		part.float ? 'story-row--floated' : '',
 		storyReadiness?.state === 'ready' ? 'story-row--ready' : '',
@@ -116,63 +104,69 @@ export function SidebarPartRow({
 		.join(' ')
 
 	return (
-		<div
-			className={rowClass}
-			tabIndex={0}
-			onClick={openPart}
-			onKeyDown={(event) => {
-				if (event.key === 'Enter' || event.key === ' ') {
-					event.preventDefault()
-					openPart()
-				}
-			}}
-			style={{ borderLeftColor: partTypeManifest?.colour ?? '#666' }}
-		>
-			<div className="col-status">
-				<span className="d-inline-flex gap-1 align-items-center">
-					{storyReadiness ? (
-						<ReadinessBadge state={storyReadiness.state} tooltip={storyReadiness.tooltip} compact />
-					) : null}
-					{editorial ? (
-						<EditorialStatusBadge
-							status={editorial.status}
-							tooltip={editorial.tooltip}
-							compact
-						/>
-					) : null}
-				</span>
-			</div>
-			<div className="col-type">
-				<span
-					className="story-type-chip"
-					style={{ backgroundColor: partTypeManifest?.colour ?? '#666' }}
-					title={partTypeManifest?.name ?? part.partType}
-				>
-					{partTypeManifest?.shortName ?? part.partType.slice(0, 4).toUpperCase()}
-				</span>
-			</div>
-			<div className="col-title" title={part.name}>
-				<span className="story-row__title">{part.name}</span>
-				{locks.length ? (
-					<span
-						className="story-row__lock"
-						title={locks.map((lock) => `${lock.displayName} is editing this story`).join(', ')}
-					>
-						🔒 {locks.map((lock) => lock.displayName).join(', ')}
+		<div className="story-row-block">
+			<div
+				className={rowClass}
+				tabIndex={0}
+				onClick={() => toggleExpandedPart(part.id)}
+				onKeyDown={(event) => {
+					if (event.key === 'Enter' || event.key === ' ') {
+						event.preventDefault()
+						toggleExpandedPart(part.id)
+					}
+				}}
+				style={{
+					borderLeftColor: typeColour,
+					backgroundColor: typeTint(typeColour)
+				}}
+			>
+				<div className="col-status">
+					<span className="d-inline-flex gap-1 align-items-center">
+						{storyReadiness ? (
+							<ReadinessBadge state={storyReadiness.state} tooltip={storyReadiness.tooltip} compact />
+						) : null}
+						{editorial ? (
+							<EditorialStatusBadge
+								status={editorial.status}
+								tooltip={editorial.tooltip}
+								compact
+							/>
+						) : null}
 					</span>
-				) : null}
+				</div>
+				<div className="col-type">
+					<span
+						className="story-type-chip"
+						style={{ backgroundColor: typeColour }}
+						title={partTypeManifest?.name ?? part.partType}
+					>
+						{partTypeManifest?.shortName ?? part.partType.slice(0, 4).toUpperCase()}
+					</span>
+				</div>
+				<div className="col-title" title={part.name}>
+					<span className="story-row__title">{part.name}</span>
+					{locks.length ? (
+						<span
+							className="story-row__lock"
+							title={locks.map((lock) => `${lock.displayName} is editing this story`).join(', ')}
+						>
+							🔒 {locks.map((lock) => lock.displayName).join(', ')}
+						</span>
+					) : null}
+				</div>
+				<div className="col-duration">
+					{formatPartOnAirDuration(
+						part,
+						partPieces.map((piece) => ({
+							pieceType: piece.pieceType,
+							duration: piece.duration,
+							skip: piece.skip
+						})),
+						{ scriptCps }
+					) || '--:--'}
+				</div>
 			</div>
-			<div className="col-duration">
-				{formatPartOnAirDuration(
-					part,
-					partPieces.map((piece) => ({
-						pieceType: piece.pieceType,
-						duration: piece.duration,
-						skip: piece.skip
-					})),
-					{ scriptCps }
-				) || '--:--'}
-			</div>
+			{expanded ? <PartExpandedPanel part={part} /> : null}
 		</div>
 	)
 }

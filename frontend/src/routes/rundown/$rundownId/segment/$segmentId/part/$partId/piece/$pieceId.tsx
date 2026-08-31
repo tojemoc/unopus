@@ -1,11 +1,10 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { Stack } from 'react-bootstrap'
-import { RundownBreadcrumbs } from '~/components/rundown/breadcrumbs'
-import { PiecePropertiesForm } from '~/components/rundown/piecePropertiesForm'
-import { PiecesList } from '~/components/rundown/piecesList'
+import { createFileRoute, redirect } from '@tanstack/react-router'
+import { useEffect } from 'react'
+import { useScriptExpand } from '~/hooks/ScriptExpandContext'
 import { usePresenceFocus } from '~/hooks/usePresence'
 import { useAppSelector } from '~/store/app'
 
+/** Piece UI is inline in PartExpandedPanel; route kept for deep links / presence. */
 export const Route = createFileRoute(
 	'/rundown/$rundownId/segment/$segmentId/part/$partId/piece/$pieceId'
 )({
@@ -14,44 +13,44 @@ export const Route = createFileRoute(
 
 function RouteComponent() {
 	const { rundownId, segmentId, partId, pieceId } = Route.useParams()
-	const navigate = Route.useNavigate()
-	usePresenceFocus(rundownId, 'piece', pieceId)
+	const { setExpandedPartId } = useScriptExpand()
 
+	const partsStatus = useAppSelector((state) => state.parts.status)
+	const partsRundownId = useAppSelector((state) => state.parts.rundownId)
+	const piecesStatus = useAppSelector((state) => state.pieces.status)
+	const piecesRundownId = useAppSelector((state) => state.pieces.rundownId)
 	const part = useAppSelector((state) =>
 		state.parts.parts.find(
-			(s) => s.rundownId === rundownId && s.segmentId === segmentId && s.id === partId
+			(p) => p.id === partId && p.rundownId === rundownId && p.segmentId === segmentId
 		)
 	)
-
 	const piece = useAppSelector((state) =>
 		state.pieces.pieces.find(
-			(s) =>
-				s.rundownId === rundownId &&
-				s.segmentId === segmentId &&
-				s.partId === partId &&
-				s.id === pieceId
+			(p) => p.id === pieceId && p.partId === partId && p.rundownId === rundownId
 		)
 	)
-	if (!piece || !part) {
-		navigate({
-			to: `/rundown/${rundownId}/segment/${segmentId}/${partId}`
-		})
-		return null
+
+	usePresenceFocus(rundownId, 'piece', pieceId)
+
+	const partsReady = partsStatus === 'succeeded' && partsRundownId === rundownId
+	const piecesReady = piecesStatus === 'succeeded' && piecesRundownId === rundownId
+
+	if (partsReady && !part) {
+		throw redirect({ to: '/rundown/$rundownId/segment/$segmentId', params: { rundownId, segmentId } })
 	}
 
-	return (
-		<Stack className="rundown-main-content rundown-main-content-fill">
-			<RundownBreadcrumbs rundownId={rundownId} />
-			<div className="rundown-main-content-properties rundown-main-content-properties-split">
-				<Stack direction="horizontal" key={`form_${partId}`} className="align-items-stretch">
-					<div className="p-4 rundown-split-pane re-surface-panel">
-						<PiecesList key={`piecesList_${partId}`} part={part} />
-					</div>
-					<div className="p-4 rundown-split-pane rundown-piece-properties-panel re-surface-form">
-						<PiecePropertiesForm key={`piecesProperties_${piece.id}`} piece={piece} />
-					</div>
-				</Stack>
-			</div>
-		</Stack>
-	)
+	if (partsReady && piecesReady && part && !piece) {
+		throw redirect({
+			to: '/rundown/$rundownId/segment/$segmentId/part/$partId',
+			params: { rundownId, segmentId, partId }
+		})
+	}
+
+	useEffect(() => {
+		if (!part) return
+		setExpandedPartId(partId)
+		return () => setExpandedPartId(null)
+	}, [partId, part, setExpandedPartId])
+
+	return null
 }

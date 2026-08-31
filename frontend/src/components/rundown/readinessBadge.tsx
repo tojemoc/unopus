@@ -41,11 +41,11 @@ export function ReadinessBadge({
 
 	return (
 		<OverlayTrigger
-			overlay={
-				<Tooltip className="readiness-badge-tooltip">
+			overlay={(overlayProps) => (
+				<Tooltip {...overlayProps} className="readiness-badge-tooltip">
 					<span className="readiness-badge-tooltip__content">{tooltip}</span>
 				</Tooltip>
-			}
+			)}
 		>
 			{badge}
 		</OverlayTrigger>
