@@ -15,6 +15,7 @@ import { BsCaretDownFill, BsFillTrashFill, BsTrash } from 'react-icons/bs'
 import { Stack, type ButtonProps } from 'react-bootstrap'
 import { HoverIconButton } from '~/components/rundownList/hoverIconButton'
 import { DeleteSegmentButton } from '../deleteSegmentButton'
+import { useScriptExpand } from '~/hooks/ScriptExpandContext'
 import { resolvePartOnAirDuration } from '~/util/pieceDuration'
 import { resolveEffectiveScriptCps } from '~/util/scriptReadingTime'
 
@@ -34,6 +35,7 @@ export function SidebarSegment({ segment }: { segment: Segment }) {
 	const navigate = useNavigate()
 	const toasts = useToasts()
 	const [isOpen, setIsOpen] = useState(true)
+	const { expandedPartId } = useScriptExpand()
 
 	const parts = useAppSelector((s) => selectPartsBySegmentId(s, segment.id))
 	const allPieces = useAppSelector(selectAllPieces)
@@ -162,6 +164,7 @@ export function SidebarSegment({ segment }: { segment: Segment }) {
 							id={segment.id}
 							reorder={handleReorderPart}
 							Component={PartRowComponent}
+							canDragItem={(part) => expandedPartId !== part.id}
 						/>
 					) : (
 						<div className="story-table-empty px-2 py-2 text-muted">

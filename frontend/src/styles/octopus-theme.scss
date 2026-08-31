@@ -420,10 +420,58 @@
 
 .gfx-preview-frame {
 	position: relative;
-	width: 100%;
+	width: min(100%, 28rem);
 	aspect-ratio: 16 / 9;
+	max-height: min(35vh, 14rem);
 	background: var(--re-preview-bg);
 	border: 1px solid var(--re-border);
+	border-radius: 0.25rem;
+	overflow: hidden;
+}
+
+.clip-preview-frame {
+	position: relative;
+	width: min(100%, 28rem);
+	aspect-ratio: 16 / 9;
+	max-height: min(35vh, 14rem);
+	background: var(--re-preview-bg);
+	border: 1px solid var(--re-border);
+	border-radius: 0.25rem;
+	overflow: hidden;
+
+	video {
+		display: block;
+		width: 100%;
+		height: 100%;
+		object-fit: contain;
+		background: #000;
+	}
+}
+
+.piece-properties-form__previews {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.75rem;
+	margin-bottom: 0.75rem;
+}
+
+.piece-properties-form__header h2 {
+	font-size: 0.95rem;
+	font-weight: 700;
+	margin-bottom: 0.15rem;
+}
+
+.piece-properties-form__timing,
+.piece-properties-form__editorial {
+	max-width: 24rem;
+}
+
+.part-expanded-piece {
+	user-select: text;
+}
+
+.story-row--expanded {
+	cursor: default;
 }
 
 .template-rundown-card {

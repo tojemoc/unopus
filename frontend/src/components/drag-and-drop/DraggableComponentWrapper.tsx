@@ -37,6 +37,8 @@ export interface DraggableComponentWrapperProps<T> extends DraggableWrappedCompo
 	parentId: string
 	itemType: DragTypes
 	hoverState: HoverState<T>
+	/** When false, the item can still be a drop target but cannot be dragged. */
+	canDrag?: boolean
 }
 
 export const DraggableComponentWrapper = <T,>({
@@ -48,7 +50,8 @@ export const DraggableComponentWrapper = <T,>({
 	hover,
 	endDrag,
 	Component,
-	hoverState
+	hoverState,
+	canDrag = true
 }: DraggableComponentWrapperProps<T>) => {
 	const ref = useRef<HTMLDivElement>(null)
 
@@ -94,6 +97,7 @@ export const DraggableComponentWrapper = <T,>({
 		item: () => {
 			return { id, index, type: itemType, data, parentId, hoverState }
 		},
+		canDrag: () => canDrag,
 		end: (item, monitor) => {
 			if (!item || !monitor) return
 
@@ -104,7 +108,11 @@ export const DraggableComponentWrapper = <T,>({
 		})
 	})
 
-	drag(drop(ref))
+	if (canDrag) {
+		drag(drop(ref))
+	} else {
+		drop(ref)
+	}
 
 	return (
 		<div
