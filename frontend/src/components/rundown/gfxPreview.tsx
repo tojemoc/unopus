@@ -16,7 +16,12 @@ function buildPreviewUrl(
 		params.set(key, String(value))
 	}
 	const query = params.toString()
-	return `${baseUrl}/${template}/index.html${query ? `?${query}` : ''}`
+	const trimmedBase = baseUrl.replace(/\/+$/, '')
+	const origin =
+		trimmedBase.startsWith('/') || /^https?:\/\//i.test(trimmedBase)
+			? trimmedBase
+			: `/${trimmedBase}`
+	return `${origin}/${template}/index.html${query ? `?${query}` : ''}`
 }
 
 export function GfxPreview({
@@ -30,6 +35,7 @@ export function GfxPreview({
 }) {
 	const [previewBaseUrl, setPreviewBaseUrl] = useState<string | null>(null)
 	const [error, setError] = useState<string | null>(null)
+	const [frameFailed, setFrameFailed] = useState(false)
 
 	const template = manifest?.previewTemplate
 
@@ -73,6 +79,10 @@ export function GfxPreview({
 		return buildPreviewUrl(previewBaseUrl, template, previewPayload)
 	}, [previewBaseUrl, template, payload])
 
+	useEffect(() => {
+		setFrameFailed(false)
+	}, [previewUrl])
+
 	if (!template) {
 		return null
 	}
@@ -81,12 +91,18 @@ export function GfxPreview({
 		<div className="gfx-preview mb-3">
 			<h3 className="mb-2">GFX Preview</h3>
 			{error && <div className="text-warning small mb-2">Preview unavailable: {error}</div>}
+			{frameFailed && previewUrl ? (
+				<div className="text-warning small mb-2">
+					Could not load preview at <code>{previewUrl}</code>
+				</div>
+			) : null}
 			{previewUrl ? (
 				<div className="gfx-preview-frame">
 					<iframe
 						key={previewUrl}
 						title={`GFX preview for ${piece.name}`}
 						src={previewUrl}
+						onError={() => setFrameFailed(true)}
 						style={{
 							position: 'absolute',
 							inset: 0,

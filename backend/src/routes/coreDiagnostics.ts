@@ -54,11 +54,20 @@ type CachedProbe = {
 let probeCache: CachedProbe | null = null
 let probeInFlight: Promise<CoreContentStatusProbeResult> | null = null
 
+/**
+ * Retrieves the session user from the request's cookie.
+ * @param req - The Express request object.
+ * @returns The user object if found, null otherwise.
+ */
 function getSessionUser(req: Request) {
 	const sessionId = parseSessionCookie(req.headers.cookie)
 	return getUserFromSession(sessionId)
 }
 
+/**
+ * Runs a Core content status probe to verify Core connectivity and configuration.
+ * @returns The probe result with status information.
+ */
 async function runContentStatusProbe(): Promise<CoreContentStatusProbeResult> {
 	const checkedAt = new Date().toISOString()
 
@@ -135,6 +144,11 @@ export function resetCoreDiagnosticsProbeCacheForTests(): void {
 	probeInFlight = null
 }
 
+/**
+ * Registers the Core diagnostics API routes on the Express application.
+ * Provides endpoints to check Core connection status and device configuration.
+ * @param app - The Express application instance.
+ */
 export function registerCoreDiagnosticsRoutes(app: Application): void {
 	app.get('/api/core/diagnostics', async (req: Request, res: Response) => {
 		if (!getSessionUser(req)) {

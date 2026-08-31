@@ -159,20 +159,18 @@ export function CoreConnectionSettingsForm({ settings }: { settings: Application
 								<Form.Label htmlFor={field.name}>{friendlyLabel('previewBaseUrl')}</Form.Label>
 								<Form.Control
 									name={field.name}
-									type="url"
+									type="text"
 									value={field.state.value ?? ''}
 									onBlur={field.handleBlur}
-									placeholder="http://localhost:3010/demo-assets"
+									placeholder="/demo-assets"
 									onChange={(e) => field.handleChange(e.target.value)}
 								/>
 								<Form.Text className="text-muted">
 									Base URL for GFX preview iframe templates (must serve{' '}
-									<code>&lt;template&gt;/index.html</code> files, not the Sofie Rundown Editor
-									app). Example:{' '}
-									<code>https://duopus.tjm.sk/demo-assets</code>. Overrides{' '}
-									<code>PREVIEW_BASE_URL</code> in backend <code>.env</code> when set. If you use
-									nginx in front of the app, ensure <code>/demo-assets/</code> is served as static
-									files (see README).
+									<code>&lt;template&gt;/index.html</code> files). Leave empty to use the bundled{' '}
+									<code>/demo-assets</code> stubs (proxied by Vite in dev). Absolute http(s) URLs
+									also work, e.g. <code>https://duopus.tjm.sk/demo-assets</code>. Overrides{' '}
+									<code>PREVIEW_BASE_URL</code> in backend <code>.env</code> when set.
 								</Form.Text>
 							</Form.Group>
 							<FieldInfo field={field} />

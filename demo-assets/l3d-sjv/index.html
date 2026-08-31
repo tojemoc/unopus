@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>L3D SJV Preview</title>
+		<style>
+			* { box-sizing: border-box; margin: 0; padding: 0; }
+			body {
+				background: #111;
+				color: #fff;
+				font-family: Arial, Helvetica, sans-serif;
+				min-height: 100vh;
+				display: flex;
+				align-items: flex-end;
+				padding: 24px;
+			}
+			.l3d {
+				background: rgba(0, 0, 0, 0.75);
+				border-left: 6px solid #8c564b;
+				padding: 12px 20px;
+				max-width: 100%;
+			}
+			.kicker { font-size: 14px; letter-spacing: 0.08em; text-transform: uppercase; color: #f0c27a; }
+			.headline { font-size: 26px; font-weight: bold; line-height: 1.2; }
+		</style>
+	</head>
+	<body>
+		<div class="l3d">
+			<div class="kicker" id="kicker"></div>
+			<div class="headline" id="headline"></div>
+		</div>
+		<script>
+			const params = new URLSearchParams(window.location.search)
+			const kicker = params.get('kicker') || ''
+			const kickerEl = document.getElementById('kicker')
+			kickerEl.textContent = kicker
+			kickerEl.style.display = kicker ? 'block' : 'none'
+			document.getElementById('headline').textContent =
+				params.get('headline') || params.get('name') || 'Headline'
+		</script>
+	</body>
+</html>

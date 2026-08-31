@@ -21,6 +21,9 @@ export {
 	formatSecondsPrecise
 } from './pieceDurationFormat.js'
 
+/**
+ * Extract piece source duration from payload (milliseconds → seconds).
+ */
 export function getPieceSourceDurationSeconds(piece: {
 	payload?: Record<string, unknown> | null
 }): number | undefined {
@@ -32,6 +35,9 @@ export function getPieceSourceDurationSeconds(piece: {
 	return raw / 1000
 }
 
+/**
+ * Format piece effective on-air duration as a clock string.
+ */
 export function formatPieceOnAirDuration(
 	piece: {
 		pieceType: string
@@ -56,6 +62,9 @@ export function formatPieceOnAirDuration(
 	return ''
 }
 
+/**
+ * Format part effective on-air duration as a clock string.
+ */
 export function formatPartOnAirDuration(
 	part: { duration?: number; script?: string; partType?: string; skip?: boolean },
 	pieces: Array<{ pieceType: string; duration?: number; skip?: boolean }>,
@@ -65,6 +74,9 @@ export function formatPartOnAirDuration(
 	return effective ? formatSecondsClock(effective) : ''
 }
 
+/**
+ * Format source duration (in seconds) as a clock string.
+ */
 export function formatSourceDurationSeconds(seconds: number | undefined): string {
 	if (typeof seconds !== 'number' || !Number.isFinite(seconds) || seconds <= 0) {
 		return ''
@@ -72,6 +84,9 @@ export function formatSourceDurationSeconds(seconds: number | undefined): string
 	return formatSecondsClock(seconds)
 }
 
+/**
+ * Format seconds as clock display (mm:ss or h:mm:ss, or Xs for fractional seconds).
+ */
 export function formatSecondsClock(seconds: number): string {
 	// Keep fractional wipe default readable (2.5s) without breaking mm:ss for whole seconds.
 	if (!Number.isInteger(seconds) && seconds < 60) {

@@ -93,7 +93,7 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 	})
 
 	return (
-		<div>
+		<div className="piece-properties-form">
 			<h2>Piece</h2>
 
 			<form.Subscribe
@@ -116,7 +116,7 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 			>
 				<Form.Group className="mb-3">
 					<Form.Text>
-						Piece type: {piece.pieceType} {!piece.start && piece.start !== 0 ? '(AdLib)' : ''}
+						Piece type: {piece.pieceType}
 					</Form.Text>
 				</Form.Group>
 

@@ -12,6 +12,10 @@ const TICK_MS = 60_000
 let intervalHandle: ReturnType<typeof setInterval> | undefined
 let tickInFlight = false
 
+/**
+ * Starts the daily template scheduler that periodically checks and generates daily rundowns from templates.
+ * The scheduler runs approximately every minute.
+ */
 export function startDailyTemplateScheduler(): void {
 	if (intervalHandle) {
 		return
@@ -73,6 +77,9 @@ export function startDailyTemplateScheduler(): void {
 	console.info('Daily template scheduler started (interval ~1 minute)')
 }
 
+/**
+ * Stops the daily template scheduler by clearing the interval timer.
+ */
 export function stopDailyTemplateScheduler(): void {
 	if (intervalHandle) {
 		clearInterval(intervalHandle)

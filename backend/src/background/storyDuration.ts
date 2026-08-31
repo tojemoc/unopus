@@ -28,14 +28,64 @@ export const STORY_DURATION_INHERIT_PIECE_TYPES = new Set([
 	'l3d-odporucanie'
 ])
 
+/**
+ * Type guard: check if a duration value is a positive finite number.
+ */
 export function isPositiveDurationSeconds(
 	duration: number | undefined | null
 ): duration is number {
 	return typeof duration === 'number' && Number.isFinite(duration) && duration > 0
 }
 
+/**
+ * Check if a piece type inherits duration from its parent part.
+ */
 export function pieceInheritsPartDuration(pieceType: string): boolean {
 	return STORY_DURATION_INHERIT_PIECE_TYPES.has(pieceType.trim().toLowerCase())
+}
+
+const MEDIA_VIDEO_PIECE_TYPES = new Set(['video'])
+
+/**
+ * Check if a piece type is a media video piece (eligible for ffprobe duration).
+ */
+export function isMediaVideoPieceType(pieceType: string): boolean {
+	return MEDIA_VIDEO_PIECE_TYPES.has(pieceType.trim().toLowerCase())
+}
+
+/**
+ * Extract a positive number from an unknown value, or return undefined.
+ */
+function positiveNumber(value: unknown): number | undefined {
+	if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+		return undefined
+	}
+	return value
+}
+
+/**
+ * On-air seconds for a SYN/VO/VT clip after trim-in / trim-out.
+ * `sourceDuration` is milliseconds (ffprobe); trim fields are seconds.
+ */
+export function resolveTrimmedSourceDurationSeconds(piece: {
+	pieceType: string
+	payload?: Record<string, unknown> | null
+}): number | undefined {
+	if (!isMediaVideoPieceType(piece.pieceType)) {
+		return undefined
+	}
+	const sourceMs = positiveNumber(piece.payload?.sourceDuration)
+	if (!sourceMs) {
+		return undefined
+	}
+	const trimIn = positiveNumber(piece.payload?.trimIn) ?? 0
+	const trimOut = positiveNumber(piece.payload?.trimOut) ?? 0
+	const seconds = sourceMs / 1000 - trimIn - trimOut
+	if (!Number.isFinite(seconds) || seconds <= 0) {
+		return undefined
+	}
+	const rounded = Math.round(seconds * 10) / 10
+	return rounded > 0 ? rounded : undefined
 }
 
 export type StoryDurationPiece = {
@@ -43,6 +93,7 @@ export type StoryDurationPiece = {
 	pieceType: string
 	duration?: number
 	skip?: boolean
+	payload?: Record<string, unknown> | null
 }
 
 export type StoryDurationPart = {
@@ -57,6 +108,9 @@ export type StoryDurationOptions = {
 	scriptCps?: number
 }
 
+/**
+ * Filter out skipped pieces, returning only active ones.
+ */
 function activePieces<T extends { skip?: boolean }>(pieces: T[]): T[] {
 	return pieces.filter((piece) => !piece.skip)
 }
@@ -198,6 +252,17 @@ export function planStoryDurationSync(
 	}
 
 	let partDuration = part.duration
+
+	for (const piece of livePieces) {
+		const trimmed = resolveTrimmedSourceDurationSeconds(piece)
+		if (!trimmed) {
+			continue
+		}
+		if (piece.duration !== trimmed) {
+			pieceUpdates.push({ id: piece.id, duration: trimmed, force: true })
+			piece.duration = trimmed
+		}
+	}
 
 	if (isPositiveDurationSeconds(partDuration)) {
 		for (const piece of livePieces) {

@@ -7,11 +7,21 @@ import {
 } from '../background/media'
 import { enrichMediaListingWithCoreReadiness } from '../background/mediaListingReadiness'
 
+/**
+ * Retrieves the session user from the request's cookie.
+ * @param req - The Express request object.
+ * @returns The user object if found, null otherwise.
+ */
 function getSessionUser(req: Request) {
 	const sessionId = parseSessionCookie(req.headers.cookie)
 	return getUserFromSession(sessionId)
 }
 
+/**
+ * Registers the media API routes on the Express application.
+ * Provides endpoints for listing, probing, and managing media files for rundowns.
+ * @param app - The Express application instance.
+ */
 export function registerMediaRoutes(app: Application): void {
 	app.get('/api/rundowns/:rundownId/media', async (req: Request, res: Response) => {
 		if (!getSessionUser(req)) {

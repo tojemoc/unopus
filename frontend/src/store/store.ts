@@ -9,6 +9,7 @@ import piecesReducer from './pieces.js'
 import typeManifestReducer from './typeManifest.js'
 import settingsReducer from './settings.js'
 import { authReducer } from './auth.js'
+import { presenceReducer } from './presence.js'
 
 export const store = configureStore({
 	reducer: {
@@ -21,6 +22,7 @@ export const store = configureStore({
 		pieces: piecesReducer,
 		settings: settingsReducer,
 		typeManifests: typeManifestReducer,
-		coreConnectionStatus: connectionStatusReducer
+		coreConnectionStatus: connectionStatusReducer,
+		presence: presenceReducer
 	}
 })

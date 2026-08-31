@@ -14,6 +14,9 @@ export const SCRIPT_DURATION_PIECE_TYPES = new Set(['headline', 'doublebox-ilu']
 /** Part types whose on-air length is driven by the linked video clip (ffprobe). */
 export const MEDIA_DURATION_PART_TYPES = new Set(['syn', 'vo', 'vt'])
 
+/**
+ * Normalize characters-per-second to a valid range (5-40), with fallback to default.
+ */
 export function normalizeScriptCps(cps: number | undefined | null): number {
 	if (typeof cps !== 'number' || !Number.isFinite(cps) || cps <= 0) {
 		return DEFAULT_SCRIPT_CPS
@@ -61,14 +64,23 @@ export function formatReadingClock(seconds: number | undefined): string {
 	return `${pad(m)}:${pad(s)}`
 }
 
+/**
+ * Check if a part type uses script-derived duration (ILU, DoubleBox, etc.).
+ */
 export function partUsesScriptDuration(partType: string | undefined | null): boolean {
 	return SCRIPT_DURATION_PART_TYPES.has((partType ?? '').trim().toLowerCase())
 }
 
+/**
+ * Check if a piece type receives script reading time as its duration.
+ */
 export function pieceReceivesScriptDuration(pieceType: string | undefined | null): boolean {
 	return SCRIPT_DURATION_PIECE_TYPES.has((pieceType ?? '').trim().toLowerCase())
 }
 
+/**
+ * Check if a part type uses media clip duration (SYN, VO, VT).
+ */
 export function partUsesMediaDuration(partType: string | undefined | null): boolean {
 	return MEDIA_DURATION_PART_TYPES.has((partType ?? '').trim().toLowerCase())
 }

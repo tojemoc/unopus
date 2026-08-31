@@ -4,6 +4,7 @@ import {
 	planStoryDurationSync,
 	resolvePartOnAirDuration,
 	resolvePieceOnAirDuration,
+	resolveTrimmedSourceDurationSeconds,
 	sumPartsOnAirDuration
 } from './storyDuration.js'
 
@@ -155,5 +156,35 @@ describe('storyDuration', () => {
 			{ scriptCps: 15 }
 		)
 		assert.equal(total, 10)
+	})
+
+	it('trims SYN sourceDuration by trimIn/trimOut and writes piece duration', () => {
+		assert.equal(
+			resolveTrimmedSourceDurationSeconds({
+				pieceType: 'video',
+				payload: { sourceDuration: 12000, trimIn: 2, trimOut: 1 }
+			}),
+			9
+		)
+
+		const plan = planStoryDurationSync({ duration: 0, partType: 'syn' }, [
+			{
+				id: 'syn',
+				pieceType: 'video',
+				payload: { sourceDuration: 12000, trimIn: 2, trimOut: 1 }
+			}
+		])
+		assert.equal(plan.partDuration, 9)
+		assert.deepEqual(plan.pieceUpdates, [{ id: 'syn', duration: 9, force: true }])
+	})
+
+	it('rejects trimmed durations that round to zero', () => {
+		assert.equal(
+			resolveTrimmedSourceDurationSeconds({
+				pieceType: 'video',
+				payload: { sourceDuration: 40 }
+			}),
+			undefined
+		)
 	})
 })

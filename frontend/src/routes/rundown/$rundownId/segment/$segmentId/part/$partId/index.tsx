@@ -3,6 +3,7 @@ import { Stack } from 'react-bootstrap'
 import { RundownBreadcrumbs } from '~/components/rundown/breadcrumbs'
 import { PartPropertiesForm } from '~/components/rundown/partPropertiesForm'
 import { PiecesList } from '~/components/rundown/piecesList'
+import { usePresenceFocus } from '~/hooks/usePresence'
 import { useAppSelector } from '~/store/app'
 
 export const Route = createFileRoute('/rundown/$rundownId/segment/$segmentId/part/$partId/')({
@@ -12,6 +13,8 @@ export const Route = createFileRoute('/rundown/$rundownId/segment/$segmentId/par
 function RouteComponent() {
 	const navigate = useNavigate()
 	const { rundownId, segmentId, partId } = Route.useParams()
+
+	usePresenceFocus(rundownId, 'part', partId)
 
 	const part = useAppSelector((state) =>
 		state.parts.parts.find(

@@ -2,11 +2,14 @@
 	background: var(--re-surface-inset) !important;
 	border-bottom: 1px solid var(--re-border) !important;
 	color: var(--re-text);
+	padding-block: 0.15rem !important;
+	min-height: 2.2rem;
 
 	.brand-text {
 		font-weight: 700;
 		letter-spacing: 0.02em;
 		color: var(--re-text);
+		font-size: 0.95rem;
 	}
 
 	.user-label {
@@ -65,20 +68,39 @@
 	background: var(--re-rundown-bar-bg) !important;
 	border-bottom: 1px solid color-mix(in srgb, var(--re-rundown-bar-bg) 80%, black) !important;
 	color: var(--re-rundown-bar-fg) !important;
+	padding-block: 0.1rem !important;
+	min-height: 2.4rem;
 }
 
 .rundown-sidebar {
 	background: var(--re-surface-1);
 	border-right: 1px solid var(--re-border);
-	width: 42%;
-	min-width: 22rem;
-	max-width: 36rem;
+	flex: 1 1 auto;
+	width: auto;
+	min-width: 0;
+	max-width: none;
 	padding: 0;
+}
+
+.rundown-inspector-column {
+	flex: 0 1 32rem;
+	max-width: 36rem;
+	min-width: 20rem;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	background: var(--re-bg);
+	color: var(--re-text);
 }
 
 .rundown-main-content {
 	background: var(--re-bg);
 	color: var(--re-text);
+	flex: 1 1 auto;
+	max-width: none;
+	min-width: 0;
+	width: 100%;
 }
 
 .re-surface-form {
@@ -116,8 +138,8 @@
 }
 
 .rundown-breadcrumbs {
-	height: 2.5em;
-	font-size: 0.75em;
+	height: 1.85em;
+	font-size: 0.7em;
 	background: var(--re-surface-inset) !important;
 	color: var(--re-text) !important;
 	border-bottom: 1px solid var(--re-border);
@@ -137,7 +159,7 @@
 	align-items: center;
 	justify-content: space-between;
 	gap: 0.75rem;
-	padding: 0.55rem 0.75rem;
+	padding: 0.3rem 0.6rem;
 	background: var(--re-surface-inset);
 	border-bottom: 1px solid var(--re-border);
 	position: sticky;
@@ -206,7 +228,7 @@
 
 	.story-row {
 		cursor: pointer;
-		padding: 0.35rem 0.45rem;
+		padding: 0.22rem 0.45rem;
 		border-bottom: 1px solid var(--re-border-subtle);
 		border-left: 4px solid transparent;
 		color: var(--re-text);
@@ -220,6 +242,22 @@
 			box-shadow: inset 3px 0 0 var(--re-accent);
 		}
 
+		&.story-row--ready:not(.active) {
+			background: color-mix(in srgb, var(--re-status-ready-bg) 55%, transparent);
+		}
+
+		&.story-row--not-ready:not(.active) {
+			background: color-mix(in srgb, var(--re-status-notready-bg) 55%, transparent);
+		}
+
+		&.story-row--ready.active {
+			background: color-mix(in srgb, var(--re-status-ready-bg) 35%, var(--re-row-active));
+		}
+
+		&.story-row--not-ready.active {
+			background: color-mix(in srgb, var(--re-status-notready-bg) 35%, var(--re-row-active));
+		}
+
 		&.story-row--skipped,
 		&.story-row--floated {
 			opacity: 0.45;
@@ -228,14 +266,41 @@
 		&.story-row--skipped .col-title {
 			text-decoration: line-through;
 		}
+
+		&.story-row--locked {
+			outline: 1px dashed var(--re-accent);
+			outline-offset: -1px;
+		}
 	}
 
 	.col-title {
-		font-size: 0.82rem;
+		font-size: 0.78rem;
 		color: var(--re-text);
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		min-width: 0;
+	}
+
+	.story-row__title {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		min-width: 0;
+	}
+
+	.story-row__lock {
+		flex-shrink: 0;
+		font-size: 0.62rem;
+		font-weight: 700;
+		letter-spacing: 0.02em;
+		color: var(--re-accent);
+		background: var(--re-accent-subtle);
+		border-radius: 999px;
+		padding: 0.05rem 0.4rem;
 	}
 
 	.col-duration {
@@ -288,6 +353,19 @@
 			background: var(--re-row-hover);
 		}
 
+		&.piece-row--ready:not(.active) {
+			background: color-mix(in srgb, var(--re-status-ready-bg) 55%, transparent);
+		}
+
+		&.piece-row--not-ready:not(.active) {
+			background: color-mix(in srgb, var(--re-status-notready-bg) 55%, transparent);
+		}
+
+		&.piece-row--locked {
+			outline: 1px dashed var(--re-accent);
+			outline-offset: -1px;
+		}
+
 		&.piece-row--skipped {
 			opacity: 0.45;
 
@@ -297,11 +375,32 @@
 		}
 	}
 
+	.piece-name {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		min-width: 0;
+
+		.piece-name__label {
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+		}
+	}
+
 	td {
-		padding: 0.4rem 0.55rem;
+		padding: 0.22rem 0.45rem;
 		vertical-align: middle;
 		color: var(--re-text);
 	}
+}
+
+.part-properties-form h2,
+.piece-properties-form h2,
+.gfx-preview h3 {
+	font-size: 1rem;
+	font-weight: 700;
+	margin-bottom: 0.4rem;
 }
 
 .piece-type-chip {

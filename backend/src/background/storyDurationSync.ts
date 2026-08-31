@@ -31,6 +31,9 @@ export const UNSET_DURATION_SQL = `(
 	OR CAST(JSON_EXTRACT(document, '$.duration') AS REAL) <= 0
 )`
 
+/**
+ * Read a single part from the database by ID.
+ */
 function readPartRow(partId: string): Part | undefined {
 	const row = db.prepare(`SELECT * FROM parts WHERE id = ? LIMIT 1`).get(partId) as DBPart | undefined
 	if (!row) {
@@ -46,6 +49,9 @@ function readPartRow(partId: string): Part | undefined {
 	}
 }
 
+/**
+ * Read all pieces for a given part from the database.
+ */
 function readPiecesForPart(partId: string): Piece[] {
 	const rows = db.prepare(`SELECT * FROM pieces WHERE partId = ?`).all(partId) as unknown as DBPiece[]
 
@@ -59,6 +65,9 @@ function readPiecesForPart(partId: string): Piece[] {
 	}))
 }
 
+/**
+ * Update piece duration in DB only if currently unset (conditional update).
+ */
 function applyPieceDurationIfUnset(pieceId: string, duration: number): void {
 	const patch = JSON.stringify({ duration })
 	const result = db
@@ -83,6 +92,9 @@ function applyPieceDurationIfUnset(pieceId: string, duration: number): void {
 	}
 }
 
+/**
+ * Update part duration in DB only if currently unset (conditional update).
+ */
 function applyPartDurationIfUnset(partId: string, duration: number): void {
 	const patch = JSON.stringify({ duration })
 	const result = db
@@ -123,6 +135,9 @@ export function broadcastStoryDurationSync(
 	}
 }
 
+/**
+ * Update piece duration in DB, optionally forcing overwrite of existing values.
+ */
 function applyPieceDuration(pieceId: string, duration: number, force: boolean): void {
 	const patch = JSON.stringify({ duration })
 	if (force) {
@@ -136,6 +151,9 @@ function applyPieceDuration(pieceId: string, duration: number, force: boolean): 
 	applyPieceDurationIfUnset(pieceId, duration)
 }
 
+/**
+ * Update part duration in DB, optionally forcing overwrite of existing values.
+ */
 function applyPartDuration(partId: string, duration: number, force: boolean): void {
 	const patch = JSON.stringify({ duration })
 	if (force) {
@@ -149,6 +167,10 @@ function applyPartDuration(partId: string, duration: number, force: boolean): vo
 	applyPartDurationIfUnset(partId, duration)
 }
 
+/**
+ * Internal sync implementation that runs inside the per-part queue.
+ * Computes and persists inherited durations within a transaction.
+ */
 async function syncStoryDurationsForPartLocked(
 	partId: string,
 	options?: { editorScriptCps?: number | null }
@@ -169,7 +191,8 @@ async function syncStoryDurationsForPartLocked(
 			id: piece.id,
 			pieceType: piece.pieceType,
 			duration: piece.duration,
-			skip: piece.skip
+			skip: piece.skip,
+			payload: piece.payload
 		})
 	)
 
