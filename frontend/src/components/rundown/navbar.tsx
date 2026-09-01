@@ -113,8 +113,7 @@ export function RundownNavbar({ rundown }: { rundown: Rundown }) {
 				<Nav className="rundown-navbar__close align-items-center gap-2">
 					<Nav.Link
 						as={Link}
-						to="/rundown/$rundownId/rewrite"
-						params={{ rundownId: rundown.id }}
+						to={`/rundown/${rundown.id}/rewrite`}
 						className="small"
 					>
 						Daily rewrite
