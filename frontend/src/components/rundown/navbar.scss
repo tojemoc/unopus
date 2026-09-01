@@ -93,4 +93,18 @@
 			color: var(--re-rundown-bar-fg);
 		}
 	}
+
+	.sync-control-bar--compact {
+		margin: 0;
+		padding: 0;
+
+		.sync-status-indicator__label {
+			font-size: 0.72rem;
+		}
+
+		.form-check-label {
+			font-size: 0.72rem;
+			color: var(--re-rundown-bar-fg);
+		}
+	}
 }
