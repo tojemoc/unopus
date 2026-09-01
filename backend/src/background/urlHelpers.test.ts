@@ -9,6 +9,27 @@ describe('preview base URL', () => {
 		assert.equal(isValidHttpUrl('/demo-assets'), false)
 	})
 
+	it('accepts relative same-origin path segments', () => {
+		assert.equal(isValidPreviewBaseUrl('gfx'), true)
+		assert.equal(isValidPreviewBaseUrl('gfx/'), true)
+		assert.equal(isValidPreviewBaseUrl('demo-assets'), true)
+		assert.equal(isValidPreviewBaseUrl('gfx/templates'), true)
+	})
+
+	it('rejects relative paths with . or .. segments', () => {
+		for (const input of [
+			'gfx/../private',
+			'gfx/../../private',
+			'../private',
+			'..',
+			'.',
+			'gfx/.',
+			'gfx/..'
+		]) {
+			assert.equal(isValidPreviewBaseUrl(input), false, `expected rejection for ${input}`)
+		}
+	})
+
 	it('rejects protocol-relative and empty values', () => {
 		assert.equal(isValidPreviewBaseUrl('//evil.example/demo-assets'), false)
 		assert.equal(isValidPreviewBaseUrl(''), false)

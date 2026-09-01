@@ -29,7 +29,10 @@ export function isValidHttpUrl(url: string): boolean {
 	}
 }
 
-/** Absolute http(s) URL, or a same-origin path such as `/demo-assets`. */
+/**
+ * Absolute http(s) URL, or a same-origin path such as `/demo-assets` or `gfx/`.
+ * Relative path segments (no leading slash) are normalized to same-origin paths by the client.
+ */
 export function isValidPreviewBaseUrl(url: string): boolean {
 	const trimmed = url.trim()
 	if (!trimmed) {
@@ -38,8 +41,18 @@ export function isValidPreviewBaseUrl(url: string): boolean {
 	if (trimmed.startsWith('?') || trimmed.startsWith('#')) {
 		return false
 	}
-	if (trimmed.startsWith('/')) {
-		return !trimmed.startsWith('//')
+	if (trimmed.startsWith('//')) {
+		return false
 	}
-	return isValidHttpUrl(trimmed)
+	if (trimmed.startsWith('/')) {
+		return true
+	}
+	if (isValidHttpUrl(trimmed)) {
+		return true
+	}
+	// Relative same-origin segment, e.g. gfx or gfx/templates (no protocol, no traversal).
+	if (!/^[a-zA-Z0-9][a-zA-Z0-9._/-]*$/.test(trimmed)) {
+		return false
+	}
+	return !trimmed.split('/').some((segment) => segment === '.' || segment === '..')
 }

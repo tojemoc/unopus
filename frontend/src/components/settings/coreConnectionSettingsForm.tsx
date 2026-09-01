@@ -11,9 +11,10 @@ import { useToasts } from '../toasts/useToasts'
 import { friendlyLabel } from '~/util/fieldLabels'
 import { clearPreviewBaseUrlCache } from '~/lib/mediaApi'
 
-function normalizeOptionalUrl(value: string | undefined): string | undefined {
+/** Empty string clears the stored override (backend json_patch removes the key). */
+function normalizeOptionalUrl(value: string | undefined): string {
 	const trimmed = value?.trim()
-	if (!trimmed) return undefined
+	if (!trimmed) return ''
 	return trimmed.replace(/\/+$/, '')
 }
 
@@ -33,7 +34,7 @@ export function CoreConnectionSettingsForm({ settings }: { settings: Application
 			try {
 				const nextSettings: ApplicationSettings = {
 					...values.value,
-					ingestMediaRoot: values.value.ingestMediaRoot?.trim() || undefined,
+					ingestMediaRoot: values.value.ingestMediaRoot?.trim() || '',
 					previewBaseUrl: normalizeOptionalUrl(values.value.previewBaseUrl)
 				}
 				await dispatch(updateSettings({ settings: nextSettings })).unwrap()
