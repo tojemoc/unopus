@@ -60,7 +60,9 @@ export function getBundledGfxTemplatesRoot(): string {
 }
 
 /**
- * Ordered GFX template roots — first match wins when serving `/demo-assets/<template>/index.html`.
+ * Ordered GFX template roots — first match wins when serving `/demo-assets/…`.
+ *
+ * Flat Caspar templates: `gfx/{name}.html`, `{name}.html`, or `{name}/index.html` stubs.
  *
  * 1. `GFX_TEMPLATES_ROOT` env (Docker bind mount to sofie-demo-assets, etc.)
  * 2. `{INGEST_MEDIA_ROOT}/gfx-templates/` (copy HTML templates onto the NAS ingest share)

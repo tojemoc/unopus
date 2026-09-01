@@ -2,7 +2,7 @@ import type { MediaFileEntry } from '~backend/background/interfaces'
 
 const apiBase = import.meta.env.MODE === 'development' ? '' : ''
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+export async function request<T>(path: string, init?: RequestInit): Promise<T> {
 	const response = await fetch(`${apiBase}${path}`, {
 		credentials: 'include',
 		headers: {

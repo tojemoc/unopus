@@ -21,7 +21,7 @@ import { registerCoreDiagnosticsRoutes } from './routes/coreDiagnostics'
 import { registerConfigRoutes } from './routes/config'
 import { registerDailyGenerationRoutes } from './routes/dailyGeneration'
 import { registerPresenceHandlers } from './background/api/presence'
-import { resolveGfxTemplateRoots } from './background/media'
+import { getBundledGfxTemplatesRoot, resolveGfxTemplateRoots } from './background/media'
 
 const frontendPath = path.resolve(__dirname, '../../frontend/dist')
 
@@ -126,6 +126,10 @@ export async function initSocketServer(port: number = 3010) {
 		app.use('/demo-assets', (req, res, next) => {
 			res.setHeader('Cache-Control', 'no-cache')
 			next()
+		})
+
+		app.get('/demo-assets/_gfx-preview-bridge.html', (_req, res) => {
+			res.sendFile(path.join(getBundledGfxTemplatesRoot(), '_gfx-preview-bridge.html'))
 		})
 
 		const gfxTemplateRoots = resolveGfxTemplateRoots()

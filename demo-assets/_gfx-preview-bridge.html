@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>GFX Preview Bridge</title>
+		<style>
+			html,
+			body,
+			iframe {
+				margin: 0;
+				padding: 0;
+				width: 100%;
+				height: 100%;
+				border: 0;
+				overflow: hidden;
+				background: #000;
+			}
+		</style>
+	</head>
+	<body>
+		<iframe id="template" title="GFX template"></iframe>
+		<script>
+			;(function () {
+				const params = new URLSearchParams(window.location.search)
+				const templatePath = params.get('template')
+				const templateFrame = document.getElementById('template')
+				let templateReady = false
+				let pendingData
+
+				if (!templatePath) {
+					document.body.textContent = 'Missing template query parameter'
+					return
+				}
+
+				templateFrame.src = templatePath
+
+				function applyPreviewData(data) {
+					const win = templateFrame.contentWindow
+					if (!win || data === undefined) {
+						return
+					}
+					if (typeof win.update === 'function') {
+						win.update(data)
+					}
+					if (typeof win.play === 'function') {
+						win.play(data)
+					}
+				}
+
+				function flushPendingData() {
+					if (!templateReady || pendingData === undefined) {
+						return
+					}
+					applyPreviewData(pendingData)
+					pendingData = undefined
+				}
+
+				function notifyReady() {
+					window.parent.postMessage({ type: 'sofie-gfx-preview-ready' }, '*')
+				}
+
+				window.addEventListener('message', (event) => {
+					if (event.source !== window.parent) {
+						return
+					}
+					if (event.data?.type !== 'sofie-gfx-preview') {
+						return
+					}
+					pendingData = event.data.xml ?? event.data.json ?? event.data.payload
+					flushPendingData()
+				})
+
+				templateFrame.addEventListener('load', () => {
+					templateReady = true
+					flushPendingData()
+					notifyReady()
+				})
+
+				notifyReady()
+			})()
+		</script>
+	</body>
+</html>
