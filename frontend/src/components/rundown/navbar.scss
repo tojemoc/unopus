@@ -61,15 +61,28 @@
 		}
 	}
 
-	.rundown-navbar__title {
+	.rundown-navbar__title-row {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
 		flex-shrink: 0;
-		color: var(--re-rundown-bar-fg);
-		text-decoration: none;
-		font-weight: 600;
+	}
 
-		&:hover {
+	.rundown-navbar__title {
+		color: var(--re-rundown-bar-fg);
+		font-weight: 600;
+	}
+
+	.rundown-navbar__settings {
+		color: var(--re-rundown-bar-fg);
+		padding: 0;
+		line-height: 1;
+		opacity: 0.85;
+
+		&:hover,
+		&:focus-visible {
 			color: var(--re-rundown-bar-fg);
-			opacity: 0.9;
+			opacity: 1;
 		}
 	}
 

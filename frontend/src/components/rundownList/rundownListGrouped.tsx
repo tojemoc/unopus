@@ -1,11 +1,13 @@
 import { Card, Col, Row, Button } from 'react-bootstrap'
 import { Link } from '@tanstack/react-router'
 import { useCallback, useEffect, useState } from 'react'
+import { BsGear } from 'react-icons/bs'
 import type { Rundown } from '~backend/background/interfaces'
 import { useAppSelector } from '~/store/app'
 import { CoreConnectionStatus } from '~backend/background/interfaces'
 import { fetchDailyGenerationStatuses, type TemplateDailyStatus } from '~/lib/dailyGenerationApi'
 import { useGenerateDailyRundown } from '~/hooks/useGenerateDailyRundown'
+import { RundownPropertiesModal } from '~/components/rundown/rundownPropertiesModal'
 import './rundownListGrouped.scss'
 
 function startOfDay(date: Date): number {
@@ -61,6 +63,7 @@ export function RundownListGrouped({ rundowns }: RundownListGroupedProps) {
 	const parts = useAppSelector((s) => s.parts.parts)
 	const coreStatus = useAppSelector((s) => s.coreConnectionStatus.status)
 	const [statuses, setStatuses] = useState<Record<string, TemplateDailyStatus>>({})
+	const [settingsRundown, setSettingsRundown] = useState<Rundown | null>(null)
 	const hasTemplates = rundowns.some((r) => r.isTemplate)
 
 	const refreshStatuses = useCallback(async () => {
@@ -199,13 +202,23 @@ export function RundownListGrouped({ rundowns }: RundownListGroupedProps) {
 													</div>
 												</div>
 											)}
-											<Link
-												to="/rundown/$rundownId"
-												params={{ rundownId: rundown.id }}
-												className="btn btn-primary mt-auto align-self-start"
-											>
-												Open
-											</Link>
+											<div className="d-flex gap-2 mt-auto align-self-start">
+												<Link
+													to="/rundown/$rundownId"
+													params={{ rundownId: rundown.id }}
+													className="btn btn-primary"
+												>
+													Open
+												</Link>
+												<Button
+													variant="outline-secondary"
+													aria-label={`Settings for ${rundown.name}`}
+													title="Rundown settings"
+													onClick={() => setSettingsRundown(rundown)}
+												>
+													<BsGear />
+												</Button>
+											</div>
 										</Card.Body>
 									</Card>
 								</Col>
@@ -214,6 +227,13 @@ export function RundownListGrouped({ rundowns }: RundownListGroupedProps) {
 					</Row>
 				</section>
 			))}
+			{settingsRundown ? (
+				<RundownPropertiesModal
+					rundown={settingsRundown}
+					show
+					onHide={() => setSettingsRundown(null)}
+				/>
+			) : null}
 		</div>
 	)
 }
