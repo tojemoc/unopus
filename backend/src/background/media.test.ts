@@ -48,6 +48,23 @@ describe('getPreviewBaseUrl', () => {
 		}
 	})
 
+	it('returns relative preview base URL segments from env', () => {
+		const restoreSettings = clearSettingsPreviewBaseUrl()
+		const previousPreviewBaseUrl = process.env.PREVIEW_BASE_URL
+		try {
+			process.env.PREVIEW_BASE_URL = 'gfx/'
+			assert.equal(readApplicationSettingsSync()?.previewBaseUrl, undefined)
+			assert.equal(getPreviewBaseUrl(), 'gfx')
+		} finally {
+			if (previousPreviewBaseUrl === undefined) {
+				delete process.env.PREVIEW_BASE_URL
+			} else {
+				process.env.PREVIEW_BASE_URL = previousPreviewBaseUrl
+			}
+			restoreSettings()
+		}
+	})
+
 	it('rewrites localhost absolute preview URLs to same-origin /demo-assets', () => {
 		const restoreSettings = clearSettingsPreviewBaseUrl()
 		const previousPreviewBaseUrl = process.env.PREVIEW_BASE_URL

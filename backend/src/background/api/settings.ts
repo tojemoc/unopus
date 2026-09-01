@@ -215,7 +215,7 @@ export const mutations = {
 			if (!isValidPreviewBaseUrl(normalizedUrl)) {
 				return {
 					error: new Error(
-						'Preview base URL must be a valid http(s) URL or a same-origin path such as /demo-assets'
+						'Preview base URL must be a valid http(s) URL or a same-origin path such as /demo-assets or gfx/'
 					)
 				}
 			}
@@ -240,7 +240,9 @@ export const mutations = {
 			for (const key of [
 				'dailyTemplateRundownId',
 				'dailyCloneTime',
-				'dailyCloneTimezone'
+				'dailyCloneTimezone',
+				'previewBaseUrl',
+				'ingestMediaRoot'
 			] as const) {
 				if (key in payload && (payload[key] === undefined || payload[key] === '')) {
 					patch[key] = null
