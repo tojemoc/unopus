@@ -51,5 +51,8 @@ export function isValidPreviewBaseUrl(url: string): boolean {
 		return true
 	}
 	// Relative same-origin segment, e.g. gfx or gfx/templates (no protocol, no traversal).
-	return /^[a-zA-Z0-9][a-zA-Z0-9._/-]*$/.test(trimmed)
+	if (!/^[a-zA-Z0-9][a-zA-Z0-9._/-]*$/.test(trimmed)) {
+		return false
+	}
+	return !trimmed.split('/').some((segment) => segment === '.' || segment === '..')
 }
