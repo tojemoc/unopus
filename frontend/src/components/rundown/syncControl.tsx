@@ -5,11 +5,15 @@ import { updateRundown } from '~/store/rundowns'
 import { SyncStatusIndicator } from './syncStatusIndicator'
 import { friendlyLabel } from '~/util/fieldLabels'
 
-export function SyncControl({ rundown }: { rundown: Rundown }) {
+export function SyncControl({ rundown, compact = false }: { rundown: Rundown; compact?: boolean }) {
 	const dispatch = useAppDispatch()
 
 	return (
-		<Stack direction="horizontal" gap={3} className="align-items-center mb-3 p-2 sync-control-bar">
+		<Stack
+			direction="horizontal"
+			gap={compact ? 2 : 3}
+			className={`align-items-center sync-control-bar${compact ? ' sync-control-bar--compact' : ' mb-3 p-2'}`}
+		>
 			<SyncStatusIndicator rundown={rundown} />
 			{!rundown.isTemplate && (
 				<Form.Check

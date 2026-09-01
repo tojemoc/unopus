@@ -17,6 +17,7 @@ import { resolvePartOnAirDuration } from '~/util/pieceDuration'
 import { resolveEffectiveScriptCps } from '~/util/scriptReadingTime'
 import { useMemo, useState } from 'react'
 import { RundownPropertiesModal } from './rundownPropertiesModal'
+import { SyncControl } from './syncControl'
 
 export function RundownNavbar({ rundown }: { rundown: Rundown }) {
 	const [showSettings, setShowSettings] = useState(false)
@@ -67,6 +68,7 @@ export function RundownNavbar({ rundown }: { rundown: Rundown }) {
 		<Navbar expand="lg" className="rundown-navbar">
 			<Container fluid className="rundown-navbar__inner">
 				<Stack className="timing" direction="horizontal" gap={3}>
+					<SyncControl rundown={rundown} compact />
 					<CoreDiagnosticsChip compact />
 					<Stack>
 						<div className="label">Expected start:</div>
@@ -109,7 +111,11 @@ export function RundownNavbar({ rundown }: { rundown: Rundown }) {
 				</div>
 
 				<Nav className="rundown-navbar__close align-items-center gap-2">
-					<Nav.Link as={Link} to={`/rundown/${rundown.id}/rewrite`} className="small">
+					<Nav.Link
+						as={Link}
+						to={`/rundown/${rundown.id}/rewrite`}
+						className="small"
+					>
 						Daily rewrite
 					</Nav.Link>
 					<Nav.Link as={Link} to="/">
