@@ -91,9 +91,7 @@ export function RundownPropertiesForm({ rundown }: { rundown: Rundown }) {
 	}
 
 	return (
-		<div>
-			<h2>Rundown</h2>
-
+		<div className="rundown-properties-form">
 			<Form
 				onSubmit={(e) => {
 					e.preventDefault()

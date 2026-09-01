@@ -5,18 +5,21 @@ import { Link } from '@tanstack/react-router'
 import { type Rundown } from '~backend/background/interfaces'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faClose } from '@fortawesome/free-solid-svg-icons'
+import { BsGear } from 'react-icons/bs'
 import './navbar.scss'
 import { toTime, toTimeDiff } from '~/util/lib'
 import { useAppSelector } from '~/store/app'
-import { Stack } from 'react-bootstrap'
+import { Button, Stack } from 'react-bootstrap'
 import { usePartInsertTarget } from '~/hooks/usePartInsertTarget'
 import { PartTypeButtons } from './sidebar/partTypeButtons'
 import { CoreDiagnosticsChip } from './coreDiagnosticsChip'
 import { resolvePartOnAirDuration } from '~/util/pieceDuration'
 import { resolveEffectiveScriptCps } from '~/util/scriptReadingTime'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
+import { RundownPropertiesModal } from './rundownPropertiesModal'
 
 export function RundownNavbar({ rundown }: { rundown: Rundown }) {
+	const [showSettings, setShowSettings] = useState(false)
 	const parts = useAppSelector((state) =>
 		state.parts.parts.filter((p) => p.rundownId === rundown.id)
 	)
@@ -91,9 +94,19 @@ export function RundownNavbar({ rundown }: { rundown: Rundown }) {
 					)}
 				</div>
 
-				<Nav.Link as={Link} to={`/rundown/${rundown.id}`} className="rundown-navbar__title">
-					{rundown.name}
-				</Nav.Link>
+				<div className="rundown-navbar__title-row">
+					<span className="rundown-navbar__title">{rundown.name}</span>
+					<Button
+						variant="link"
+						size="sm"
+						className="rundown-navbar__settings"
+						aria-label="Rundown settings"
+						title="Rundown settings"
+						onClick={() => setShowSettings(true)}
+					>
+						<BsGear />
+					</Button>
+				</div>
 
 				<Nav className="rundown-navbar__close align-items-center gap-2">
 					<Nav.Link as={Link} to={`/rundown/${rundown.id}/rewrite`} className="small">
@@ -104,6 +117,11 @@ export function RundownNavbar({ rundown }: { rundown: Rundown }) {
 					</Nav.Link>
 				</Nav>
 			</Container>
+			<RundownPropertiesModal
+				rundown={rundown}
+				show={showSettings}
+				onHide={() => setShowSettings(false)}
+			/>
 		</Navbar>
 	)
 }
