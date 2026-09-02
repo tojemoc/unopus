@@ -20,65 +20,70 @@
 	</head>
 	<body>
 		<iframe id="template" title="GFX template"></iframe>
-		<script>
-			;(function () {
-				const params = new URLSearchParams(window.location.search)
-				const templatePath = params.get('template')
-				const templateFrame = document.getElementById('template')
-				let templateReady = false
-				let pendingData
+		<script type="module">
+			import { resolveBridgeTemplateSrc } from './gfx-preview-bridge-utils.mjs'
 
-				if (!templatePath) {
-					document.body.textContent = 'Missing template query parameter'
+			const params = new URLSearchParams(window.location.search)
+			const templatePath = params.get('template')
+			const templateFrame = document.getElementById('template')
+			let templateReady = false
+			let pendingData
+
+			const templateSrc = resolveBridgeTemplateSrc(
+				templatePath,
+				window.location.href,
+				window.location.origin
+			)
+			if (!templateSrc) {
+				document.body.textContent = 'Invalid template query parameter'
+				throw new Error('Invalid template query parameter')
+			}
+
+			templateFrame.src = templateSrc
+
+			function applyPreviewData(data) {
+				const win = templateFrame.contentWindow
+				if (!win || data === undefined) {
 					return
 				}
-
-				templateFrame.src = templatePath
-
-				function applyPreviewData(data) {
-					const win = templateFrame.contentWindow
-					if (!win || data === undefined) {
-						return
-					}
-					if (typeof win.update === 'function') {
-						win.update(data)
-					}
-					if (typeof win.play === 'function') {
-						win.play(data)
-					}
+				if (typeof win.update === 'function') {
+					win.update(data)
 				}
-
-				function flushPendingData() {
-					if (!templateReady || pendingData === undefined) {
-						return
-					}
-					applyPreviewData(pendingData)
-					pendingData = undefined
+				if (typeof win.play === 'function') {
+					win.play(data)
 				}
+			}
 
-				function notifyReady() {
-					window.parent.postMessage({ type: 'sofie-gfx-preview-ready' }, '*')
+			function flushPendingData() {
+				if (!templateReady || pendingData === undefined) {
+					return
 				}
+				applyPreviewData(pendingData)
+				pendingData = undefined
+			}
 
-				window.addEventListener('message', (event) => {
-					if (event.source !== window.parent) {
-						return
-					}
-					if (event.data?.type !== 'sofie-gfx-preview') {
-						return
-					}
-					pendingData = event.data.xml ?? event.data.json ?? event.data.payload
-					flushPendingData()
-				})
+			function notifyReady() {
+				window.parent.postMessage({ type: 'sofie-gfx-preview-ready' }, '*')
+			}
 
-				templateFrame.addEventListener('load', () => {
-					templateReady = true
-					flushPendingData()
-					notifyReady()
-				})
+			window.addEventListener('message', (event) => {
+				if (event.source !== window.parent) {
+					return
+				}
+				if (event.data?.type !== 'sofie-gfx-preview') {
+					return
+				}
+				pendingData = event.data.xml ?? event.data.json ?? event.data.payload
+				flushPendingData()
+			})
 
+			templateFrame.addEventListener('load', () => {
+				templateReady = true
+				flushPendingData()
 				notifyReady()
-			})()
+			})
+
+			notifyReady()
 		</script>
 	</body>
 </html>

@@ -23,7 +23,11 @@ const TEMPLATE_CANDIDATES: ReadonlyArray<{
  * Sanitize a preview template id for filesystem lookup (no path segments).
  */
 export function sanitizeGfxTemplateId(template: string): string {
-	return template.replace(/[/\\]/g, '').trim()
+	const sanitized = template.replace(/[/\\]/g, '').trim()
+	if (sanitized === '.' || sanitized === '..') {
+		return ''
+	}
+	return sanitized
 }
 
 /**
@@ -40,8 +44,8 @@ export function resolveGfxTemplate(template: string): GfxTemplateResolution | nu
 		return null
 	}
 
-	for (const root of resolveGfxTemplateRoots()) {
-		for (const candidate of TEMPLATE_CANDIDATES) {
+	for (const candidate of TEMPLATE_CANDIDATES) {
+		for (const root of resolveGfxTemplateRoots()) {
 			const relativePath = candidate.buildPath(safeTemplate)
 			const absolutePath = path.join(root, relativePath)
 			if (fsSync.existsSync(absolutePath)) {

@@ -1,26 +1,13 @@
 import { request } from './mediaApi'
+import { isSameOriginPreviewBase } from './isSameOriginPreviewBase'
+
+export { isSameOriginPreviewBase }
 
 export type GfxTemplateMode = 'caspar' | 'query'
 
 export interface GfxTemplateResolution {
 	relativePath: string
 	mode: GfxTemplateMode
-}
-
-export function isSameOriginPreviewBase(baseUrl: string): boolean {
-	const trimmed = baseUrl.trim()
-	if (!trimmed || trimmed.startsWith('?') || trimmed.startsWith('#') || trimmed.startsWith('//')) {
-		return false
-	}
-	if (trimmed.startsWith('/')) {
-		return true
-	}
-	try {
-		const parsed = new URL(trimmed)
-		return parsed.protocol === 'http:' || parsed.protocol === 'https:'
-	} catch {
-		return !trimmed.split('/').some((segment) => segment === '.' || segment === '..')
-	}
 }
 
 export function joinPreviewPath(baseUrl: string, relativePath: string): string {
