@@ -4,7 +4,18 @@ export function isSameOriginPreviewBase(baseUrl: string): boolean {
 		return false
 	}
 	if (trimmed.startsWith('/')) {
-		return true
+		if (typeof window === 'undefined') {
+			return false
+		}
+		try {
+			const parsed = new URL(trimmed, window.location.href)
+			if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+				return false
+			}
+			return parsed.origin === window.location.origin
+		} catch {
+			return false
+		}
 	}
 	try {
 		const parsed = new URL(trimmed)

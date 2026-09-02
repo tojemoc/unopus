@@ -7,7 +7,10 @@ describe('isSameOriginPreviewBase', () => {
 
 	beforeEach(() => {
 		globalThis.window = {
-			location: { origin: 'https://duopus.tjm.sk' }
+			location: {
+				origin: 'https://duopus.tjm.sk',
+				href: 'https://duopus.tjm.sk/app/backend/'
+			}
 		} as Window & typeof globalThis
 	})
 
@@ -26,5 +29,9 @@ describe('isSameOriginPreviewBase', () => {
 	it('accepts same-origin relative paths', () => {
 		assert.equal(isSameOriginPreviewBase('/demo-assets'), true)
 		assert.equal(isSameOriginPreviewBase('demo-assets'), true)
+	})
+
+	it('rejects leading-slash paths that resolve to a foreign origin', () => {
+		assert.equal(isSameOriginPreviewBase('/\\attacker.example'), false)
 	})
 })
