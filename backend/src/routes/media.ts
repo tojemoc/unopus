@@ -1,6 +1,7 @@
 import type { Application, Request, Response } from 'express'
 import { getUserFromSession, parseSessionCookie } from '../background/auth/authStore'
 import fs from 'fs/promises'
+import { resolveGfxTemplate } from '../background/gfxPreview'
 import {
 	ensureRundownMediaFolder,
 	listRundownMedia,
@@ -85,6 +86,27 @@ export function registerMediaRoutes(app: Application): void {
 			console.error(error)
 			res.status(400).json({ error: (error as Error).message })
 		}
+	})
+
+	app.get('/api/gfx/template', (req: Request, res: Response) => {
+		if (!getSessionUser(req)) {
+			res.status(401).json({ error: 'Not authenticated' })
+			return
+		}
+
+		const template = typeof req.query.template === 'string' ? req.query.template.trim() : ''
+		if (!template) {
+			res.status(400).json({ error: 'Missing template query parameter' })
+			return
+		}
+
+		const resolution = resolveGfxTemplate(template)
+		if (!resolution) {
+			res.status(404).json({ error: `GFX template not found: ${template}` })
+			return
+		}
+
+		res.json(resolution)
 	})
 
 	app.post('/api/rundowns/:rundownId/media/ensure-folder', async (req: Request, res: Response) => {

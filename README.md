@@ -104,13 +104,17 @@ Set `INGEST_MEDIA_ROOT` in `backend/.env`, or override it in **Settings → Conn
 
 ### GFX preview
 
-Preview iframes load **HTML template files** directly from the same host as the editor — no Caspar required. Each piece type with `previewTemplate` opens:
+Preview iframes load **HTML template files** from the same host as the editor — no Caspar required. Each piece type with `previewTemplate` is resolved in this order (first match wins):
 
 ```text
-{previewBaseUrl}/{previewTemplate}/index.html?{payload query params}
+{previewBaseUrl}/gfx/{previewTemplate}.html          ← Caspar flat deploy (sofie-demo-template/gfx/)
+{previewBaseUrl}/{previewTemplate}.html
+{previewBaseUrl}/{previewTemplate}/index.html?…      ← bundled query-param stubs
 ```
 
-The bundled stubs in `demo-assets/` read those query params in plain JavaScript. Full-fidelity templates from [sofie-demo-assets](https://github.com/SuperFlyTV/sofie-demo-assets) work the same way when copied or bind-mounted.
+**Caspar flat templates** (`gfx/*.html`) expose `window.update(data)` / `window.play(data)` and expect data as CasparCG **templateData XML** (`<componentData id="name"><data value="…"/></componentData>`). The editor loads a same-origin bridge page (`_gfx-preview-bridge.html`) that injects that XML into the template — the same shape CasparCG sends on playout.
+
+**Bundled stubs** in `demo-assets/` still use URL query parameters in plain JavaScript.
 
 **Default:** `PREVIEW_BASE_URL=/demo-assets` (same-origin). Avoid `http://localhost:…` in production — browsers load that from the operator's machine, not the server.
 
@@ -118,14 +122,24 @@ The bundled stubs in `demo-assets/` read those query params in plain JavaScript.
 
 | Priority | Source | Setup |
 |----------|--------|--------|
-| 1 | `GFX_TEMPLATES_ROOT` env | Docker bind-mount sofie-demo-assets → `/app/gfx-templates` |
-| 2 | `{INGEST_MEDIA_ROOT}/gfx-templates/` | Copy `headline/`, `l3d-tema/`, … onto the NAS ingest share |
+| 1 | `GFX_TEMPLATES_ROOT` env | Docker bind-mount `sofie-demo-template/` (with `gfx/*.html`) |
+| 2 | `{INGEST_MEDIA_ROOT}/gfx-templates/` | Copy templates onto the NAS ingest share |
 | 3 | Bundled `demo-assets/` | Shipped in the Docker image / frontend build |
 
-Example NAS layout:
+Example NAS / Caspar deploy layout (mount the **template-path** root, not `gfx/` alone):
 
 ```text
-<INGEST_MEDIA_ROOT>/gfx-templates/headline/index.html
+<GFX_TEMPLATES_ROOT>/
+  gfx/l3d-headline.html
+  gfx/l3d-syn.html
+  gfx/l3d-tema.html
+  assets/…
+  icons/…
+```
+
+Legacy stub layout (still supported):
+
+```text
 <INGEST_MEDIA_ROOT>/gfx-templates/l3d-tema/index.html
 <INGEST_MEDIA_ROOT>/clips/<file>.mp4
 ```
@@ -136,10 +150,10 @@ Example NAS layout:
 environment:
   - PREVIEW_BASE_URL=/demo-assets
   - INGEST_MEDIA_ROOT=/app/ingest
-  # - GFX_TEMPLATES_ROOT=/app/gfx-templates
+  # - GFX_TEMPLATES_ROOT=/app/gfx-templates   # mount sofie-demo-template/ here
 volumes:
   - /mnt/nas/ingest:/app/ingest:ro
-  # - /mnt/nas/sofie-demo-assets:/app/gfx-templates:ro
+  # - /mnt/nas/sofie-demo-template:/app/gfx-templates:ro
 ```
 
 Override per install in **Settings → Connection → GFX preview base URL** only when templates live on another host (absolute `https://…` URL).
@@ -172,7 +186,7 @@ location /socket.io/ {
 
 Alternatively, proxy all traffic to the Node backend (`yarn start` on port 3010) and skip serving `dist` from nginx.
 
-For **full-fidelity** previews (real Vue templates), run `yarn serve` from `sofie-demo-assets` and set the preview base URL to that host (e.g. `http://192.168.1.115:8080`).
+For **full-fidelity** previews during template development, run `yarn serve` from [sofie-demo-assets](https://github.com/tojemoc/sofie-demo-assets) and set the preview base URL to that host (e.g. `http://192.168.1.115:8080`). That dev server uses `{template}/index.html?…` query params, not the Caspar flat `gfx/*.html` bridge.
 
 Pieces exported to Sofie use:
 
