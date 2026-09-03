@@ -323,6 +323,9 @@ export function pickDurationSecondsFromFfprobeJson(probe: {
 
 	for (const stream of probe.streams ?? []) {
 		push(stream.duration)
+		if (stream.codec_type !== 'video') {
+			continue
+		}
 		const framesRaw = stream.nb_frames
 		const frames =
 			typeof framesRaw === 'number'

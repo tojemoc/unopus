@@ -142,4 +142,28 @@ describe('pickDurationSecondsFromFfprobeJson', () => {
 			18
 		)
 	})
+
+	it('ignores frame-derived duration from non-video streams', () => {
+		assert.equal(
+			pickDurationSecondsFromFfprobeJson({
+				format: { duration: '12.000000' },
+				streams: [
+					{
+						codec_type: 'video',
+						duration: '12.000000',
+						nb_frames: '300',
+						avg_frame_rate: '25/1'
+					},
+					{
+						codec_type: 'audio',
+						duration: '12.000000',
+						// Packet count + bogus rate must not inflate past the video candidate (12s).
+						nb_frames: '441000',
+						avg_frame_rate: '1/1'
+					}
+				]
+			}),
+			12
+		)
+	})
 })
