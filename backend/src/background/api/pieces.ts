@@ -23,6 +23,7 @@ import type { SessionUser } from '../auth/types'
 import { mutations as typeManifestMutations, resolveManifestId } from './typeManifests'
 import { resolveSourceEnabled, trimSourceText } from '../sourcePayload'
 import { spliceReorder, resolveReorderTargetIndex } from '../util'
+import { encodeJsonMergePatchClears } from '../jsonMergePatch'
 
 export function comparePieceOrder(a: Piece, b: Piece): number {
 	const rankA = typeof a.rank === 'number' ? a.rank : Number.MAX_SAFE_INTEGER
@@ -299,15 +300,18 @@ export const mutations = {
 			return { error: existing.error ?? new Error(`Piece with id ${payload.id} not found`) }
 		}
 
-		const update = {
-			...payload,
-			payload: undefined,
-			id: null,
-			playlistId: null,
-			rundownId: null,
-			segmentId: null,
-			partId: null
-		}
+		const update = encodeJsonMergePatchClears(
+			{
+				...payload,
+				payload: undefined,
+				id: null,
+				playlistId: null,
+				rundownId: null,
+				segmentId: null,
+				partId: null
+			} as Record<string, unknown>,
+			['duration', 'start']
+		)
 
 		try {
 			let sql: string

@@ -18,7 +18,8 @@ import {
 	DEFAULT_WIPE_DURATION_SECONDS,
 	WIPE_CUT_POINT_SECONDS,
 	formatSecondsPrecise,
-	getPieceSourceDurationSeconds
+	getPieceSourceDurationSeconds,
+	pieceInheritsPartDuration
 } from '~/util/pieceDuration'
 import {
 	isBypassClipField,
@@ -465,6 +466,12 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 									(field.state.value === undefined ||
 										field.state.value === null ||
 										field.state.value === 0)
+								const isEmpty =
+									field.state.value === undefined ||
+									field.state.value === null ||
+									field.state.value === 0
+								const holdUntilTake =
+									isEmpty && pieceInheritsPartDuration(piece.pieceType)
 
 								return (
 									<>
@@ -481,7 +488,9 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 												placeholder={
 													piece.pieceType === 'wipe'
 														? String(DEFAULT_WIPE_DURATION_SECONDS)
-														: undefined
+														: holdUntilTake
+															? 'until Take'
+															: undefined
 												}
 												onBlur={field.handleBlur}
 												onChange={(e) => {
@@ -493,6 +502,11 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 												<Form.Text muted className="small">
 													Default {DEFAULT_WIPE_DURATION_SECONDS}s · cut at{' '}
 													{formatSecondsPrecise(WIPE_CUT_POINT_SECONDS)}
+												</Form.Text>
+											) : null}
+											{holdUntilTake ? (
+												<Form.Text muted className="small">
+													Empty = stay until Take (not filled from part duration)
 												</Form.Text>
 											) : null}
 										</Form.Group>

@@ -54,13 +54,20 @@ describe('syncStoryDurationsForPart', () => {
 		db.prepare(
 			`INSERT OR REPLACE INTO segments (id, playlistId, rundownId, document) VALUES (?, NULL, ?, ?)`
 		).run(segmentId, rundownId, JSON.stringify({ name: 'sync-test-seg', rank: 0 }))
+		// 30 chars @ default 15 CPS → 2s script duration; force onto headline
 		db.prepare(
 			`INSERT OR REPLACE INTO parts (id, playlistId, rundownId, segmentId, document) VALUES (?, NULL, ?, ?, ?)`
 		).run(
 			partId,
 			rundownId,
 			segmentId,
-			JSON.stringify({ name: 'sync-test-part', rank: 0, duration: 6 })
+			JSON.stringify({
+				name: 'sync-test-part',
+				rank: 0,
+				partType: 'ilu',
+				script: 'a'.repeat(30),
+				duration: 99
+			})
 		)
 		db.prepare(
 			`INSERT OR REPLACE INTO pieces (id, playlistId, rundownId, segmentId, partId, document) VALUES (?, NULL, ?, ?, ?, ?)`
@@ -69,7 +76,7 @@ describe('syncStoryDurationsForPart', () => {
 			rundownId,
 			segmentId,
 			partId,
-			JSON.stringify({ name: 'mod', pieceType: 'l3d-mod', duration: '8', rank: 0 })
+			JSON.stringify({ name: 'il', pieceType: 'headline', duration: '8', rank: 0 })
 		)
 	}
 
@@ -95,9 +102,31 @@ describe('syncStoryDurationsForPart', () => {
 		db.prepare(`DELETE FROM rundowns WHERE id = ?`).run(rundownId)
 	})
 
-	it('repairs JSON string piece duration via the unset UPDATE path', async () => {
+	it('force-repairs JSON string headline duration from ILU script reading time', async () => {
 		await syncStoryDurationsForPart(partId)
-		assert.equal(readPieceDuration(), 6)
+		assert.equal(readPieceDuration(), 2)
+	})
+
+	it('leaves empty L3D On air alone (no part inherit fill)', async () => {
+		const l3dId = 'story-duration-sync-test-l3d'
+		db.prepare(
+			`INSERT OR REPLACE INTO pieces (id, playlistId, rundownId, segmentId, partId, document) VALUES (?, NULL, ?, ?, ?, ?)`
+		).run(
+			l3dId,
+			rundownId,
+			segmentId,
+			partId,
+			JSON.stringify({ name: 'mod', pieceType: 'l3d-mod', rank: 1 })
+		)
+		try {
+			await syncStoryDurationsForPart(partId)
+			const row = db.prepare(`SELECT document FROM pieces WHERE id = ?`).get(l3dId) as {
+				document: string
+			}
+			assert.equal((JSON.parse(row.document) as { duration?: unknown }).duration, undefined)
+		} finally {
+			db.prepare(`DELETE FROM pieces WHERE id = ?`).run(l3dId)
+		}
 	})
 
 	it('serializes concurrent calls so the second waits for the first locked path', async () => {
@@ -131,6 +160,6 @@ describe('syncStoryDurationsForPart', () => {
 		}
 		await Promise.all([first, second])
 		assert.equal(enteredLocked, 2)
-		assert.equal(readPieceDuration(), 6)
+		assert.equal(readPieceDuration(), 2)
 	})
 })

@@ -42,6 +42,7 @@ import { syncStoryDurationsForPart, broadcastStoryDurationSync } from '../storyD
 import { partUsesScriptDuration } from '../scriptReadingTime'
 import { isPositiveDurationSeconds } from '../storyDuration'
 import { readApplicationSettingsSync } from '../settingsResolver'
+import { encodeJsonMergePatchClears } from '../jsonMergePatch'
 
 function partExcludedFromSofie(part: Part): boolean {
 	return Boolean(part.float || part.skip)
@@ -560,13 +561,16 @@ export const mutations = {
 		}
 	},
 	async update(payload: MutationPartUpdate): Promise<{ result?: Part; error?: Error }> {
-		const update = {
-			...payload,
-			id: null,
-			playlistId: null,
-			rundownId: null,
-			segmentId: null
-		}
+		const update = encodeJsonMergePatchClears(
+			{
+				...payload,
+				id: null,
+				playlistId: null,
+				rundownId: null,
+				segmentId: null
+			} as Record<string, unknown>,
+			['duration']
+		)
 
 		try {
 			const stmt = db.prepare(`
