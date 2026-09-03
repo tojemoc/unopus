@@ -59,14 +59,7 @@ export function parseDurationClockInput(raw: string): number | undefined {
 		return undefined
 	}
 
-	let h = 0
-	let m = 0
-	let s = 0
-	if (nums.length === 3) {
-		;[h, m, s] = nums
-	} else {
-		;[m, s] = nums
-	}
+	const [h, m, s] = nums.length === 3 ? nums : [0, nums[0], nums[1]]
 	if (m > 59 || s > 59) {
 		return undefined
 	}
