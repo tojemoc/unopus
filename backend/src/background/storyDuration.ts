@@ -1,12 +1,14 @@
 /**
- * Story (part) ↔ timed graphic piece duration inheritance.
+ * Story (part) ↔ timed graphic piece duration rules.
  *
  * Single source of truth for what Rundown Editor displays and exports to Sofie ingest.
- * Keep in sync with megarepo assets piece types that need on-air enable length.
  *
  * Duration sources:
- * - ILU / DoubleBox parts → part script reading time (CPS) → ILU pieces
- * - SYN / VO / VT parts → ffprobe length on the video piece
+ * - ILU / DoubleBox parts → part script reading time (CPS) → script-receiving pieces (force)
+ * - SYN / VO / VT: media picker seeds On air + sourceDuration from ffprobe; editorial On air
+ *   is never force-overwritten by source length (operators may trim timing or clear it)
+ * - L3D / inheriting graphics: empty On air is intentional → Sofie enable without duration
+ *   (hold until Take). Do not auto-fill from part duration on save.
  * - Skipped parts/pieces are excluded from timing
  */
 import {
@@ -38,7 +40,8 @@ export function isPositiveDurationSeconds(
 }
 
 /**
- * Check if a piece type inherits duration from its parent part.
+ * Piece types that historically inherited part On air in the Dur column.
+ * Empty On air on these types means hold until Take (not auto-filled from part).
  */
 export function pieceInheritsPartDuration(pieceType: string): boolean {
 	return STORY_DURATION_INHERIT_PIECE_TYPES.has(pieceType.trim().toLowerCase())
@@ -129,19 +132,22 @@ export function resolveScriptDerivedPartDuration(
 	return estimateScriptReadingSeconds(part.script, options?.scriptCps)
 }
 
-/** Effective on-air duration for one piece (seconds), before persistence. */
+/**
+ * Effective on-air duration for one piece (seconds).
+ *
+ * Empty duration is intentional: L3Ds hold until Take; video pieces fall back to
+ * `sourceDuration` (minus trims) at playout in blueprints. Part duration is not
+ * substituted here — that used to make cleared L3Ds reappear with a short enable.
+ */
 export function resolvePieceOnAirDuration(
 	piece: Pick<StoryDurationPiece, 'duration' | 'pieceType' | 'skip'>,
-	partDuration: number | undefined
+	_partDuration?: number | undefined
 ): number | undefined {
 	if (piece.skip) {
 		return undefined
 	}
 	if (isPositiveDurationSeconds(piece.duration)) {
 		return piece.duration
-	}
-	if (pieceInheritsPartDuration(piece.pieceType) && isPositiveDurationSeconds(partDuration)) {
-		return partDuration
 	}
 	return undefined
 }
@@ -214,9 +220,10 @@ export type StoryDurationSyncPlan = {
  * Compute DB updates so stored part/piece durations match what we export to Sofie.
  *
  * 1. ILU-family + script → force part + script-receiving pieces to reading time
- * 2. Part duration → inheriting pieces with no explicit duration
- * 3. When part duration is empty → set from longest explicit child duration, then fill siblings
- * 4. Skipped pieces are never updated / never contribute
+ * 2. Never overwrite editorial piece On air from ffprobe source length
+ * 3. Never auto-fill L3D / inheriting graphics from part (empty = hold until Take)
+ * 4. When part duration is empty → set from longest explicit child On air, else trimmed source
+ * 5. Skipped pieces are never updated / never contribute
  */
 export function planStoryDurationSync(
 	part: StoryDurationPart,
@@ -237,11 +244,6 @@ export function planStoryDurationSync(
 				if (piece.duration !== scriptDuration) {
 					pieceUpdates.push({ id: piece.id, duration: scriptDuration, force: true })
 				}
-			} else if (
-				!isPositiveDurationSeconds(piece.duration) &&
-				pieceInheritsPartDuration(piece.pieceType)
-			) {
-				pieceUpdates.push({ id: piece.id, duration: scriptDuration })
 			}
 		}
 		return {
@@ -251,60 +253,28 @@ export function planStoryDurationSync(
 		}
 	}
 
-	let partDuration = part.duration
-
-	for (const piece of livePieces) {
-		const trimmed = resolveTrimmedSourceDurationSeconds(piece)
-		if (!trimmed) {
-			continue
-		}
-		if (piece.duration !== trimmed) {
-			pieceUpdates.push({ id: piece.id, duration: trimmed, force: true })
-			piece.duration = trimmed
-		}
-	}
-
-	if (isPositiveDurationSeconds(partDuration)) {
-		for (const piece of livePieces) {
-			if (
-				!isPositiveDurationSeconds(piece.duration) &&
-				pieceInheritsPartDuration(piece.pieceType)
-			) {
-				pieceUpdates.push({ id: piece.id, duration: partDuration })
-			}
-		}
+	if (isPositiveDurationSeconds(part.duration)) {
 		return { pieceUpdates }
 	}
 
-	const maxChild = resolvePartOnAirDuration(part, livePieces, options)
-	if (!isPositiveDurationSeconds(maxChild)) {
-		return { pieceUpdates }
-	}
-
-	partDuration = maxChild
-
-	const effectiveById = new Map<string, number>()
+	let maxChild = 0
 	for (const piece of livePieces) {
 		if (isPositiveDurationSeconds(piece.duration)) {
-			effectiveById.set(piece.id, piece.duration)
-		}
-	}
-	for (const update of pieceUpdates) {
-		effectiveById.set(update.id, update.duration)
-	}
-
-	for (const piece of livePieces) {
-		if (effectiveById.has(piece.id)) {
+			maxChild = Math.max(maxChild, piece.duration)
 			continue
 		}
-		if (pieceInheritsPartDuration(piece.pieceType)) {
-			pieceUpdates.push({ id: piece.id, duration: partDuration })
-			effectiveById.set(piece.id, partDuration)
+		const trimmed = resolveTrimmedSourceDurationSeconds(piece)
+		if (trimmed) {
+			maxChild = Math.max(maxChild, trimmed)
 		}
 	}
 
-	return {
-		partDuration,
-		pieceUpdates
+	if (maxChild > 0) {
+		return {
+			partDuration: maxChild,
+			pieceUpdates
+		}
 	}
+
+	return { pieceUpdates }
 }

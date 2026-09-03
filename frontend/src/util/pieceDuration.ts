@@ -9,10 +9,11 @@
 import {
 	resolvePieceOnAirDuration,
 	resolvePartOnAirDuration,
+	pieceInheritsPartDuration,
 	type StoryDurationOptions
 } from '~backend/background/storyDuration'
 
-export { resolvePieceOnAirDuration, resolvePartOnAirDuration }
+export { resolvePieceOnAirDuration, resolvePartOnAirDuration, pieceInheritsPartDuration }
 
 export const DEFAULT_WIPE_DURATION_SECONDS = 2.5
 

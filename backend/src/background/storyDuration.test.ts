@@ -9,18 +9,22 @@ import {
 } from './storyDuration.js'
 
 describe('storyDuration', () => {
-	it('resolves piece duration from part when inheriting type has none', () => {
+	it('does not inherit part duration onto empty L3D pieces (hold until Take)', () => {
 		assert.equal(
 			resolvePieceOnAirDuration({ pieceType: 'l3d-mod', duration: undefined }, 6),
-			6
+			undefined
 		)
 		assert.equal(
 			resolvePieceOnAirDuration({ pieceType: 'l3d-predstavovak', duration: undefined }, 6),
-			6
+			undefined
 		)
 		assert.equal(
 			resolvePieceOnAirDuration({ pieceType: 'l3d-odporucanie', duration: undefined }, 6),
-			6
+			undefined
+		)
+		assert.equal(
+			resolvePieceOnAirDuration({ pieceType: 'l3d-mod', duration: 4 }, 6),
+			4
 		)
 		assert.equal(
 			resolvePieceOnAirDuration({ pieceType: 'logo-bug', duration: undefined }, 6),
@@ -41,7 +45,7 @@ describe('storyDuration', () => {
 		)
 	})
 
-	it('plans Mod story sync: part → l3d-mod when piece unset', () => {
+	it('does not plan part → L3D fills when piece On air is empty', () => {
 		const plan = planStoryDurationSync(
 			{ duration: 6 },
 			[
@@ -51,10 +55,10 @@ describe('storyDuration', () => {
 		)
 
 		assert.equal(plan.partDuration, undefined)
-		assert.deepEqual(plan.pieceUpdates, [{ id: 'mod', duration: 6 }])
+		assert.deepEqual(plan.pieceUpdates, [])
 	})
 
-	it('plans story sync: part → l3d-predstavovak and l3d-odporucanie when unset', () => {
+	it('does not plan part → predstavovak / odporucanie fills when unset', () => {
 		const plan = planStoryDurationSync(
 			{ duration: 6 },
 			[
@@ -65,13 +69,10 @@ describe('storyDuration', () => {
 		)
 
 		assert.equal(plan.partDuration, undefined)
-		assert.deepEqual(plan.pieceUpdates, [
-			{ id: 'pred', duration: 6 },
-			{ id: 'odp', duration: 6 }
-		])
+		assert.deepEqual(plan.pieceUpdates, [])
 	})
 
-	it('plans Mod story sync: child → part when part unset', () => {
+	it('plans part duration from longest child when part unset, without filling siblings', () => {
 		const plan = planStoryDurationSync(
 			{ duration: 0 },
 			[
@@ -82,7 +83,7 @@ describe('storyDuration', () => {
 		)
 
 		assert.equal(plan.partDuration, 8)
-		assert.deepEqual(plan.pieceUpdates, [{ id: 'tema', duration: 8 }])
+		assert.deepEqual(plan.pieceUpdates, [])
 	})
 
 	it('derives ILU part duration from script reading time', () => {
@@ -97,7 +98,7 @@ describe('storyDuration', () => {
 		)
 	})
 
-	it('plans ILU script sync onto headline and part', () => {
+	it('plans ILU script sync onto headline only (not L3D inherit fill)', () => {
 		const script = 'a'.repeat(30)
 		const plan = planStoryDurationSync(
 			{ partType: 'ilu', script, duration: 99 },
@@ -111,10 +112,7 @@ describe('storyDuration', () => {
 
 		assert.equal(plan.partDuration, 2)
 		assert.equal(plan.forcePartDuration, true)
-		assert.deepEqual(plan.pieceUpdates, [
-			{ id: 'il', duration: 2, force: true },
-			{ id: 'l3d', duration: 2 }
-		])
+		assert.deepEqual(plan.pieceUpdates, [{ id: 'il', duration: 2, force: true }])
 	})
 
 	it('excludes skipped pieces from duration and sync', () => {
@@ -138,7 +136,7 @@ describe('storyDuration', () => {
 			{ id: 'il', pieceType: 'headline', skip: true },
 			{ id: 'l3d', pieceType: 'l3d-headline' }
 		])
-		assert.deepEqual(plan.pieceUpdates, [{ id: 'l3d', duration: 6 }])
+		assert.deepEqual(plan.pieceUpdates, [])
 	})
 
 	it('skipped parts contribute nothing to rundown sum', () => {
@@ -158,7 +156,7 @@ describe('storyDuration', () => {
 		assert.equal(total, 10)
 	})
 
-	it('trims SYN sourceDuration by trimIn/trimOut and writes piece duration', () => {
+	it('does not force-overwrite editorial On air from trimmed sourceDuration', () => {
 		assert.equal(
 			resolveTrimmedSourceDurationSeconds({
 				pieceType: 'video',
@@ -171,11 +169,24 @@ describe('storyDuration', () => {
 			{
 				id: 'syn',
 				pieceType: 'video',
+				duration: 18,
+				payload: { sourceDuration: 12000, trimIn: 2, trimOut: 1 }
+			}
+		])
+		assert.equal(plan.partDuration, 18)
+		assert.deepEqual(plan.pieceUpdates, [])
+	})
+
+	it('uses trimmed source for part duration when video On air is empty', () => {
+		const plan = planStoryDurationSync({ duration: 0, partType: 'syn' }, [
+			{
+				id: 'syn',
+				pieceType: 'video',
 				payload: { sourceDuration: 12000, trimIn: 2, trimOut: 1 }
 			}
 		])
 		assert.equal(plan.partDuration, 9)
-		assert.deepEqual(plan.pieceUpdates, [{ id: 'syn', duration: 9, force: true }])
+		assert.deepEqual(plan.pieceUpdates, [])
 	})
 
 	it('rejects trimmed durations that round to zero', () => {

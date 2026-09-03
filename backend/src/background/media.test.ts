@@ -4,6 +4,7 @@ import { db } from './db.js'
 import {
 	getBundledGfxTemplatesRoot,
 	getPreviewBaseUrl,
+	pickDurationSecondsFromFfprobeJson,
 	resolveGfxTemplateRoots
 } from './media.js'
 import { readApplicationSettingsSync } from './settingsResolver.js'
@@ -89,5 +90,38 @@ describe('resolveGfxTemplateRoots', () => {
 		const bundled = getBundledGfxTemplatesRoot()
 		const roots = resolveGfxTemplateRoots()
 		assert.ok(roots.includes(bundled), `expected bundled root ${bundled} in ${roots.join(', ')}`)
+	})
+})
+
+describe('pickDurationSecondsFromFfprobeJson', () => {
+	it('prefers nb_frames / fps when container duration tags are short', () => {
+		assert.equal(
+			pickDurationSecondsFromFfprobeJson({
+				format: { duration: '12.000000' },
+				streams: [
+					{
+						codec_type: 'video',
+						duration: '12.000000',
+						nb_frames: '450',
+						avg_frame_rate: '25/1'
+					},
+					{
+						codec_type: 'audio',
+						duration: '12.000000'
+					}
+				]
+			}),
+			18
+		)
+	})
+
+	it('returns format duration when frames are absent', () => {
+		assert.equal(
+			pickDurationSecondsFromFfprobeJson({
+				format: { duration: '18.04' },
+				streams: [{ codec_type: 'video', duration: '18.0' }]
+			}),
+			18
+		)
 	})
 })

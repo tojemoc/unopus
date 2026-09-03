@@ -289,6 +289,68 @@ async function probeDurationCached(
 }
 
 /**
+ * Pick a playable duration (seconds) from ffprobe JSON.
+ *
+ * Container `format.duration` / stream `duration` tags are often wrong on NLE /
+ * phone exports (mvhd lies while samples are longer). Prefer the longest of:
+ * - format.duration
+ * - per-stream duration
+ * - video `nb_frames / avg_frame_rate` when both are present
+ *
+ * That matches what Chromium's `<video>` typically reports for the same file.
+ */
+export function pickDurationSecondsFromFfprobeJson(probe: {
+	format?: { duration?: string | number }
+	streams?: Array<{
+		codec_type?: string
+		duration?: string | number
+		nb_frames?: string | number
+		avg_frame_rate?: string
+		r_frame_rate?: string
+	}>
+}): number | undefined {
+	const candidates: number[] = []
+
+	const push = (raw: unknown) => {
+		const seconds =
+			typeof raw === 'number' ? raw : typeof raw === 'string' ? Number.parseFloat(raw) : Number.NaN
+		if (Number.isFinite(seconds) && seconds > 0) {
+			candidates.push(seconds)
+		}
+	}
+
+	push(probe.format?.duration)
+
+	for (const stream of probe.streams ?? []) {
+		push(stream.duration)
+		const framesRaw = stream.nb_frames
+		const frames =
+			typeof framesRaw === 'number'
+				? framesRaw
+				: typeof framesRaw === 'string'
+					? Number.parseInt(framesRaw, 10)
+					: Number.NaN
+		const rateStr = stream.avg_frame_rate || stream.r_frame_rate
+		if (Number.isFinite(frames) && frames > 0 && typeof rateStr === 'string' && rateStr.includes('/')) {
+			const [numStr, denStr] = rateStr.split('/')
+			const num = Number.parseFloat(numStr)
+			const den = Number.parseFloat(denStr)
+			if (Number.isFinite(num) && Number.isFinite(den) && den > 0 && num > 0) {
+				candidates.push(frames / (num / den))
+			}
+		}
+	}
+
+	if (candidates.length === 0) {
+		return undefined
+	}
+
+	const seconds = Math.max(...candidates)
+	// Round to 0.1s for editor friendliness.
+	return Math.round(seconds * 10) / 10
+}
+
+/**
  * Probe clip duration in seconds via ffprobe. Returns undefined when unavailable.
  */
 export async function probeMediaDurationSeconds(absolutePath: string): Promise<number | undefined> {
@@ -316,9 +378,9 @@ export async function probeMediaDurationSeconds(absolutePath: string): Promise<n
 				'-v',
 				'error',
 				'-show_entries',
-				'format=duration',
+				'format=duration:stream=duration,nb_frames,avg_frame_rate,r_frame_rate,codec_type',
 				'-of',
-				'default=noprint_wrappers=1:nokey=1',
+				'json',
 				absolutePath
 			],
 			{ stdio: ['ignore', 'pipe', 'ignore'] }
@@ -340,13 +402,12 @@ export async function probeMediaDurationSeconds(absolutePath: string): Promise<n
 				finish(undefined)
 				return
 			}
-			const seconds = Number.parseFloat(stdout.trim())
-			if (!Number.isFinite(seconds) || seconds <= 0) {
+			try {
+				const parsed = JSON.parse(stdout) as Parameters<typeof pickDurationSecondsFromFfprobeJson>[0]
+				finish(pickDurationSecondsFromFfprobeJson(parsed))
+			} catch {
 				finish(undefined)
-				return
 			}
-			// Round to 0.1s for editor friendliness.
-			finish(Math.round(seconds * 10) / 10)
 		})
 	})
 }
