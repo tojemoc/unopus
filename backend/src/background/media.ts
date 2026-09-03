@@ -330,14 +330,12 @@ export function pickDurationSecondsFromFfprobeJson(probe: {
 				: typeof framesRaw === 'string'
 					? Number.parseInt(framesRaw, 10)
 					: Number.NaN
-		const rateStr = stream.avg_frame_rate || stream.r_frame_rate
-		if (Number.isFinite(frames) && frames > 0 && typeof rateStr === 'string' && rateStr.includes('/')) {
-			const [numStr, denStr] = rateStr.split('/')
-			const num = Number.parseFloat(numStr)
-			const den = Number.parseFloat(denStr)
-			if (Number.isFinite(num) && Number.isFinite(den) && den > 0 && num > 0) {
-				candidates.push(frames / (num / den))
-			}
+		if (!Number.isFinite(frames) || frames <= 0) {
+			continue
+		}
+		const rate = parseFfprobeFrameRate(stream.avg_frame_rate) ?? parseFfprobeFrameRate(stream.r_frame_rate)
+		if (rate !== undefined) {
+			candidates.push(frames / rate)
 		}
 	}
 
@@ -348,6 +346,20 @@ export function pickDurationSecondsFromFfprobeJson(probe: {
 	const seconds = Math.max(...candidates)
 	// Round to 0.1s for editor friendliness.
 	return Math.round(seconds * 10) / 10
+}
+
+/** Parse ffprobe `N/D` rates; reject missing, non-finite, and `0/0`. */
+function parseFfprobeFrameRate(rateStr: string | undefined): number | undefined {
+	if (typeof rateStr !== 'string' || !rateStr.includes('/')) {
+		return undefined
+	}
+	const [numStr, denStr] = rateStr.split('/')
+	const num = Number.parseFloat(numStr)
+	const den = Number.parseFloat(denStr)
+	if (!Number.isFinite(num) || !Number.isFinite(den) || den <= 0 || num <= 0) {
+		return undefined
+	}
+	return num / den
 }
 
 /**

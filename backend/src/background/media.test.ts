@@ -124,4 +124,22 @@ describe('pickDurationSecondsFromFfprobeJson', () => {
 			18
 		)
 	})
+
+	it('falls back to r_frame_rate when avg_frame_rate is 0/0', () => {
+		assert.equal(
+			pickDurationSecondsFromFfprobeJson({
+				format: { duration: '12.000000' },
+				streams: [
+					{
+						codec_type: 'video',
+						duration: '12.000000',
+						nb_frames: '450',
+						avg_frame_rate: '0/0',
+						r_frame_rate: '25/1'
+					}
+				]
+			}),
+			18
+		)
+	})
 })
