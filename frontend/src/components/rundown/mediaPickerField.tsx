@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
-import { Button, Form, InputGroup } from 'react-bootstrap'
+import { Button, Form, InputGroup, Spinner } from 'react-bootstrap'
 import {
 	ensureRundownMediaFolder,
 	fetchAppConfig,
@@ -7,6 +7,7 @@ import {
 	fetchRundownMedia
 } from '~/lib/mediaApi'
 import type { MediaFileEntry } from '~backend/background/interfaces'
+import { findNearDuplicateMediaNames, formatSecondsClock } from '~/util/pieceDuration'
 
 const MEDIA_POLL_MS = 10_000
 
@@ -20,7 +21,7 @@ function formatMediaOptionLabel(file: MediaFileEntry): string {
 		statusText = reason ? `not confirmed: ${reason}` : 'not confirmed'
 	}
 	if (file.durationSeconds) {
-		return `${file.name} (${file.durationSeconds}s) (${statusText})`
+		return `${file.name} (${formatSecondsClock(file.durationSeconds)}) (${statusText})`
 	}
 	return `${file.name} (${statusText})`
 }
@@ -51,6 +52,8 @@ export function MediaPickerField({
 	const [creatingFolder, setCreatingFolder] = useState(false)
 	const [error, setError] = useState<string | null>(null)
 	const [ingestMediaRoot, setIngestMediaRoot] = useState<string | null>(null)
+	const [probing, setProbing] = useState(false)
+	const [lastProbeSeconds, setLastProbeSeconds] = useState<number | undefined>(undefined)
 	const requestIdRef = useRef(0)
 	const durationRequestIdRef = useRef(0)
 	const datalistId = useId()
@@ -129,30 +132,42 @@ export function MediaPickerField({
 	}, [loadMedia])
 
 	const emitDurationForPath = useCallback(
-		async (mediaPath: string, knownSeconds?: number) => {
+		async (mediaPath: string, _knownSeconds?: number, forceProbe = false) => {
 			if (!onDurationSeconds) {
 				return
 			}
 			const requestId = ++durationRequestIdRef.current
-			if (typeof knownSeconds === 'number' && Number.isFinite(knownSeconds) && knownSeconds > 0) {
-				onDurationSeconds(knownSeconds)
-				return
-			}
 			if (!mediaPath.trim()) {
+				setLastProbeSeconds(undefined)
+				setProbing(false)
 				onDurationSeconds(undefined)
 				return
 			}
+
+			// Always re-run ffprobe on explicit picks so Source length updates visibly
+			// (listing cache can be stale after a file replace).
+			if (!forceProbe && typeof _knownSeconds === 'number' && Number.isFinite(_knownSeconds) && _knownSeconds > 0) {
+				// Kept for blur-without-change paths that only need a soft fill.
+			}
+
+			setProbing(true)
 			try {
 				const seconds = await fetchMediaDurationSeconds(mediaPath.trim())
 				if (requestId !== durationRequestIdRef.current) {
 					return
 				}
+				setLastProbeSeconds(seconds)
 				onDurationSeconds(seconds)
 			} catch {
 				if (requestId !== durationRequestIdRef.current) {
 					return
 				}
+				setLastProbeSeconds(undefined)
 				onDurationSeconds(undefined)
+			} finally {
+				if (requestId === durationRequestIdRef.current) {
+					setProbing(false)
+				}
 			}
 		},
 		[onDurationSeconds]
@@ -161,8 +176,10 @@ export function MediaPickerField({
 	const handlePathChange = useCallback(
 		(nextPath: string, knownSeconds?: number, probeNow = false) => {
 			onChange(nextPath)
-			if (probeNow || typeof knownSeconds === 'number') {
-				void emitDurationForPath(nextPath, knownSeconds)
+			if (probeNow) {
+				void emitDurationForPath(nextPath, knownSeconds, true)
+			} else if (typeof knownSeconds === 'number') {
+				void emitDurationForPath(nextPath, knownSeconds, false)
 			}
 		},
 		[emitDurationForPath, onChange]
@@ -186,6 +203,14 @@ export function MediaPickerField({
 		absoluteFolderPath ??
 		(ingestMediaRoot ? `${ingestMediaRoot.replace(/[/\\]+$/, '')}/${logicalFolderPath}` : null)
 
+	const nearDuplicates =
+		value && value.trim()
+			? findNearDuplicateMediaNames(
+					value.trim(),
+					files.map((f) => f.path)
+				)
+			: []
+
 	return (
 		<>
 			<InputGroup>
@@ -197,7 +222,7 @@ export function MediaPickerField({
 					disabled={initialLoading}
 					onBlur={() => {
 						onBlur()
-						void emitDurationForPath(value ?? '')
+						void emitDurationForPath(value ?? '', undefined, true)
 					}}
 					onChange={(e) => handlePathChange(e.target.value.trimStart())}
 					autoComplete="off"
@@ -241,6 +266,28 @@ export function MediaPickerField({
 					))}
 				</Form.Select>
 			)}
+			{onDurationSeconds ? (
+				<Form.Text className="d-block mt-1">
+					{probing ? (
+						<span className="text-primary">
+							<Spinner animation="border" size="sm" className="me-1" />
+							Probing media duration…
+						</span>
+					) : typeof lastProbeSeconds === 'number' ? (
+						<span className="text-success">
+							Source length: {formatSecondsClock(lastProbeSeconds)} ({lastProbeSeconds}s)
+						</span>
+					) : value?.trim() ? (
+						<span className="text-muted">Pick a clip to measure Source length</span>
+					) : null}
+				</Form.Text>
+			) : null}
+			{nearDuplicates.length > 0 ? (
+				<Form.Text className="text-warning d-block mt-1">
+					Near-duplicate filename(s) in this folder — confirm the on-air pick:{' '}
+					{nearDuplicates.map((p) => p.split(/[/\\]/).pop()).join(', ')}
+				</Form.Text>
+			) : null}
 			{error && (
 				<Form.Text className="text-warning d-block">
 					Could not list media: {error}
