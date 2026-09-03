@@ -469,7 +469,6 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 								const isEmpty =
 									field.state.value === undefined ||
 									field.state.value === null ||
-									field.state.value === '' ||
 									field.state.value === 0
 								const holdUntilTake =
 									isEmpty && pieceInheritsPartDuration(piece.pieceType)
