@@ -33,7 +33,8 @@ export function MediaPickerField({
 	onChange,
 	onBlur,
 	name,
-	onDurationSeconds
+	onDurationSeconds,
+	onDurationClear
 }: {
 	rundownId: string
 	subdir?: string
@@ -43,6 +44,8 @@ export function MediaPickerField({
 	name: string
 	/** Fired when a clip is selected and ffprobe reports a duration (seconds). */
 	onDurationSeconds?: (durationSeconds: number | undefined) => void
+	/** Fired when the media path is cleared or replaced before a new probe completes. */
+	onDurationClear?: () => void
 }) {
 	const [files, setFiles] = useState<MediaFileEntry[]>([])
 	const [folderPath, setFolderPath] = useState<string | null>(null)
@@ -133,14 +136,14 @@ export function MediaPickerField({
 
 	const emitDurationForPath = useCallback(
 		async (mediaPath: string, _knownSeconds?: number, forceProbe = false) => {
-			if (!onDurationSeconds) {
+			if (!onDurationSeconds && !onDurationClear) {
 				return
 			}
 			const requestId = ++durationRequestIdRef.current
 			if (!mediaPath.trim()) {
 				setLastProbeSeconds(undefined)
 				setProbing(false)
-				onDurationSeconds(undefined)
+				onDurationClear?.()
 				return
 			}
 
@@ -156,21 +159,26 @@ export function MediaPickerField({
 				if (requestId !== durationRequestIdRef.current) {
 					return
 				}
-				setLastProbeSeconds(seconds)
-				onDurationSeconds(seconds)
+				if (typeof seconds === 'number' && Number.isFinite(seconds) && seconds > 0) {
+					setLastProbeSeconds(seconds)
+					onDurationSeconds?.(seconds)
+				} else {
+					setLastProbeSeconds(undefined)
+					onDurationClear?.()
+				}
 			} catch {
 				if (requestId !== durationRequestIdRef.current) {
 					return
 				}
 				setLastProbeSeconds(undefined)
-				onDurationSeconds(undefined)
+				onDurationClear?.()
 			} finally {
 				if (requestId === durationRequestIdRef.current) {
 					setProbing(false)
 				}
 			}
 		},
-		[onDurationSeconds]
+		[onDurationClear, onDurationSeconds]
 	)
 
 	const handlePathChange = useCallback(
@@ -178,6 +186,7 @@ export function MediaPickerField({
 			durationRequestIdRef.current += 1
 			setProbing(false)
 			setLastProbeSeconds(undefined)
+			onDurationClear?.()
 			onChange(nextPath)
 			if (probeNow) {
 				void emitDurationForPath(nextPath, knownSeconds, true)
@@ -185,7 +194,7 @@ export function MediaPickerField({
 				void emitDurationForPath(nextPath, knownSeconds, false)
 			}
 		},
-		[emitDurationForPath, onChange]
+		[emitDurationForPath, onChange, onDurationClear]
 	)
 
 	const handleCreateFolder = useCallback(async () => {
