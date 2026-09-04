@@ -31,7 +31,8 @@ jobs:
       - name: Validate production dependencies
         run: |
           set -euo pipefail
-          git fetch --depth=1 origin "$DEFAULT_BRANCH"
+          # Prefer refs/heads/ so a same-named tag cannot shadow the trusted branch.
+          git fetch --depth=1 origin "refs/heads/${DEFAULT_BRANCH}:refs/remotes/origin/${DEFAULT_BRANCH}"
           gate="$(mktemp)"
           trap 'rm -f "$gate"' EXIT
           # Run the gate from the default branch so a pushed rewrite of the script
@@ -72,7 +73,7 @@ jobs:
       - name: Validate production dependencies
         run: |
           set -euo pipefail
-          git fetch --depth=1 origin "$DEFAULT_BRANCH"
+          git fetch --depth=1 origin "refs/heads/${DEFAULT_BRANCH}:refs/remotes/origin/${DEFAULT_BRANCH}"
           gate="$(mktemp)"
           trap 'rm -f "$gate"' EXIT
           if ! git show "origin/${DEFAULT_BRANCH}:scripts/ci-should-skip-audit.sh" >"$gate"; then
@@ -93,7 +94,7 @@ jobs:
       - name: Validate dev dependencies
         run: |
           set -euo pipefail
-          git fetch --depth=1 origin "$DEFAULT_BRANCH"
+          git fetch --depth=1 origin "refs/heads/${DEFAULT_BRANCH}:refs/remotes/origin/${DEFAULT_BRANCH}"
           gate="$(mktemp)"
           trap 'rm -f "$gate"' EXIT
           if ! git show "origin/${DEFAULT_BRANCH}:scripts/ci-should-skip-audit.sh" >"$gate"; then
