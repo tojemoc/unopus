@@ -82,7 +82,7 @@ export function findNearDuplicateMediaNames(selectedPath: string, allPaths: stri
 			continue
 		}
 		const other = basenameStemExt(otherPath)
-		if (!other || other.ext !== selected.ext) {
+		if (!other || other.dir !== selected.dir || other.ext !== selected.ext) {
 			continue
 		}
 		if (stemsNearDuplicate(selected.stem, other.stem)) {
@@ -92,17 +92,20 @@ export function findNearDuplicateMediaNames(selectedPath: string, allPaths: stri
 	return matches
 }
 
-function basenameStemExt(path: string): { stem: string; ext: string } | null {
+function basenameStemExt(path: string): { dir: string; stem: string; ext: string } | null {
 	const normalized = path.replace(/\\/g, '/').trim()
 	if (!normalized) {
 		return null
 	}
-	const base = normalized.split('/').pop() ?? ''
+	const parts = normalized.split('/')
+	const base = parts.pop() ?? ''
+	const dir = parts.join('/').toLowerCase()
 	const dot = base.lastIndexOf('.')
 	if (dot <= 0) {
-		return { stem: base.toLowerCase(), ext: '' }
+		return { dir, stem: base.toLowerCase(), ext: '' }
 	}
 	return {
+		dir,
 		stem: base.slice(0, dot).toLowerCase(),
 		ext: base.slice(dot).toLowerCase()
 	}
@@ -118,7 +121,18 @@ function stemsNearDuplicate(a: string, b: string): boolean {
 		return false
 	}
 	if (longer.length === shorter.length + 1) {
-		return longer.startsWith(shorter) || longer.endsWith(shorter)
+		let shortIndex = 0
+		let skipped = false
+		for (const character of longer) {
+			if (shortIndex < shorter.length && character === shorter[shortIndex]) {
+				shortIndex++
+			} else if (skipped) {
+				return false
+			} else {
+				skipped = true
+			}
+		}
+		return shortIndex === shorter.length
 	}
 	let diffs = 0
 	for (let i = 0; i < a.length; i++) {

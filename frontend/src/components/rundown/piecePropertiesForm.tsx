@@ -73,7 +73,7 @@ function ClockDurationInput({
 			id={id}
 			name={name}
 			type="text"
-			inputMode="numeric"
+			inputMode="text"
 			placeholder={placeholder}
 			value={draft}
 			onFocus={() => {

@@ -55,4 +55,17 @@ describe('findNearDuplicateMediaNames', () => {
 			'clips/SYN SUSKO2.mp4'
 		])
 	})
+
+	it('does not match identical basenames in different folders', () => {
+		const paths = ['clips/CLIP1.mp4', 'other/CLIP2.mp4', 'other/CLIP1.mp4']
+		assert.deepEqual(findNearDuplicateMediaNames('other/CLIP1.mp4', paths), ['other/CLIP2.mp4'])
+		assert.deepEqual(findNearDuplicateMediaNames('clips/CLIP1.mp4', paths), [])
+	})
+
+	it('flags a one-character insertion or deletion in the middle of the stem', () => {
+		const paths = ['clips/SYN SUSKO.mp4', 'clips/SYN SSKO.mp4', 'clips/SYN FEDOROV.mp4']
+		assert.deepEqual(findNearDuplicateMediaNames('clips/SYN SUSKO.mp4', paths), [
+			'clips/SYN SSKO.mp4'
+		])
+	})
 })

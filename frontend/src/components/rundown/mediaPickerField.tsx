@@ -175,6 +175,9 @@ export function MediaPickerField({
 
 	const handlePathChange = useCallback(
 		(nextPath: string, knownSeconds?: number, probeNow = false) => {
+			durationRequestIdRef.current += 1
+			setProbing(false)
+			setLastProbeSeconds(undefined)
 			onChange(nextPath)
 			if (probeNow) {
 				void emitDurationForPath(nextPath, knownSeconds, true)
