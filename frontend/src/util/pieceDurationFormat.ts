@@ -67,8 +67,8 @@ export function parseDurationClockInput(raw: string): number | undefined {
 }
 
 /**
- * Files whose basenames differ by only a digit or a single character (same extension).
- * Helps catch near-duplicate on-air picks (SYN1 vs SYN2, FOO vs FOO2).
+ * Files whose basenames share the same “base word” or differ by one edit (same extension).
+ * Catches on-air near-dups: SYN1 vs SYN2, FOO vs FOO2, FOO vs FOO v2 / FOO_final / FOO (3).
  */
 export function findNearDuplicateMediaNames(selectedPath: string, allPaths: string[]): string[] {
 	const selected = basenameStemExt(selectedPath)
@@ -108,8 +108,33 @@ function basenameStemExt(path: string): { stem: string; ext: string } | null {
 	}
 }
 
+/** Strip version / draft suffixes so "clip v2" and "clip_final" share a base word. */
+export function stemBaseWord(stem: string): string {
+	let s = stem.toLowerCase().trim()
+	// Repeat: FOO_v2_final → FOO
+	for (let i = 0; i < 4; i++) {
+		const next = s
+			.replace(/[\s._-]*(v|ver|version)[\s._-]*\d+$/i, '')
+			.replace(/[\s._-]*(final|draft|new|copy|alt|old|wip)[\s._-]*\d*$/i, '')
+			.replace(/[\s._-]*\(\d+\)$/, '')
+			.replace(/[\s._-]+\d+$/, '')
+			.replace(/[\s._-]+$/, '')
+			.trim()
+		if (next === s) {
+			break
+		}
+		s = next
+	}
+	return s
+}
+
 function stemsNearDuplicate(a: string, b: string): boolean {
 	if (a === b) {
+		return true
+	}
+	const baseA = stemBaseWord(a)
+	const baseB = stemBaseWord(b)
+	if (baseA && baseB && baseA === baseB) {
 		return true
 	}
 	const longer = a.length >= b.length ? a : b

@@ -284,7 +284,7 @@ export function MediaPickerField({
 			) : null}
 			{nearDuplicates.length > 0 ? (
 				<Form.Text className="text-warning d-block mt-1">
-					Near-duplicate filename(s) in this folder — confirm the on-air pick:{' '}
+					Same base name in this folder (v2 / final / similar) — confirm the on-air pick:{' '}
 					{nearDuplicates.map((p) => p.split(/[/\\]/).pop()).join(', ')}
 				</Form.Text>
 			) : null}

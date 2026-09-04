@@ -55,4 +55,19 @@ describe('findNearDuplicateMediaNames', () => {
 			'clips/SYN SUSKO2.mp4'
 		])
 	})
+
+	it('flags same base word with v2 / final / parenthetical suffixes', () => {
+		const paths = [
+			'clips/ILU REGISTER.mp4',
+			'clips/ILU REGISTER v2.mp4',
+			'clips/ILU REGISTER_final.mp4',
+			'clips/ILU REGISTER (2).mp4',
+			'clips/ILU OTHER.mp4'
+		]
+		assert.deepEqual(findNearDuplicateMediaNames('clips/ILU REGISTER.mp4', paths), [
+			'clips/ILU REGISTER v2.mp4',
+			'clips/ILU REGISTER_final.mp4',
+			'clips/ILU REGISTER (2).mp4'
+		])
+	})
 })
