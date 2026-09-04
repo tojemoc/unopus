@@ -135,7 +135,7 @@ function PayloadField({
 	form: PieceFormApi
 	fieldInfo: PayloadManifest
 	piece: Piece
-	durationFromMediaRef: React.MutableRefObject<boolean>
+	durationFromMediaRef: React.MutableRefObject<'none' | 'set' | 'clear'>
 }) {
 	return (
 		<form.Field
@@ -248,7 +248,7 @@ function PayloadField({
 									}
 									form.setFieldValue('duration', undefined)
 									form.setFieldValue('payload.sourceDuration', undefined)
-									durationFromMediaRef.current = false
+									durationFromMediaRef.current = 'clear'
 								}}
 								onDurationSeconds={(durationSeconds) => {
 									if (
@@ -266,7 +266,7 @@ function PayloadField({
 										'payload.sourceDuration',
 										Math.round(durationSeconds * 1000)
 									)
-									durationFromMediaRef.current = true
+									durationFromMediaRef.current = 'set'
 								}}
 							/>
 						)}
@@ -356,7 +356,7 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 		)
 	)
 	const parentPart = useAppSelector((state) => state.parts.parts?.find((p) => p.id === piece.partId))
-	const durationFromMediaRef = useRef(false)
+	const durationFromMediaRef = useRef<'none' | 'set' | 'clear'>('none')
 
 	const { clip, headline, content, bypass, source, other } = categorizePayloadFields(manifest)
 
@@ -388,35 +388,44 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 			}
 
 			const nextDuration = values.value.duration
-			if (
-				durationFromMediaRef.current &&
-				parentPart &&
-				typeof nextDuration === 'number' &&
-				Number.isFinite(nextDuration) &&
-				nextDuration > 0 &&
-				parentPart.duration !== nextDuration
-			) {
-				try {
-					await dispatch(
-						updatePart({
-							part: {
-								...parentPart,
-								duration: nextDuration
-							}
+			const mediaSync = durationFromMediaRef.current
+			if (mediaSync === 'set' || mediaSync === 'clear') {
+				const partDuration =
+					mediaSync === 'clear'
+						? undefined
+						: typeof nextDuration === 'number' &&
+							  Number.isFinite(nextDuration) &&
+							  nextDuration > 0
+							? nextDuration
+							: undefined
+				const shouldSyncPart =
+					parentPart &&
+					(mediaSync === 'clear'
+						? parentPart.duration !== undefined
+						: partDuration !== undefined && parentPart.duration !== partDuration)
+				if (shouldSyncPart && parentPart) {
+					try {
+						await dispatch(
+							updatePart({
+								part: {
+									...parentPart,
+									duration: partDuration
+								}
+							})
+						).unwrap()
+					} catch (e) {
+						console.error(e)
+						toasts.show({
+							headerContent: 'Updating part duration',
+							bodyContent: 'Piece saved, but part duration could not be synchronized'
 						})
-					).unwrap()
-				} catch (e) {
-					console.error(e)
-					toasts.show({
-						headerContent: 'Updating part duration',
-						bodyContent: 'Piece saved, but part duration could not be synchronized'
-					})
-					form.reset(updatedPiece)
-					return
+						form.reset(updatedPiece)
+						return
+					}
 				}
 			}
 
-			durationFromMediaRef.current = false
+			durationFromMediaRef.current = 'none'
 			form.reset(updatedPiece)
 		}
 	})
