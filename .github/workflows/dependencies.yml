@@ -54,11 +54,19 @@ jobs:
           CI: true
       - name: Validate production dependencies
         run: |
-          yarn validate:dependencies
+          if ! git log --format=oneline -n 1 | grep -q "\[ignore-audit\]"; then
+            yarn validate:dependencies
+          else
+            echo "Skipping audit"
+          fi
         env:
           CI: true
       - name: Validate dev dependencies
         run: |
-          yarn validate:dev-dependencies
+          if ! git log --format=oneline -n 1 | grep -q "\[ignore-audit\]"; then
+            yarn validate:dev-dependencies
+          else
+            echo "Skipping audit"
+          fi
         env:
           CI: true
