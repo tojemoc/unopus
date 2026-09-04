@@ -126,16 +126,19 @@ function categorizePayloadFields(manifest: TypeManifest | undefined) {
 	return { clip, headline, content, bypass, source, other }
 }
 
+/** Sync parent part duration from media probe: apply positive, clear when probe/path clears. */
+type MediaDurationPartSync = 'idle' | 'apply' | 'clear'
+
 function PayloadField({
 	form,
 	fieldInfo,
 	piece,
-	durationFromMediaRef
+	mediaDurationPartSyncRef
 }: {
 	form: PieceFormApi
 	fieldInfo: PayloadManifest
 	piece: Piece
-	durationFromMediaRef: React.MutableRefObject<boolean>
+	mediaDurationPartSyncRef: React.MutableRefObject<MediaDurationPartSync>
 }) {
 	return (
 		<form.Field
@@ -248,7 +251,7 @@ function PayloadField({
 									}
 									form.setFieldValue('duration', undefined)
 									form.setFieldValue('payload.sourceDuration', undefined)
-									durationFromMediaRef.current = false
+									mediaDurationPartSyncRef.current = 'clear'
 								}}
 								onDurationSeconds={(durationSeconds) => {
 									if (
@@ -266,7 +269,7 @@ function PayloadField({
 										'payload.sourceDuration',
 										Math.round(durationSeconds * 1000)
 									)
-									durationFromMediaRef.current = true
+									mediaDurationPartSyncRef.current = 'apply'
 								}}
 							/>
 						)}
@@ -356,7 +359,7 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 		)
 	)
 	const parentPart = useAppSelector((state) => state.parts.parts?.find((p) => p.id === piece.partId))
-	const durationFromMediaRef = useRef(false)
+	const mediaDurationPartSyncRef = useRef<MediaDurationPartSync>('idle')
 
 	const { clip, headline, content, bypass, source, other } = categorizePayloadFields(manifest)
 
@@ -388,20 +391,31 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 			}
 
 			const nextDuration = values.value.duration
-			if (
-				durationFromMediaRef.current &&
+			const sync = mediaDurationPartSyncRef.current
+			const applyPartDuration =
+				sync === 'apply' &&
 				parentPart &&
 				typeof nextDuration === 'number' &&
 				Number.isFinite(nextDuration) &&
 				nextDuration > 0 &&
 				parentPart.duration !== nextDuration
-			) {
+			const clearPartDuration =
+				sync === 'clear' &&
+				parentPart &&
+				(nextDuration === undefined ||
+					nextDuration === null ||
+					!(typeof nextDuration === 'number' && Number.isFinite(nextDuration) && nextDuration > 0)) &&
+				typeof parentPart.duration === 'number' &&
+				Number.isFinite(parentPart.duration) &&
+				parentPart.duration > 0
+
+			if (applyPartDuration || clearPartDuration) {
 				try {
 					await dispatch(
 						updatePart({
 							part: {
 								...parentPart,
-								duration: nextDuration
+								duration: applyPartDuration ? (nextDuration as number) : undefined
 							}
 						})
 					).unwrap()
@@ -416,7 +430,7 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 				}
 			}
 
-			durationFromMediaRef.current = false
+			mediaDurationPartSyncRef.current = 'idle'
 			form.reset(updatedPiece)
 		}
 	})
@@ -453,7 +467,7 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 						form={form}
 						fieldInfo={fieldInfo}
 						piece={piece}
-						durationFromMediaRef={durationFromMediaRef}
+						mediaDurationPartSyncRef={mediaDurationPartSyncRef}
 					/>
 				))}
 
@@ -463,7 +477,7 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 						form={form}
 						fieldInfo={fieldInfo}
 						piece={piece}
-						durationFromMediaRef={durationFromMediaRef}
+						mediaDurationPartSyncRef={mediaDurationPartSyncRef}
 					/>
 				))}
 
@@ -473,7 +487,7 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 						form={form}
 						fieldInfo={fieldInfo}
 						piece={piece}
-						durationFromMediaRef={durationFromMediaRef}
+						mediaDurationPartSyncRef={mediaDurationPartSyncRef}
 					/>
 				))}
 
@@ -688,7 +702,7 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 													form={form}
 													fieldInfo={fieldInfo}
 													piece={piece}
-													durationFromMediaRef={durationFromMediaRef}
+													mediaDurationPartSyncRef={mediaDurationPartSyncRef}
 												/>
 											)
 										)}
@@ -698,7 +712,7 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 												form={form}
 												fieldInfo={fieldInfo}
 												piece={piece}
-												durationFromMediaRef={durationFromMediaRef}
+												mediaDurationPartSyncRef={mediaDurationPartSyncRef}
 											/>
 										))}
 									</div>
@@ -710,7 +724,7 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 										form={form}
 										fieldInfo={fieldInfo}
 										piece={piece}
-										durationFromMediaRef={durationFromMediaRef}
+										mediaDurationPartSyncRef={mediaDurationPartSyncRef}
 									/>
 								))}
 
