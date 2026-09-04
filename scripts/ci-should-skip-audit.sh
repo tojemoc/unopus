@@ -6,9 +6,10 @@
 #   - as its own line in the body
 # Prose mentions of the marker do not count.
 #
-# And requires a trusted actor:
-#   - human with admin or maintain permission on this repository, or
-#   - a GitHub App bot (*[bot]) with write/admin/maintain (installation push)
+# And requires a trusted actor (independent of merely editing the subject):
+#   - a GitHub App bot (*[bot]) on a push event (installation write is
+#     maintainer-approved), or
+#   - a human with admin or maintain permission on this repository
 # Unauthorized markers are ignored so normal validation still runs.
 set -euo pipefail
 
@@ -23,7 +24,19 @@ if [[ "$has_marker" != true ]]; then
 	exit 1
 fi
 
-if [[ -z "${GITHUB_TOKEN:-}" || -z "${GITHUB_REPOSITORY:-}" || -z "${GITHUB_ACTOR:-}" ]]; then
+if [[ -z "${GITHUB_ACTOR:-}" ]]; then
+	echo "Ignoring [ignore-audit]: missing GITHUB_ACTOR; running validation" >&2
+	exit 1
+fi
+
+# Push-capable GitHub Apps are installation-trusted by maintainers; they are not
+# listed as classic collaborators, so the permission API returns "none".
+if [[ "${GITHUB_ACTOR}" == *'[bot]' && "${GITHUB_EVENT_NAME:-}" == 'push' ]]; then
+	echo "Skipping audit ([ignore-audit] authorized for GitHub App ${GITHUB_ACTOR} on push)"
+	exit 0
+fi
+
+if [[ -z "${GITHUB_TOKEN:-}" || -z "${GITHUB_REPOSITORY:-}" ]]; then
 	echo "Ignoring [ignore-audit]: missing GitHub auth context; running validation" >&2
 	exit 1
 fi
@@ -42,23 +55,13 @@ if ! perm="$(
 	exit 1
 fi
 
-authorized=false
 case "${perm}" in
 admin | maintain)
-	authorized=true
-	;;
-write)
-	# Bots that can push are installation-trusted; human "write" collaborators are not.
-	if [[ "${GITHUB_ACTOR}" == *'[bot]' ]]; then
-		authorized=true
-	fi
-	;;
-esac
-
-if [[ "$authorized" == true ]]; then
 	echo "Skipping audit ([ignore-audit] authorized for ${GITHUB_ACTOR} as ${perm})"
 	exit 0
-fi
-
-echo "Ignoring [ignore-audit]: actor ${GITHUB_ACTOR} permission=${perm:-unknown} (need admin/maintain, or write bot)" >&2
-exit 1
+	;;
+*)
+	echo "Ignoring [ignore-audit]: actor ${GITHUB_ACTOR} permission=${perm:-unknown} (need admin or maintain)" >&2
+	exit 1
+	;;
+esac
