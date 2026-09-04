@@ -242,6 +242,14 @@ function PayloadField({
 								value={field.state.value as string | undefined}
 								onBlur={field.handleBlur}
 								onChange={(value) => field.handleChange(value)}
+								onDurationClear={() => {
+									if (fieldInfo.id !== 'fileName' && fieldInfo.id !== 'iluFile') {
+										return
+									}
+									form.setFieldValue('duration', undefined)
+									form.setFieldValue('payload.sourceDuration', undefined)
+									durationFromMediaRef.current = false
+								}}
 								onDurationSeconds={(durationSeconds) => {
 									if (
 										typeof durationSeconds !== 'number' ||

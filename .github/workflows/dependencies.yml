@@ -30,7 +30,19 @@ jobs:
           CI: true
       - name: Validate production dependencies
         run: |
-          if scripts/ci-should-skip-audit.sh; then
+          set -euo pipefail
+          git fetch --depth=1 origin "$DEFAULT_BRANCH"
+          gate="$(mktemp)"
+          trap 'rm -f "$gate"' EXIT
+          # Run the gate from the default branch so a pushed rewrite of the script
+          # cannot force an always-skip. Authorization checks stay inside that script.
+          if ! git show "origin/${DEFAULT_BRANCH}:scripts/ci-should-skip-audit.sh" >"$gate"; then
+            echo "Trusted skip-audit gate missing on ${DEFAULT_BRANCH}; running validation"
+            yarn validate:dependencies
+            exit 0
+          fi
+          chmod +x "$gate"
+          if bash "$gate"; then
             echo "Skipping audit"
           else
             yarn validate:dependencies
@@ -38,6 +50,7 @@ jobs:
         env:
           CI: true
           GITHUB_TOKEN: ${{ github.token }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
 
   validate-all-dependencies-packages:
     name: Validate all Package dependencies
@@ -58,7 +71,17 @@ jobs:
           CI: true
       - name: Validate production dependencies
         run: |
-          if scripts/ci-should-skip-audit.sh; then
+          set -euo pipefail
+          git fetch --depth=1 origin "$DEFAULT_BRANCH"
+          gate="$(mktemp)"
+          trap 'rm -f "$gate"' EXIT
+          if ! git show "origin/${DEFAULT_BRANCH}:scripts/ci-should-skip-audit.sh" >"$gate"; then
+            echo "Trusted skip-audit gate missing on ${DEFAULT_BRANCH}; running validation"
+            yarn validate:dependencies
+            exit 0
+          fi
+          chmod +x "$gate"
+          if bash "$gate"; then
             echo "Skipping audit"
           else
             yarn validate:dependencies
@@ -66,9 +89,20 @@ jobs:
         env:
           CI: true
           GITHUB_TOKEN: ${{ github.token }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
       - name: Validate dev dependencies
         run: |
-          if scripts/ci-should-skip-audit.sh; then
+          set -euo pipefail
+          git fetch --depth=1 origin "$DEFAULT_BRANCH"
+          gate="$(mktemp)"
+          trap 'rm -f "$gate"' EXIT
+          if ! git show "origin/${DEFAULT_BRANCH}:scripts/ci-should-skip-audit.sh" >"$gate"; then
+            echo "Trusted skip-audit gate missing on ${DEFAULT_BRANCH}; running validation"
+            yarn validate:dev-dependencies
+            exit 0
+          fi
+          chmod +x "$gate"
+          if bash "$gate"; then
             echo "Skipping audit"
           else
             yarn validate:dev-dependencies
@@ -76,3 +110,4 @@ jobs:
         env:
           CI: true
           GITHUB_TOKEN: ${{ github.token }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
