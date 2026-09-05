@@ -20,6 +20,7 @@
 		"dev": "yarn dev:backend & yarn dev:ui",
 		"lint": "yarn workspaces foreach --topological-dev --all --verbose run lint",
 		"lint-fix": "yarn lint --fix",
+		"typecheck": "yarn workspaces foreach --topological-dev --all --verbose run typecheck",
 		"test": "yarn workspace @sofie-rundown-editor/backend test",
 		"build": "yarn workspaces foreach --topological-dev --all --verbose run build",
 		"license-validate": "license-checker -r --filter MIT --filter 0BSD --filter BSD --filter ISC --filter Apache --filter Unlicense --plain --border ascii",

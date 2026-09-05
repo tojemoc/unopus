@@ -32,9 +32,13 @@ cp backend/.env.example backend/.env
 
 Standard commands (see `package.json` scripts):
 ```
-yarn lint         # ESLint across all workspaces
-yarn build        # TypeScript + Vite production build
+yarn typecheck   # tsc --noEmit / tsc -b (no Vite emit)
+yarn lint        # ESLint across all workspaces
+yarn build       # TypeScript emit + Vite production build
 ```
+
+CI (`.github/workflows/node.yaml`): PRs run `typecheck` + `lint` only; `yarn build`
+runs on pushes to `main`. Docker/GitHub releases stay in `release.yaml` (main + `v*` tags).
 
 No automated test suite exists in this repo.
 
