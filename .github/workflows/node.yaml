@@ -1,11 +1,11 @@
 name: Node CI
 
 on:
+  # PRs: typecheck + lint only. Production build runs on main merges.
+  # Docker/GitHub releases stay in release.yaml (main + v* tags).
   push:
     branches:
-      - '**'
-    tags:
-      - 'v**'
+      - main
   pull_request:
 
 jobs:
@@ -35,14 +35,16 @@ jobs:
         run: bash scripts/fetch-sofie-megarepo-assets.sh
       - name: Run typecheck and linter
         run: |
-          yarn build
+          yarn typecheck
           yarn lint
         env:
           CI: true
 
   build:
+    name: Build
     runs-on: blacksmith-4vcpu-ubuntu-2404
-
+    # Full TS emit + Vite production build only on main (not every PR push)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - name: Checkout code
         uses: actions/checkout@v6

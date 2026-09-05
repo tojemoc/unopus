@@ -6,6 +6,7 @@
 	"scripts": {
 		"dev": "vite",
 		"build": "tsc -b && vite build && cp -r ../demo-assets dist/demo-assets",
+		"typecheck": "tsc -b --pretty false",
 		"lint": "run -T eslint .",
 		"preview": "vite preview"
 	},
