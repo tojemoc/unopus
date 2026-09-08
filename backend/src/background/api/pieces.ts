@@ -735,7 +735,7 @@ export function mutatePieceForExport(piece: Piece): MutatedPiece {
 		name: piece.name,
 		objectType: piece.pieceType,
 		objectTime,
-		duration: piece.duration,
+		duration: piece.duration ?? undefined,
 		clipName: undefined,
 		attributes: {
 			...normalizeGraphicAttributesForExport(piece.payload),

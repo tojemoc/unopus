@@ -38,7 +38,11 @@ import {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type PieceFormApi = any
 
-/** Local draft so mm:ss can be typed without parse-on-every-keystroke clearing the field. */
+/**
+ * Local draft so mm:ss[.frac] can be typed without parse-on-every-keystroke clearing the field.
+ * Cleared values commit as `null` (not `undefined`) so JSON/IPC keeps the key and sqlite
+ * json_patch can delete duration — `undefined` is dropped on the wire and the old value returns.
+ */
 function ClockDurationInput({
 	id,
 	name,
@@ -52,7 +56,7 @@ function ClockDurationInput({
 	valueSeconds: number | undefined | null
 	placeholder?: string
 	onBlur: () => void
-	onCommit: (seconds: number | undefined) => void
+	onCommit: (seconds: number | null) => void
 }) {
 	const fromProp =
 		typeof valueSeconds === 'number' && Number.isFinite(valueSeconds) && valueSeconds > 0
@@ -81,11 +85,21 @@ function ClockDurationInput({
 			}}
 			onBlur={() => {
 				focusedRef.current = false
+				const trimmed = draft.trim()
+				if (!trimmed) {
+					onCommit(null)
+					setDraft('')
+					onBlur()
+					return
+				}
 				const parsed = parseDurationClockInput(draft)
-				const committed =
-					typeof parsed === 'number' && parsed > 0 ? parsed : undefined
-				onCommit(committed)
-				setDraft(committed !== undefined ? formatSecondsClock(committed) : '')
+				if (typeof parsed === 'number' && parsed > 0) {
+					onCommit(parsed)
+					setDraft(formatSecondsClock(parsed))
+				} else {
+					// Invalid clock — keep the last committed display instead of clearing.
+					setDraft(fromProp)
+				}
 				onBlur()
 			}}
 			onChange={(e) => setDraft(e.target.value)}
@@ -246,8 +260,9 @@ function PayloadField({
 									if (fieldInfo.id !== 'fileName' && fieldInfo.id !== 'iluFile') {
 										return
 									}
-									form.setFieldValue('duration', undefined)
-									form.setFieldValue('payload.sourceDuration', undefined)
+									// null survives JSON/IPC; undefined is dropped and the old duration returns.
+									form.setFieldValue('duration', null)
+									form.setFieldValue('payload.sourceDuration', null)
 									durationFromMediaRef.current = 'clear'
 								}}
 								onDurationSeconds={(durationSeconds) => {
@@ -392,17 +407,17 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 			if (mediaSync === 'set' || mediaSync === 'clear') {
 				const partDuration =
 					mediaSync === 'clear'
-						? undefined
+						? null
 						: typeof nextDuration === 'number' &&
 							  Number.isFinite(nextDuration) &&
 							  nextDuration > 0
 							? nextDuration
-							: undefined
+							: null
 				const shouldSyncPart =
 					parentPart &&
 					(mediaSync === 'clear'
-						? parentPart.duration !== undefined
-						: partDuration !== undefined && parentPart.duration !== partDuration)
+						? parentPart.duration !== undefined && parentPart.duration !== null
+						: partDuration !== null && parentPart.duration !== partDuration)
 				if (shouldSyncPart && parentPart) {
 					try {
 						await dispatch(
@@ -522,7 +537,7 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 											onBlur={field.handleBlur}
 											onChange={(e) => {
 												const val = e.target.value
-												field.handleChange(val === '' ? undefined : Number(val))
+												field.handleChange(val === '' ? null : Number(val))
 											}}
 										/>
 									</Form.Group>
@@ -546,51 +561,31 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 									field.state.value === 0
 								const holdUntilTake =
 									isEmpty && pieceInheritsPartDuration(piece.pieceType)
-								const useClock =
-									piece.pieceType === 'video' ||
-									piece.pieceType === 'doublebox-ilu' ||
-									piece.pieceType === 'headline' ||
-									piece.pieceType === 'ilu'
+								const wipePlaceholder = formatSecondsClock(DEFAULT_WIPE_DURATION_SECONDS)
 
 								return (
 									<>
 										<Form.Group>
 											<Form.Label htmlFor={field.name} className="small mb-1">
-												{useClock ? 'On air (mm:ss)' : 'On air (s)'}
+												On air (mm:ss)
 											</Form.Label>
-											{useClock ? (
-												<ClockDurationInput
-													id={field.name}
-													name={field.name}
-													valueSeconds={field.state.value}
-													placeholder={holdUntilTake ? 'until Take' : 'mm:ss'}
-													onBlur={field.handleBlur}
-													onCommit={(seconds) => field.handleChange(seconds)}
-												/>
-											) : (
-												<Form.Control
-													size="sm"
-													id={field.name}
-													name={field.name}
-													type="number"
-													value={field.state.value ?? ''}
-													placeholder={
-														piece.pieceType === 'wipe'
-															? String(DEFAULT_WIPE_DURATION_SECONDS)
-															: holdUntilTake
-																? 'until Take'
-																: undefined
-													}
-													onBlur={field.handleBlur}
-													onChange={(e) => {
-														const val = e.target.value
-														field.handleChange(val === '' ? undefined : Number(val))
-													}}
-												/>
-											)}
+											<ClockDurationInput
+												id={field.name}
+												name={field.name}
+												valueSeconds={field.state.value}
+												placeholder={
+													piece.pieceType === 'wipe'
+														? wipePlaceholder
+														: holdUntilTake
+															? 'until Take'
+															: 'mm:ss'
+												}
+												onBlur={field.handleBlur}
+												onCommit={(seconds) => field.handleChange(seconds)}
+											/>
 											{isWipeDefault ? (
 												<Form.Text muted className="small">
-													Default {DEFAULT_WIPE_DURATION_SECONDS}s · cut at{' '}
+													Default {wipePlaceholder} · cut at{' '}
 													{formatSecondsPrecise(WIPE_CUT_POINT_SECONDS)}
 												</Form.Text>
 											) : null}

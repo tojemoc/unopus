@@ -258,7 +258,7 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 										onBlur={field.handleBlur}
 										onChange={(e) => {
 											const raw = e.target.value.trim()
-											field.handleChange(raw === '' ? undefined : Number(raw))
+											field.handleChange(raw === '' ? null : Number(raw))
 										}}
 									/>
 									{scriptDriven ? (

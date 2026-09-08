@@ -7,27 +7,39 @@ export function formatSecondsPrecise(seconds: number, maxDecimals = 2): string {
 	return `${text}s`
 }
 
+const pad2 = (t: number) => ('00' + t).substr(-2)
+
 /**
- * Format seconds as clock display (mm:ss or h:mm:ss, or Xs for fractional seconds).
+ * Format the seconds component of a clock (`ss` or `ss.frac`), trimming trailing zeros.
+ * Examples: 5 → `05`, 2.5 → `02.5`, 0.76 → `00.76`
+ */
+function formatClockSecondsPart(secondsInMinute: number): string {
+	const rounded = Math.round(secondsInMinute * 100) / 100
+	const fixed = rounded.toFixed(2).replace(/\.?0+$/, '')
+	const [intPart, frac] = fixed.split('.')
+	const padded = pad2(Number(intPart))
+	return frac !== undefined ? `${padded}.${frac}` : padded
+}
+
+/**
+ * Format seconds as clock display (`mm:ss`, `mm:ss.frac`, or `h:mm:ss[.frac]`).
+ * Fractional on-air values (e.g. wipe 2.5s) render as `00:02.5`.
  */
 export function formatSecondsClock(seconds: number): string {
-	// Keep fractional wipe default readable (2.5s) without breaking mm:ss for whole seconds.
-	if (!Number.isInteger(seconds) && seconds < 60) {
-		const rounded = Math.round(seconds * 10) / 10
-		return `${rounded}s`
+	if (!Number.isFinite(seconds) || seconds < 0) {
+		return '00:00'
 	}
 
 	const h = Math.floor(seconds / 3600)
 	const m = Math.floor((seconds % 3600) / 60)
-	const s = Math.floor(seconds % 60)
-	const pad = (t: number) => ('00' + t).substr(-2)
+	const s = seconds - h * 3600 - m * 60
 
-	return `${h > 0 ? pad(h) + ':' : ''}${pad(m)}:${pad(s)}`
+	return `${h > 0 ? pad2(h) + ':' : ''}${pad2(m)}:${formatClockSecondsPart(s)}`
 }
 
 /**
- * Parse On air clock text (`mm:ss`, `h:mm:ss`, or plain seconds / `12.5s`) into seconds.
- * Empty / whitespace → undefined (clear On air).
+ * Parse On air clock text (`mm:ss`, `mm:ss.frac`, `h:mm:ss[.frac]`, or plain seconds / `12.5s`)
+ * into seconds. Empty / whitespace → undefined (clear On air).
  */
 export function parseDurationClockInput(raw: string): number | undefined {
 	const trimmed = raw.trim()
@@ -50,17 +62,23 @@ export function parseDurationClockInput(raw: string): number | undefined {
 	if (parts.length < 2 || parts.length > 3) {
 		return undefined
 	}
-	if (!parts.every((p) => /^\d{1,2}$/.test(p))) {
+
+	const head = parts.slice(0, -1)
+	const secPart = parts[parts.length - 1]
+	if (!head.every((p) => /^\d{1,2}$/.test(p))) {
+		return undefined
+	}
+	if (!/^\d{1,2}(?:\.\d+)?$/.test(secPart)) {
 		return undefined
 	}
 
-	const nums = parts.map((p) => Number(p))
+	const nums = [...head.map((p) => Number(p)), Number(secPart)]
 	if (nums.some((n) => !Number.isFinite(n))) {
 		return undefined
 	}
 
 	const [h, m, s] = nums.length === 3 ? nums : [0, nums[0], nums[1]]
-	if (m > 59 || s > 59) {
+	if (m > 59 || s >= 60) {
 		return undefined
 	}
 	return h * 3600 + m * 60 + s

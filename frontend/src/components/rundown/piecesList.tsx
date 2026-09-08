@@ -294,7 +294,9 @@ function PieceRow({
 			<td>
 				<IconButton onClick={performCopyPiece} />
 			</td>
-			<td className="piece-start">{piece.start !== undefined ? toTime(piece.start) : ''}</td>
+			<td className="piece-start">
+				{typeof piece.start === 'number' ? toTime(piece.start) : ''}
+			</td>
 			<td className="piece-duration" title="On-air duration">
 				{formatPieceOnAirDuration(piece, effectivePartDuration)}
 				{piece.pieceType === 'wipe' ? (

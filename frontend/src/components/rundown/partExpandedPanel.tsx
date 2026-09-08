@@ -42,7 +42,7 @@ export function PartExpandedPanel({ part }: { part: Part }) {
 	const [float, setFloat] = useState(livePart.float)
 	const [skip, setSkip] = useState(Boolean(livePart.skip))
 	const [editorChecked, setEditorChecked] = useState(Boolean(livePart.editorChecked))
-	const [duration, setDuration] = useState<number | undefined>(livePart.duration)
+	const [duration, setDuration] = useState<number | null | undefined>(livePart.duration)
 	const [expandedPieceId, setExpandedPieceId] = useState<string | null>(null)
 	const [saving, setSaving] = useState(false)
 
@@ -184,7 +184,7 @@ export function PartExpandedPanel({ part }: { part: Part }) {
 						placeholder="Dur s"
 						aria-label="Duration seconds"
 						onChange={(e) =>
-							setDuration(e.target.value === '' ? undefined : Number(e.target.value))
+							setDuration(e.target.value === '' ? null : Number(e.target.value))
 						}
 					/>
 					<Button size="sm" variant="primary" disabled={saving} onClick={() => void savePart()}>

@@ -8,7 +8,7 @@ import { HoverIconButton } from '~/components/rundownList/hoverIconButton'
 
 type SidebarItemProps = {
 	label: ReactNode
-	duration?: number
+	duration?: number | null
 	floated?: boolean
 	linkTo: string
 	linkParams: Record<string, string>
