@@ -25,15 +25,19 @@ export type PresenceEvictedPayload = {
 	byDisplayName?: string
 }
 
-const FOCUS_ACK_TIMEOUT_MS = 4000
+/** Single budget covering connect wait + focus acknowledgement. */
+const FOCUS_TIMEOUT_MS = 4000
 
 /**
  * Wait until the shared socket is connected (or timeout).
  */
-async function whenSocketConnected(timeoutMs = FOCUS_ACK_TIMEOUT_MS): Promise<boolean> {
+async function whenSocketConnected(timeoutMs: number): Promise<boolean> {
 	const socket = getSocket()
 	if (socket.connected) {
 		return true
+	}
+	if (timeoutMs <= 0) {
+		return false
 	}
 	return await new Promise<boolean>((resolve) => {
 		const timer = window.setTimeout(() => {
@@ -64,8 +68,14 @@ export async function requestPresenceFocus(args: {
 	rundownId: string
 	force?: boolean
 }): Promise<PresenceFocusResult> {
-	const connected = await whenSocketConnected()
+	const deadline = Date.now() + FOCUS_TIMEOUT_MS
+	const connected = await whenSocketConnected(Math.max(0, deadline - Date.now()))
 	if (!connected) {
+		return { ok: false, reason: 'unavailable' }
+	}
+
+	const ackTimeoutMs = Math.max(0, deadline - Date.now())
+	if (ackTimeoutMs <= 0) {
 		return { ok: false, reason: 'unavailable' }
 	}
 
@@ -78,12 +88,9 @@ export async function requestPresenceFocus(args: {
 	}
 
 	try {
-		const result = (await Promise.race([
-			socket.emitWithAck('presence:focus', payload),
-			new Promise<undefined>((resolve) => {
-				window.setTimeout(() => resolve(undefined), FOCUS_ACK_TIMEOUT_MS)
-			})
-		])) as PresenceFocusResult | undefined
+		const result = (await socket
+			.timeout(ackTimeoutMs)
+			.emitWithAck('presence:focus', payload)) as PresenceFocusResult
 
 		if (!result || typeof result !== 'object' || !('ok' in result)) {
 			return { ok: false, reason: 'unavailable' }

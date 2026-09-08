@@ -31,6 +31,7 @@ function RouteComponent() {
 			(p) => p.id === pieceId && p.partId === partId && p.rundownId === rundownId
 		)
 	)
+	const partExists = Boolean(part)
 
 	const partsReady = partsStatus === 'succeeded' && partsRundownId === rundownId
 	const piecesReady = piecesStatus === 'succeeded' && piecesRundownId === rundownId
@@ -47,7 +48,7 @@ function RouteComponent() {
 	}
 
 	useEffect(() => {
-		if (!part) return
+		if (!partExists) return
 		let cancelled = false
 		// Story lock is on the part; piece deep-links still need the story expander.
 		void requestPresenceFocus({
@@ -70,7 +71,7 @@ function RouteComponent() {
 			cancelled = true
 			setExpandedPartId((prev) => (prev === partId ? null : prev))
 		}
-	}, [partId, part, rundownId, setExpandedPartId, toasts])
+	}, [partId, partExists, rundownId, setExpandedPartId, toasts])
 
 	return null
 }

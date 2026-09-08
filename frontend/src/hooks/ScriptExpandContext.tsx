@@ -4,6 +4,7 @@ import {
 	useContext,
 	useEffect,
 	useMemo,
+	useRef,
 	useState,
 	type Dispatch,
 	type ReactNode,
@@ -24,6 +25,9 @@ const ScriptExpandContext = createContext<ScriptExpandContextValue | null>(null)
 export function ScriptExpandProvider({ children }: { children: ReactNode }) {
 	const toasts = useToasts()
 	const [expandedPartId, setExpandedPartId] = useState<string | null>(null)
+	const expandedPartIdRef = useRef(expandedPartId)
+	expandedPartIdRef.current = expandedPartId
+
 	const toggleExpandedPart = useCallback((partId: string) => {
 		setExpandedPartId((prev) => (prev === partId ? null : partId))
 	}, [])
@@ -34,19 +38,17 @@ export function ScriptExpandProvider({ children }: { children: ReactNode }) {
 			if (!payload || payload.entityType !== 'part') {
 				return
 			}
-			setExpandedPartId((prev) => {
-				if (prev !== payload.entityId) {
-					return prev
-				}
-				const by = payload.byDisplayName?.trim()
-				toasts.show({
-					headerContent: 'Story lock taken',
-					bodyContent: by
-						? `${by} opened this story. Unsaved changes in this panel may be lost.`
-						: 'Another user opened this story. Unsaved changes in this panel may be lost.'
-				})
-				return null
+			if (expandedPartIdRef.current !== payload.entityId) {
+				return
+			}
+			const by = payload.byDisplayName?.trim()
+			toasts.show({
+				headerContent: 'Story lock taken',
+				bodyContent: by
+					? `${by} opened this story. Unsaved changes in this panel may be lost.`
+					: 'Another user opened this story. Unsaved changes in this panel may be lost.'
 			})
+			setExpandedPartId(null)
 		}
 		socket.on('presence:evicted', onEvicted)
 		return () => {

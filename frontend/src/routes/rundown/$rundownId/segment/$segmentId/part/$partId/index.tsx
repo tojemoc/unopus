@@ -22,6 +22,7 @@ function RouteComponent() {
 			(p) => p.id === partId && p.rundownId === rundownId && p.segmentId === segmentId
 		)
 	)
+	const partExists = Boolean(part)
 
 	const partsReady = partsStatus === 'succeeded' && partsRundownId === rundownId
 	if (partsReady && !part) {
@@ -29,7 +30,7 @@ function RouteComponent() {
 	}
 
 	useEffect(() => {
-		if (!part) return
+		if (!partExists) return
 		let cancelled = false
 		void requestPresenceFocus({
 			entityType: 'part',
@@ -51,7 +52,7 @@ function RouteComponent() {
 			cancelled = true
 			setExpandedPartId((prev) => (prev === partId ? null : prev))
 		}
-	}, [partId, part, rundownId, setExpandedPartId, toasts])
+	}, [partId, partExists, rundownId, setExpandedPartId, toasts])
 
 	return null
 }

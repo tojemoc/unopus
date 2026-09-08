@@ -305,26 +305,6 @@
 		min-width: 0;
 	}
 
-	.story-row__lock {
-		flex-shrink: 0;
-		display: inline-flex;
-		align-items: center;
-		gap: 0.2rem;
-		font-size: 0.62rem;
-		font-weight: 700;
-		letter-spacing: 0.02em;
-		color: var(--re-accent);
-		background: var(--re-accent-subtle);
-		border-radius: 999px;
-		padding: 0.05rem 0.4rem;
-
-		svg {
-			width: 0.7em;
-			height: 0.7em;
-			flex-shrink: 0;
-		}
-	}
-
 	.col-duration {
 		text-align: right;
 		font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
@@ -342,6 +322,26 @@
 		font-size: 0.62rem;
 		font-weight: 700;
 		color: var(--re-text-on-chip);
+	}
+}
+
+.story-row__lock {
+	flex-shrink: 0;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.2rem;
+	font-size: 0.62rem;
+	font-weight: 700;
+	letter-spacing: 0.02em;
+	color: var(--re-accent);
+	background: var(--re-accent-subtle);
+	border-radius: 999px;
+	padding: 0.05rem 0.4rem;
+
+	svg {
+		width: 0.7em;
+		height: 0.7em;
+		flex-shrink: 0;
 	}
 }
 
