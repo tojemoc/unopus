@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Button, Modal } from 'react-bootstrap'
 import { BsLockFill } from 'react-icons/bs'
 import { useAppSelector } from '~/store/app'
@@ -72,6 +72,7 @@ export function SidebarPartRow({ part }: { part: Part }) {
 	const expanded = expandedPartId === part.id
 	const [takeoverHolder, setTakeoverHolder] = useState<string | null>(null)
 	const [busy, setBusy] = useState(false)
+	const pointerStart = useRef<{ x: number; y: number } | null>(null)
 
 	const partTypeManifest = useAppSelector((state) =>
 		findTypeManifest(state.typeManifests.manifests, part.partType, TypeManifestEntity.Part)
@@ -124,7 +125,14 @@ export function SidebarPartRow({ part }: { part: Part }) {
 				setExpandedPartId(part.id)
 				return
 			}
-			setTakeoverHolder(result.holder.displayName || 'Another user')
+			if (result.reason === 'unavailable') {
+				// Don't block editing if presence is down; still open locally.
+				console.warn('Story lock unavailable; opening without exclusive lock')
+				setTakeoverHolder(null)
+				setExpandedPartId(part.id)
+				return
+			}
+			setTakeoverHolder(result.holder.displayName || lockNames || 'Another user')
 		} catch (error) {
 			console.error(error)
 			toasts.show({
@@ -144,6 +152,11 @@ export function SidebarPartRow({ part }: { part: Part }) {
 			setExpandedPartId(null)
 			return
 		}
+		// Fast path: known foreign lock from presence snapshot → confirm before kicking.
+		if (locks.length > 0) {
+			setTakeoverHolder(lockNames || locks[0]?.displayName || 'Another user')
+			return
+		}
 		void openStory(false)
 	}
 
@@ -152,8 +165,24 @@ export function SidebarPartRow({ part }: { part: Part }) {
 			<div
 				className={rowClass}
 				tabIndex={0}
+				role="button"
+				aria-expanded={expanded}
 				aria-busy={busy || undefined}
-				onClick={handleActivate}
+				onPointerDown={(event) => {
+					pointerStart.current = { x: event.clientX, y: event.clientY }
+				}}
+				onClick={(event) => {
+					// Ignore click that followed a drag gesture (react-dnd).
+					const start = pointerStart.current
+					pointerStart.current = null
+					if (
+						start &&
+						(Math.abs(event.clientX - start.x) > 4 || Math.abs(event.clientY - start.y) > 4)
+					) {
+						return
+					}
+					handleActivate()
+				}}
 				onKeyDown={(event) => {
 					if (event.key === 'Enter' || event.key === ' ') {
 						event.preventDefault()

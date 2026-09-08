@@ -38,7 +38,7 @@ function RouteComponent() {
 			force: false
 		}).then((result) => {
 			if (cancelled) return
-			if (result.ok) {
+			if (result.ok || result.reason === 'unavailable') {
 				setExpandedPartId(partId)
 				return
 			}

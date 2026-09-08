@@ -16,12 +16,42 @@ export interface PresenceLockHolder {
 export type PresenceFocusResult =
 	| { ok: true; evicted?: PresenceFocus[] }
 	| { ok: false; reason: 'locked'; holder: PresenceLockHolder }
+	| { ok: false; reason: 'unavailable' }
 
 export type PresenceEvictedPayload = {
 	entityType: PresenceEntityType
 	entityId: string
 	rundownId: string
 	byDisplayName?: string
+}
+
+const FOCUS_ACK_TIMEOUT_MS = 4000
+
+/**
+ * Wait until the shared socket is connected (or timeout).
+ */
+async function whenSocketConnected(timeoutMs = FOCUS_ACK_TIMEOUT_MS): Promise<boolean> {
+	const socket = getSocket()
+	if (socket.connected) {
+		return true
+	}
+	return await new Promise<boolean>((resolve) => {
+		const timer = window.setTimeout(() => {
+			socket.off('connect', onConnect)
+			resolve(false)
+		}, timeoutMs)
+		const onConnect = () => {
+			window.clearTimeout(timer)
+			resolve(true)
+		}
+		socket.once('connect', onConnect)
+		// In case connect raced between the check and once()
+		if (socket.connected) {
+			window.clearTimeout(timer)
+			socket.off('connect', onConnect)
+			resolve(true)
+		}
+	})
 }
 
 /**
@@ -34,22 +64,35 @@ export async function requestPresenceFocus(args: {
 	rundownId: string
 	force?: boolean
 }): Promise<PresenceFocusResult> {
+	const connected = await whenSocketConnected()
+	if (!connected) {
+		return { ok: false, reason: 'unavailable' }
+	}
+
 	const socket = getSocket()
-	const result = (await socket.emitWithAck('presence:focus', {
+	const payload = {
 		entityType: args.entityType,
 		entityId: args.entityId,
 		rundownId: args.rundownId,
 		force: args.force === true
-	})) as PresenceFocusResult | undefined
-
-	if (!result || typeof result !== 'object' || !('ok' in result)) {
-		return {
-			ok: false,
-			reason: 'locked',
-			holder: { socketId: '', userId: '', displayName: 'Another user' }
-		}
 	}
-	return result
+
+	try {
+		const result = (await Promise.race([
+			socket.emitWithAck('presence:focus', payload),
+			new Promise<undefined>((resolve) => {
+				window.setTimeout(() => resolve(undefined), FOCUS_ACK_TIMEOUT_MS)
+			})
+		])) as PresenceFocusResult | undefined
+
+		if (!result || typeof result !== 'object' || !('ok' in result)) {
+			return { ok: false, reason: 'unavailable' }
+		}
+		return result
+	} catch (error) {
+		console.error('presence:focus failed', error)
+		return { ok: false, reason: 'unavailable' }
+	}
 }
 
 /**
