@@ -190,7 +190,7 @@ async function syncStoryDurationsForPartLocked(
 		(piece): StoryDurationPiece => ({
 			id: piece.id,
 			pieceType: piece.pieceType,
-			duration: piece.duration,
+			duration: piece.duration ?? undefined,
 			skip: piece.skip,
 			payload: piece.payload
 		})
@@ -198,7 +198,7 @@ async function syncStoryDurationsForPartLocked(
 
 	const plan = planStoryDurationSync(
 		{
-			duration: part.duration,
+			duration: part.duration ?? undefined,
 			script: part.script,
 			partType: part.partType,
 			skip: part.skip

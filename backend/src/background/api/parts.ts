@@ -61,7 +61,7 @@ async function mutatePart(part: Part): Promise<MutatedPart> {
 	const settings = readApplicationSettingsSync()
 	const rawPieces = await getMutatedPiecesFromPart(part.id)
 	const durationPieces = rawPieces.map((piece) => ({
-		duration: piece.duration,
+		duration: piece.duration ?? undefined,
 		pieceType: piece.objectType
 	}))
 	const effectivePartDuration = part.skip
@@ -70,22 +70,22 @@ async function mutatePart(part: Part): Promise<MutatedPart> {
 			? part.duration
 			: (resolvePartOnAirDuration(
 					{
-						duration: part.duration,
+						duration: part.duration ?? undefined,
 						script: part.script,
 						partType: part.partType,
 						skip: part.skip
 					},
 					durationPieces,
 					{ scriptCps: settings?.scriptCps }
-				) ?? part.duration)
+				) ?? (part.duration ?? undefined))
 
 	const pieces = rawPieces.map((piece) => ({
 		...piece,
 		duration:
 			resolvePieceOnAirDuration(
-				{ duration: piece.duration, pieceType: piece.objectType },
+				{ duration: piece.duration ?? undefined, pieceType: piece.objectType },
 				effectivePartDuration
-			) ?? piece.duration
+			) ?? (piece.duration ?? undefined)
 	}))
 
 	const iluDurationMode = settings?.iluDurationMode ?? 'auto'

@@ -30,8 +30,17 @@ describe('parseDurationClockInput', () => {
 		assert.equal(parseDurationClockInput('  '), undefined)
 	})
 
+	it('parses mm:ss.frac clocks', () => {
+		assert.equal(parseDurationClockInput('00:02.5'), 2.5)
+		assert.equal(parseDurationClockInput('0:02.5'), 2.5)
+		assert.equal(parseDurationClockInput('00:00.76'), 0.76)
+		assert.equal(parseDurationClockInput('01:20.5'), 80.5)
+		assert.equal(parseDurationClockInput('1:01:20.25'), 3680.25)
+	})
+
 	it('rejects invalid clocks', () => {
 		assert.equal(parseDurationClockInput('1:99'), undefined)
+		assert.equal(parseDurationClockInput('00:60'), undefined)
 		assert.equal(parseDurationClockInput('abc'), undefined)
 	})
 })
@@ -40,6 +49,19 @@ describe('formatSecondsClock', () => {
 	it('formats whole seconds as mm:ss', () => {
 		assert.equal(formatSecondsClock(80), '01:20')
 		assert.equal(formatSecondsClock(5), '00:05')
+	})
+
+	it('formats fractional seconds as mm:ss.frac (not bare 2.5s)', () => {
+		assert.equal(formatSecondsClock(2.5), '00:02.5')
+		assert.equal(formatSecondsClock(0.76), '00:00.76')
+		assert.equal(formatSecondsClock(80.5), '01:20.5')
+	})
+
+	it('carries hundredths rounding across mm/ss (never formats :60)', () => {
+		assert.equal(formatSecondsClock(59.999), '01:00')
+		assert.equal(formatSecondsClock(3599.999), '01:00:00')
+		assert.equal(parseDurationClockInput(formatSecondsClock(59.999)), 60)
+		assert.equal(parseDurationClockInput(formatSecondsClock(3599.999)), 3600)
 	})
 })
 

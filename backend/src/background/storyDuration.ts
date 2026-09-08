@@ -94,13 +94,13 @@ export function resolveTrimmedSourceDurationSeconds(piece: {
 export type StoryDurationPiece = {
 	id: string
 	pieceType: string
-	duration?: number
+	duration?: number | null
 	skip?: boolean
 	payload?: Record<string, unknown> | null
 }
 
 export type StoryDurationPart = {
-	duration?: number
+	duration?: number | null
 	script?: string
 	partType?: string
 	skip?: boolean
@@ -141,7 +141,7 @@ export function resolveScriptDerivedPartDuration(
  */
 export function resolvePieceOnAirDuration(
 	piece: Pick<StoryDurationPiece, 'duration' | 'pieceType' | 'skip'>,
-	_partDuration?: number | undefined
+	_partDuration?: number | null | undefined
 ): number | undefined {
 	if (piece.skip) {
 		return undefined

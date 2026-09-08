@@ -88,7 +88,7 @@ export interface Part extends IHasPayload {
 	editorChecked?: boolean
 
 	script?: string
-	duration?: number
+	duration?: number | null
 	partType: string
 	/** True when the part was created from a part-type preset button */
 	fromPreset?: boolean
@@ -107,8 +107,8 @@ export interface Piece extends IHasPayload {
 	/** Name of the piece */
 	name: string
 
-	start?: number
-	duration?: number // todo - timing type for infintes
+	start?: number | null
+	duration?: number | null // todo - timing type for infintes
 	rank?: number
 
 	pieceType: string

@@ -46,15 +46,15 @@ export function getPieceSourceDurationSeconds(piece: {
 export function formatPieceOnAirDuration(
 	piece: {
 		pieceType: string
-		duration?: number
+		duration?: number | null
 		skip?: boolean
 	},
-	partDuration?: number
+	partDuration?: number | null
 ): string {
 	if (piece.skip) {
 		return ''
 	}
-	const effective = resolvePieceOnAirDuration(piece, partDuration)
+	const effective = resolvePieceOnAirDuration(piece, partDuration ?? undefined)
 	if (typeof effective === 'number' && Number.isFinite(effective) && effective > 0) {
 		return formatSecondsClock(effective)
 	}
@@ -71,8 +71,8 @@ export function formatPieceOnAirDuration(
  * Format part effective on-air duration as a clock string.
  */
 export function formatPartOnAirDuration(
-	part: { duration?: number; script?: string; partType?: string; skip?: boolean },
-	pieces: Array<{ pieceType: string; duration?: number; skip?: boolean }>,
+	part: { duration?: number | null; script?: string; partType?: string; skip?: boolean },
+	pieces: Array<{ pieceType: string; duration?: number | null; skip?: boolean }>,
 	options?: StoryDurationOptions
 ): string {
 	const effective = resolvePartOnAirDuration(part, pieces, options)
