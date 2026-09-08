@@ -56,6 +56,13 @@ describe('formatSecondsClock', () => {
 		assert.equal(formatSecondsClock(0.76), '00:00.76')
 		assert.equal(formatSecondsClock(80.5), '01:20.5')
 	})
+
+	it('carries hundredths rounding across mm/ss (never formats :60)', () => {
+		assert.equal(formatSecondsClock(59.999), '01:00')
+		assert.equal(formatSecondsClock(3599.999), '01:00:00')
+		assert.equal(parseDurationClockInput(formatSecondsClock(59.999)), 60)
+		assert.equal(parseDurationClockInput(formatSecondsClock(3599.999)), 3600)
+	})
 })
 
 describe('findNearDuplicateMediaNames', () => {
