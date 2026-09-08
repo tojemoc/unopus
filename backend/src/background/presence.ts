@@ -1,5 +1,6 @@
 /**
  * In-memory occupancy for rundown rows (parts / pieces).
+ * Enforces exclusive edit locks so only one foreign user can hold a row at a time.
  * Broadcasts who is currently looking at which row so the UI can show a lock chip.
  */
 
@@ -13,6 +14,16 @@ export interface PresenceFocus {
 	entityId: string
 	rundownId: string
 }
+
+export interface PresenceLockHolder {
+	socketId: string
+	userId: string
+	displayName: string
+}
+
+export type PresenceFocusResult =
+	| { ok: true; evicted: PresenceFocus[] }
+	| { ok: false; reason: 'locked'; holder: PresenceLockHolder }
 
 type PresenceListener = (focuses: PresenceFocus[]) => void
 
@@ -40,11 +51,64 @@ export function onPresenceChange(listener: PresenceListener): () => void {
 }
 
 /**
- * Set or update the presence focus for a socket connection.
+ * Find sockets currently focused on the same entity (excluding `socketId`).
+ */
+function holdersForEntity(
+	entityType: PresenceEntityType,
+	entityId: string,
+	exceptSocketId: string
+): PresenceFocus[] {
+	return [...focuses.values()].filter(
+		(focus) =>
+			focus.entityType === entityType &&
+			focus.entityId === entityId &&
+			focus.socketId !== exceptSocketId
+	)
+}
+
+/**
+ * Set or update the presence focus for a socket connection (unconditional).
+ * Prefer {@link trySetPresenceFocus} for exclusive locking.
  */
 export function setPresenceFocus(focus: PresenceFocus): void {
 	focuses.set(focus.socketId, focus)
 	emit()
+}
+
+/**
+ * Attempt to acquire an exclusive presence focus on an entity.
+ *
+ * - Same user on another tab is auto-evicted (no confirmation needed).
+ * - A different user blocks unless `force` is true (kick / takeover).
+ */
+export function trySetPresenceFocus(
+	focus: PresenceFocus,
+	options?: { force?: boolean }
+): PresenceFocusResult {
+	const holders = holdersForEntity(focus.entityType, focus.entityId, focus.socketId)
+	const foreignHolders = holders.filter((holder) => holder.userId !== focus.userId)
+
+	if (foreignHolders.length > 0 && !options?.force) {
+		const holder = foreignHolders[0]
+		return {
+			ok: false,
+			reason: 'locked',
+			holder: {
+				socketId: holder.socketId,
+				userId: holder.userId,
+				displayName: holder.displayName
+			}
+		}
+	}
+
+	const toEvict = options?.force ? holders : holders.filter((holder) => holder.userId === focus.userId)
+	for (const holder of toEvict) {
+		focuses.delete(holder.socketId)
+	}
+
+	focuses.set(focus.socketId, focus)
+	emit()
+	return { ok: true, evicted: toEvict }
 }
 
 /**

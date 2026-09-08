@@ -7,6 +7,51 @@ import {
 	type PresenceFocus
 } from '~/store/presence'
 
+export interface PresenceLockHolder {
+	socketId: string
+	userId: string
+	displayName: string
+}
+
+export type PresenceFocusResult =
+	| { ok: true; evicted?: PresenceFocus[] }
+	| { ok: false; reason: 'locked'; holder: PresenceLockHolder }
+
+export type PresenceEvictedPayload = {
+	entityType: PresenceEntityType
+	entityId: string
+	rundownId: string
+	byDisplayName?: string
+}
+
+/**
+ * Request an exclusive presence focus (edit lock) for a part or piece.
+ * Pass `force: true` to kick the current holder (possible unsaved data loss for them).
+ */
+export async function requestPresenceFocus(args: {
+	entityType: PresenceEntityType
+	entityId: string
+	rundownId: string
+	force?: boolean
+}): Promise<PresenceFocusResult> {
+	const socket = getSocket()
+	const result = (await socket.emitWithAck('presence:focus', {
+		entityType: args.entityType,
+		entityId: args.entityId,
+		rundownId: args.rundownId,
+		force: args.force === true
+	})) as PresenceFocusResult | undefined
+
+	if (!result || typeof result !== 'object' || !('ok' in result)) {
+		return {
+			ok: false,
+			reason: 'locked',
+			holder: { socketId: '', userId: '', displayName: 'Another user' }
+		}
+	}
+	return result
+}
+
 /**
  * Subscribe to presence updates from the server and sync to Redux store.
  */
@@ -27,6 +72,7 @@ export function usePresenceSync(): void {
 
 /**
  * Emit presence focus for the current component and clear on unmount.
+ * Renews the lock while the editor is mounted; does not force-takeover.
  */
 export function usePresenceFocus(
 	rundownId: string | undefined,
@@ -38,7 +84,7 @@ export function usePresenceFocus(
 			return
 		}
 		const socket = getSocket()
-		socket.emit('presence:focus', { entityType, entityId, rundownId })
+		void requestPresenceFocus({ entityType, entityId, rundownId, force: false })
 		return () => {
 			socket.emit('presence:blur')
 		}

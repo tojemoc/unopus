@@ -4,8 +4,9 @@ import {
 	clearPresenceFocus,
 	listPresenceFocuses,
 	onPresenceChange,
-	setPresenceFocus,
-	type PresenceEntityType
+	trySetPresenceFocus,
+	type PresenceEntityType,
+	type PresenceFocusResult
 } from '../presence'
 
 /**
@@ -14,6 +15,15 @@ import {
 function isEntityType(value: unknown): value is PresenceEntityType {
 	return value === 'part' || value === 'piece'
 }
+
+type FocusPayload = {
+	entityType?: unknown
+	entityId?: unknown
+	rundownId?: unknown
+	force?: unknown
+}
+
+type FocusAck = (result: PresenceFocusResult) => void
 
 /**
  * Register Socket.IO handlers for presence tracking (focus/blur/disconnect).
@@ -31,28 +41,58 @@ export function registerPresenceHandlers(socket: Socket, io: Server): void {
 
 	socket.emit('presence:update', listPresenceFocuses())
 
-	socket.on(
-		'presence:focus',
-		(payload: { entityType?: unknown; entityId?: unknown; rundownId?: unknown }) => {
-			if (!isEntityType(payload?.entityType)) {
-				return
-			}
-			if (typeof payload.entityId !== 'string' || !payload.entityId) {
-				return
-			}
-			if (typeof payload.rundownId !== 'string' || !payload.rundownId) {
-				return
-			}
-			setPresenceFocus({
+	socket.on('presence:focus', (payload: FocusPayload, ack?: FocusAck) => {
+		if (!isEntityType(payload?.entityType)) {
+			ack?.({
+				ok: false,
+				reason: 'locked',
+				holder: { socketId: '', userId: '', displayName: 'Unknown' }
+			})
+			return
+		}
+		if (typeof payload.entityId !== 'string' || !payload.entityId) {
+			ack?.({
+				ok: false,
+				reason: 'locked',
+				holder: { socketId: '', userId: '', displayName: 'Unknown' }
+			})
+			return
+		}
+		if (typeof payload.rundownId !== 'string' || !payload.rundownId) {
+			ack?.({
+				ok: false,
+				reason: 'locked',
+				holder: { socketId: '', userId: '', displayName: 'Unknown' }
+			})
+			return
+		}
+
+		const force = payload.force === true
+		const result = trySetPresenceFocus(
+			{
 				socketId: socket.id,
 				userId: user.id,
 				displayName: user.displayName,
 				entityType: payload.entityType,
 				entityId: payload.entityId,
 				rundownId: payload.rundownId
-			})
+			},
+			{ force }
+		)
+
+		if (result.ok) {
+			for (const evicted of result.evicted) {
+				io.to(evicted.socketId).emit('presence:evicted', {
+					entityType: evicted.entityType,
+					entityId: evicted.entityId,
+					rundownId: evicted.rundownId,
+					byDisplayName: user.displayName
+				})
+			}
 		}
-	)
+
+		ack?.(result)
+	})
 
 	socket.on('presence:blur', () => {
 		clearPresenceFocus(socket.id)
@@ -62,6 +102,4 @@ export function registerPresenceHandlers(socket: Socket, io: Server): void {
 		unsubscribe()
 		clearPresenceFocus(socket.id)
 	})
-
-	void io
 }
