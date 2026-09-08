@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button, Form, Stack } from 'react-bootstrap'
 import type { Part, Piece } from '~backend/background/interfaces'
 import { TypeManifestEntity } from '~backend/background/interfaces'
@@ -9,6 +9,7 @@ import { useToasts } from '../toasts/useToasts'
 import { ScriptReadingCounter } from './scriptReadingCounter'
 import { ScriptPieceFlow } from './scriptPieceFlow'
 import { PiecePropertiesForm } from './piecePropertiesForm'
+import { ClockDurationInput } from './clockDurationInput'
 import { findTypeManifest, toolbarManifests } from '~/util/typeManifest'
 import { resolveEffectiveScriptCps } from '~/util/scriptReadingTime'
 import { usePresenceFocus } from '~/hooks/usePresence'
@@ -43,8 +44,14 @@ export function PartExpandedPanel({ part }: { part: Part }) {
 	const [skip, setSkip] = useState(Boolean(livePart.skip))
 	const [editorChecked, setEditorChecked] = useState(Boolean(livePart.editorChecked))
 	const [duration, setDuration] = useState<number | null | undefined>(livePart.duration)
+	const durationRef = useRef(duration)
 	const [expandedPieceId, setExpandedPieceId] = useState<string | null>(null)
 	const [saving, setSaving] = useState(false)
+
+	const commitDuration = (next: number | null | undefined) => {
+		durationRef.current = next
+		setDuration(next)
+	}
 
 	useEffect(() => {
 		setName(livePart.name)
@@ -52,6 +59,7 @@ export function PartExpandedPanel({ part }: { part: Part }) {
 		setFloat(livePart.float)
 		setSkip(Boolean(livePart.skip))
 		setEditorChecked(Boolean(livePart.editorChecked))
+		durationRef.current = livePart.duration
 		setDuration(livePart.duration)
 	}, [livePart, part.id])
 
@@ -74,7 +82,7 @@ export function PartExpandedPanel({ part }: { part: Part }) {
 						float,
 						skip,
 						editorChecked,
-						duration
+						duration: durationRef.current
 					}
 				})
 			).unwrap()
@@ -176,16 +184,12 @@ export function PartExpandedPanel({ part }: { part: Part }) {
 						checked={editorChecked}
 						onChange={(e) => setEditorChecked(e.target.checked)}
 					/>
-					<Form.Control
-						size="sm"
-						type="number"
-						style={{ width: '5.5rem' }}
-						value={duration ?? ''}
-						placeholder="Dur s"
-						aria-label="Duration seconds"
-						onChange={(e) =>
-							setDuration(e.target.value === '' ? null : Number(e.target.value))
-						}
+					<ClockDurationInput
+						style={{ width: '6.5rem' }}
+						valueSeconds={duration}
+						placeholder="mm:ss"
+						aria-label="On air duration"
+						onCommit={commitDuration}
 					/>
 					<Button size="sm" variant="primary" disabled={saving} onClick={() => void savePart()}>
 						{saving ? 'Saving…' : 'Save'}

@@ -3,7 +3,7 @@ import { Button, ButtonGroup, Col, Form, Modal, Row } from 'react-bootstrap'
 import type { Piece, PayloadManifest, TypeManifest } from '~backend/background/interfaces'
 import { ManifestFieldType, TypeManifestEntity } from '~backend/background/interfaces'
 import { FieldInfo } from '../form'
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useAppDispatch, useAppSelector } from '~/store/app'
 import { removePiece, updatePiece } from '~/store/pieces'
@@ -13,6 +13,7 @@ import { MediaPickerField } from './mediaPickerField'
 import { GfxPreview } from './gfxPreview'
 import { ClipPreview } from './clipPreview'
 import { ScriptReadingCounter } from './scriptReadingCounter'
+import { ClockDurationInput } from './clockDurationInput'
 import { resolveSourceEnabled } from '~/util/sourcePayload'
 import {
 	DEFAULT_WIPE_DURATION_SECONDS,
@@ -20,7 +21,6 @@ import {
 	formatSecondsClock,
 	formatSecondsPrecise,
 	getPieceSourceDurationSeconds,
-	parseDurationClockInput,
 	pieceInheritsPartDuration
 } from '~/util/pieceDuration'
 import {
@@ -38,74 +38,6 @@ import {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type PieceFormApi = any
 
-/**
- * Local draft so mm:ss[.frac] can be typed without parse-on-every-keystroke clearing the field.
- * Cleared values commit as `null` (not `undefined`) so JSON/IPC keeps the key and sqlite
- * json_patch can delete duration — `undefined` is dropped on the wire and the old value returns.
- */
-function ClockDurationInput({
-	id,
-	name,
-	valueSeconds,
-	placeholder,
-	onBlur,
-	onCommit
-}: {
-	id: string
-	name: string
-	valueSeconds: number | undefined | null
-	placeholder?: string
-	onBlur: () => void
-	onCommit: (seconds: number | null) => void
-}) {
-	const fromProp =
-		typeof valueSeconds === 'number' && Number.isFinite(valueSeconds) && valueSeconds > 0
-			? formatSecondsClock(valueSeconds)
-			: ''
-	const [draft, setDraft] = useState(fromProp)
-	const focusedRef = useRef(false)
-
-	useEffect(() => {
-		if (!focusedRef.current) {
-			setDraft(fromProp)
-		}
-	}, [fromProp])
-
-	return (
-		<Form.Control
-			size="sm"
-			id={id}
-			name={name}
-			type="text"
-			inputMode="text"
-			placeholder={placeholder}
-			value={draft}
-			onFocus={() => {
-				focusedRef.current = true
-			}}
-			onBlur={() => {
-				focusedRef.current = false
-				const trimmed = draft.trim()
-				if (!trimmed) {
-					onCommit(null)
-					setDraft('')
-					onBlur()
-					return
-				}
-				const parsed = parseDurationClockInput(draft)
-				if (typeof parsed === 'number' && parsed > 0) {
-					onCommit(parsed)
-					setDraft(formatSecondsClock(parsed))
-				} else {
-					// Invalid clock — keep the last committed display instead of clearing.
-					setDraft(fromProp)
-				}
-				onBlur()
-			}}
-			onChange={(e) => setDraft(e.target.value)}
-		/>
-	)
-}
 
 function categorizePayloadFields(manifest: TypeManifest | undefined) {
 	const clip: PayloadManifest[] = []

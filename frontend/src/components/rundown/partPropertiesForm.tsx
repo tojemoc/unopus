@@ -11,8 +11,9 @@ import { useNavigate } from '@tanstack/react-router'
 import { useAppDispatch, useAppSelector } from '~/store/app'
 import { removePart, updatePart } from '~/store/parts'
 import { useToasts } from '../toasts/useToasts'
-import { formatPartOnAirDuration, resolvePartOnAirDuration } from '~/util/pieceDuration'
+import { formatPartOnAirDuration, resolvePartOnAirDuration, formatSecondsClock } from '~/util/pieceDuration'
 import { ScriptReadingCounter } from './scriptReadingCounter'
+import { ClockDurationInput } from './clockDurationInput'
 import { partUsesScriptDuration, resolveEffectiveScriptCps } from '~/util/scriptReadingTime'
 
 export function PartPropertiesForm({ part }: { part: Part }) {
@@ -245,21 +246,18 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 						return (
 							<>
 								<Form.Group className="mb-3">
-									<Form.Label htmlFor={field.name}>Duration (seconds):</Form.Label>
-									<Form.Control
+									<Form.Label htmlFor={field.name}>On air (mm:ss)</Form.Label>
+									<ClockDurationInput
+										id={field.name}
 										name={field.name}
-										type="number"
-										min={0}
-										step="any"
-										value={storedDuration ?? ''}
+										valueSeconds={storedDuration}
 										placeholder={
-											effectivePartDuration ? String(effectivePartDuration) : 'Unset'
+											effectivePartDuration
+												? formatSecondsClock(effectivePartDuration)
+												: 'mm:ss'
 										}
 										onBlur={field.handleBlur}
-										onChange={(e) => {
-											const raw = e.target.value.trim()
-											field.handleChange(raw === '' ? null : Number(raw))
-										}}
+										onCommit={(seconds) => field.handleChange(seconds)}
 									/>
 									{scriptDriven ? (
 										<Form.Text className="text-muted">

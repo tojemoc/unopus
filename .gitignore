@@ -46,3 +46,4 @@ ingest/
 
 # Fetched sofie megarepo assets (local / CI cache; not committed)
 .sofie-assets/
+artifacts/
