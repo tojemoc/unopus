@@ -13,6 +13,8 @@ export interface PresenceFocus {
 	entityType: PresenceEntityType
 	entityId: string
 	rundownId: string
+	/** Client-generated lease; blur with this id only clears a matching acquisition. */
+	leaseId: string
 }
 
 export interface PresenceLockHolder {
@@ -22,7 +24,7 @@ export interface PresenceLockHolder {
 }
 
 export type PresenceFocusResult =
-	| { ok: true; evicted: PresenceFocus[] }
+	| { ok: true; evicted: PresenceFocus[]; leaseId: string }
 	| { ok: false; reason: 'locked'; holder: PresenceLockHolder }
 
 type PresenceListener = (focuses: PresenceFocus[]) => void
@@ -108,16 +110,22 @@ export function trySetPresenceFocus(
 
 	focuses.set(focus.socketId, focus)
 	emit()
-	return { ok: true, evicted: toEvict }
+	return { ok: true, evicted: toEvict, leaseId: focus.leaseId }
 }
 
 /**
  * Remove the presence focus for a socket connection.
+ * When `leaseId` is provided, only clears if it matches the current acquisition.
  */
-export function clearPresenceFocus(socketId: string): void {
-	if (!focuses.delete(socketId)) {
+export function clearPresenceFocus(socketId: string, leaseId?: string): void {
+	const current = focuses.get(socketId)
+	if (!current) {
 		return
 	}
+	if (leaseId !== undefined && current.leaseId !== leaseId) {
+		return
+	}
+	focuses.delete(socketId)
 	emit()
 }
 

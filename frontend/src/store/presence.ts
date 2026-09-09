@@ -9,6 +9,7 @@ export interface PresenceFocus {
 	entityType: PresenceEntityType
 	entityId: string
 	rundownId: string
+	leaseId?: string
 }
 
 interface PresenceState {

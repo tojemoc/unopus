@@ -14,7 +14,7 @@ export interface PresenceLockHolder {
 }
 
 export type PresenceFocusResult =
-	| { ok: true; evicted?: PresenceFocus[] }
+	| { ok: true; leaseId: string; evicted?: PresenceFocus[] }
 	| { ok: false; reason: 'locked'; holder: PresenceLockHolder }
 	| { ok: false; reason: 'unavailable' }
 
@@ -27,6 +27,13 @@ export type PresenceEvictedPayload = {
 
 /** Single budget covering connect wait + focus acknowledgement. */
 const FOCUS_TIMEOUT_MS = 4000
+
+function createLeaseId(): string {
+	if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+		return crypto.randomUUID()
+	}
+	return `lease-${Date.now()}-${Math.random().toString(16).slice(2)}`
+}
 
 /**
  * Wait until the shared socket is connected (or timeout).
@@ -59,15 +66,30 @@ async function whenSocketConnected(timeoutMs: number): Promise<boolean> {
 }
 
 /**
+ * Release a specific presence acquisition. No-op if another lease replaced it.
+ */
+export function releasePresenceFocus(leaseId: string | undefined): void {
+	if (!leaseId) {
+		return
+	}
+	getSocket().emit('presence:blur', { leaseId })
+}
+
+/**
  * Request an exclusive presence focus (edit lock) for a part or piece.
  * Pass `force: true` to kick the current holder (possible unsaved data loss for them).
+ * Callers that may cancel should keep the returned `leaseId` and pass it to
+ * {@link releasePresenceFocus} so a late acquire cannot clear a newer lock.
  */
 export async function requestPresenceFocus(args: {
 	entityType: PresenceEntityType
 	entityId: string
 	rundownId: string
 	force?: boolean
+	/** Optional pre-generated lease; generated when omitted. */
+	leaseId?: string
 }): Promise<PresenceFocusResult> {
+	const leaseId = args.leaseId ?? createLeaseId()
 	const deadline = Date.now() + FOCUS_TIMEOUT_MS
 	const connected = await whenSocketConnected(Math.max(0, deadline - Date.now()))
 	if (!connected) {
@@ -84,7 +106,8 @@ export async function requestPresenceFocus(args: {
 		entityType: args.entityType,
 		entityId: args.entityId,
 		rundownId: args.rundownId,
-		force: args.force === true
+		force: args.force === true,
+		leaseId
 	}
 
 	try {
@@ -94,6 +117,9 @@ export async function requestPresenceFocus(args: {
 
 		if (!result || typeof result !== 'object' || !('ok' in result)) {
 			return { ok: false, reason: 'unavailable' }
+		}
+		if (result.ok) {
+			return { ...result, leaseId }
 		}
 		return result
 	} catch (error) {
@@ -133,10 +159,21 @@ export function usePresenceFocus(
 		if (!rundownId || !entityId) {
 			return
 		}
-		const socket = getSocket()
-		void requestPresenceFocus({ entityType, entityId, rundownId, force: false })
+		const leaseId = createLeaseId()
+		let cancelled = false
+		void requestPresenceFocus({ entityType, entityId, rundownId, force: false, leaseId }).then(
+			(result) => {
+				if (cancelled) {
+					if (result.ok) {
+						releasePresenceFocus(leaseId)
+					}
+					return
+				}
+			}
+		)
 		return () => {
-			socket.emit('presence:blur')
+			cancelled = true
+			releasePresenceFocus(leaseId)
 		}
 	}, [rundownId, entityType, entityId])
 }

@@ -20,7 +20,8 @@ describe('presence', () => {
 			displayName: 'Kubo',
 			entityType: 'part',
 			entityId: 'p1',
-			rundownId: 'r1'
+			rundownId: 'r1',
+			leaseId: 'lease-1'
 		})
 		setPresenceFocus({
 			socketId: 's1',
@@ -28,7 +29,8 @@ describe('presence', () => {
 			displayName: 'Kubo',
 			entityType: 'piece',
 			entityId: 'x1',
-			rundownId: 'r1'
+			rundownId: 'r1',
+			leaseId: 'lease-2'
 		})
 
 		assert.deepEqual(listPresenceFocuses('r1'), [
@@ -38,7 +40,8 @@ describe('presence', () => {
 				displayName: 'Kubo',
 				entityType: 'piece',
 				entityId: 'x1',
-				rundownId: 'r1'
+				rundownId: 'r1',
+				leaseId: 'lease-2'
 			}
 		])
 	})
@@ -50,7 +53,8 @@ describe('presence', () => {
 			displayName: 'Kubo',
 			entityType: 'part',
 			entityId: 'p1',
-			rundownId: 'r1'
+			rundownId: 'r1',
+			leaseId: 'lease-1'
 		})
 		setPresenceFocus({
 			socketId: 's2',
@@ -58,7 +62,8 @@ describe('presence', () => {
 			displayName: 'Ondro',
 			entityType: 'part',
 			entityId: 'p2',
-			rundownId: 'r2'
+			rundownId: 'r2',
+			leaseId: 'lease-2'
 		})
 
 		assert.equal(listPresenceFocuses('r1').length, 1)
@@ -74,7 +79,8 @@ describe('presence', () => {
 			displayName: 'Kubo',
 			entityType: 'part',
 			entityId: 'p1',
-			rundownId: 'r1'
+			rundownId: 'r1',
+			leaseId: 'lease-1'
 		})
 		assert.equal(first.ok, true)
 
@@ -84,7 +90,8 @@ describe('presence', () => {
 			displayName: 'Ondro',
 			entityType: 'part',
 			entityId: 'p1',
-			rundownId: 'r1'
+			rundownId: 'r1',
+			leaseId: 'lease-2'
 		})
 		assert.equal(blocked.ok, false)
 		if (!blocked.ok) {
@@ -101,7 +108,8 @@ describe('presence', () => {
 			displayName: 'Kubo',
 			entityType: 'part',
 			entityId: 'p1',
-			rundownId: 'r1'
+			rundownId: 'r1',
+			leaseId: 'lease-1'
 		})
 
 		const takeover = trySetPresenceFocus(
@@ -111,7 +119,8 @@ describe('presence', () => {
 				displayName: 'Ondro',
 				entityType: 'part',
 				entityId: 'p1',
-				rundownId: 'r1'
+				rundownId: 'r1',
+				leaseId: 'lease-2'
 			},
 			{ force: true }
 		)
@@ -120,6 +129,7 @@ describe('presence', () => {
 		if (takeover.ok) {
 			assert.equal(takeover.evicted.length, 1)
 			assert.equal(takeover.evicted[0]?.socketId, 's1')
+			assert.equal(takeover.leaseId, 'lease-2')
 		}
 		assert.deepEqual(listPresenceFocuses('r1').map((f) => f.socketId), ['s2'])
 	})
@@ -131,7 +141,8 @@ describe('presence', () => {
 			displayName: 'Kubo',
 			entityType: 'part',
 			entityId: 'p1',
-			rundownId: 'r1'
+			rundownId: 'r1',
+			leaseId: 'lease-1'
 		})
 
 		const secondTab = trySetPresenceFocus({
@@ -140,7 +151,8 @@ describe('presence', () => {
 			displayName: 'Kubo',
 			entityType: 'part',
 			entityId: 'p1',
-			rundownId: 'r1'
+			rundownId: 'r1',
+			leaseId: 'lease-2'
 		})
 
 		assert.equal(secondTab.ok, true)
@@ -148,5 +160,32 @@ describe('presence', () => {
 			assert.equal(secondTab.evicted[0]?.socketId, 's1')
 		}
 		assert.equal(listPresenceFocuses('r1')[0]?.socketId, 's2')
+	})
+
+	it('lease-scoped blur leaves a newer acquisition intact', () => {
+		trySetPresenceFocus({
+			socketId: 's1',
+			userId: 'u1',
+			displayName: 'Kubo',
+			entityType: 'part',
+			entityId: 'p1',
+			rundownId: 'r1',
+			leaseId: 'lease-old'
+		})
+		trySetPresenceFocus({
+			socketId: 's1',
+			userId: 'u1',
+			displayName: 'Kubo',
+			entityType: 'part',
+			entityId: 'p1',
+			rundownId: 'r1',
+			leaseId: 'lease-new'
+		})
+
+		clearPresenceFocus('s1', 'lease-old')
+		assert.equal(listPresenceFocuses('r1')[0]?.leaseId, 'lease-new')
+
+		clearPresenceFocus('s1', 'lease-new')
+		assert.equal(listPresenceFocuses('r1').length, 0)
 	})
 })

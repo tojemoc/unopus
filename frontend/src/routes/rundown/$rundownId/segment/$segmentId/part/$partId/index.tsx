@@ -1,8 +1,7 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useEffect } from 'react'
 import { useScriptExpand } from '~/hooks/ScriptExpandContext'
-import { requestPresenceFocus } from '~/hooks/usePresence'
-import { getSocket } from '~/lib/socket'
+import { releasePresenceFocus, requestPresenceFocus } from '~/hooks/usePresence'
 import { useAppSelector } from '~/store/app'
 import { useToasts } from '~/components/toasts/useToasts'
 
@@ -33,16 +32,18 @@ function RouteComponent() {
 	useEffect(() => {
 		if (!partExists) return
 		let cancelled = false
+		const leaseId = crypto.randomUUID()
 		void requestPresenceFocus({
 			entityType: 'part',
 			entityId: partId,
 			rundownId,
-			force: false
+			force: false,
+			leaseId
 		}).then((result) => {
 			if (cancelled) {
-				// Focus may have been acquired after cleanup — release it.
+				// Late acquire for this lease only — do not clear a newer lock.
 				if (result.ok) {
-					getSocket().emit('presence:blur')
+					releasePresenceFocus(leaseId)
 				}
 				return
 			}
@@ -57,7 +58,7 @@ function RouteComponent() {
 		})
 		return () => {
 			cancelled = true
-			getSocket().emit('presence:blur')
+			releasePresenceFocus(leaseId)
 			setExpandedPartId((prev) => (prev === partId ? null : prev))
 		}
 	}, [partId, partExists, rundownId, setExpandedPartId, toasts])

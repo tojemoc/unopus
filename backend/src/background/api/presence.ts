@@ -21,6 +21,11 @@ type FocusPayload = {
 	entityId?: unknown
 	rundownId?: unknown
 	force?: unknown
+	leaseId?: unknown
+}
+
+type BlurPayload = {
+	leaseId?: unknown
 }
 
 type FocusAck = (result: PresenceFocusResult) => void
@@ -66,6 +71,14 @@ export function registerPresenceHandlers(socket: Socket, io: Server): void {
 			})
 			return
 		}
+		if (typeof payload.leaseId !== 'string' || !payload.leaseId) {
+			ack?.({
+				ok: false,
+				reason: 'locked',
+				holder: { socketId: '', userId: '', displayName: 'Unknown' }
+			})
+			return
+		}
 
 		const force = payload.force === true
 		const result = trySetPresenceFocus(
@@ -75,7 +88,8 @@ export function registerPresenceHandlers(socket: Socket, io: Server): void {
 				displayName: user.displayName,
 				entityType: payload.entityType,
 				entityId: payload.entityId,
-				rundownId: payload.rundownId
+				rundownId: payload.rundownId,
+				leaseId: payload.leaseId
 			},
 			{ force }
 		)
@@ -94,8 +108,9 @@ export function registerPresenceHandlers(socket: Socket, io: Server): void {
 		ack?.(result)
 	})
 
-	socket.on('presence:blur', () => {
-		clearPresenceFocus(socket.id)
+	socket.on('presence:blur', (payload?: BlurPayload) => {
+		const leaseId = typeof payload?.leaseId === 'string' ? payload.leaseId : undefined
+		clearPresenceFocus(socket.id, leaseId)
 	})
 
 	socket.on('disconnect', () => {
