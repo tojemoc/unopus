@@ -25,7 +25,8 @@ const LABELS: Record<string, string> = {
 	scriptCps: 'Script reading speed (CPS)',
 	iluDurationMode: 'ILU duration mode in Sofie',
 	skipStatusUnlessEditorChecked: 'Show Skipped status unless editor-checked',
-	requireEditorCheckForAir: 'Require editor check before on-air'
+	requireEditorCheckForAir: 'Require editor check before on-air',
+	ignoreCoreContentStatus: 'Ignore Sofie media status (sync rundown only)'
 }
 
 /**

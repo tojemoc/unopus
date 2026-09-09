@@ -378,6 +378,41 @@ export function CoreConnectionSettingsForm({ settings }: { settings: Application
 					)}
 				/>
 
+				<hr className="my-4" />
+				<h3 className="h5">Sofie sync &amp; media status</h3>
+				<p className="text-muted small">
+					Sync to Sofie always pushes the rundown structure. Media Ready / Not Ready badges can
+					additionally query Sofie Package Manager — which is sometimes wrong when files are
+					present locally. Use the toggle below to keep syncing the rundown while judging media
+					from the ingest folder only (same as with sync off).
+				</p>
+
+				<form.Field
+					name="ignoreCoreContentStatus"
+					children={(field) => (
+						<>
+							<Form.Group className="mb-3">
+								<Form.Label htmlFor={field.name}>
+									{friendlyLabel('ignoreCoreContentStatus')}
+								</Form.Label>
+								<Form.Switch
+									id={field.name}
+									name={field.name}
+									checked={Boolean(field.state.value)}
+									onBlur={field.handleBlur}
+									onChange={(e) => field.handleChange(e.target.checked)}
+								/>
+								<Form.Text className="text-muted">
+									When enabled, Sync to Sofie still creates/updates the rundown in Core, but
+									readiness badges ignore Package Manager content-status and use local file
+									checks only.
+								</Form.Text>
+							</Form.Group>
+							<FieldInfo field={field} />
+						</>
+					)}
+				/>
+
 				<div className="mb-3">
 					<Button variant="outline-primary" onClick={() => void testConnection()} disabled={testing}>
 						{testing ? 'Testing…' : 'Test Connection'}

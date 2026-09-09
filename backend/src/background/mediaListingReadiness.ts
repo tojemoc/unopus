@@ -15,6 +15,7 @@ import {
 import { getIngestMediaRoot } from './media'
 import { mutations as piecesMutations } from './api/pieces'
 import { mutations as typeManifestMutations } from './api/typeManifests'
+import { readApplicationSettingsSync } from './settingsResolver'
 
 function collectPieceMediaPaths(
 	piece: Piece,
@@ -50,6 +51,11 @@ export async function enrichMediaListingWithCoreReadiness(
 	rundownId: string,
 	files: MediaFileEntry[]
 ): Promise<MediaFileEntry[]> {
+	if (Boolean(readApplicationSettingsSync()?.ignoreCoreContentStatus)) {
+		// Setting: sync rundown only — do not paint media picker with Package Manager status.
+		return unknownReadiness(files)
+	}
+
 	const ingestRoot = getIngestMediaRoot()
 
 	let pieces: Piece[]

@@ -272,7 +272,7 @@ export interface PieceReadiness {
 
 export interface RundownReadinessDiagnostics {
 	coreConnectionStatus: CoreConnectionStatus
-	coreCallSource: 'core' | 'core-disconnected' | 'core-error'
+	coreCallSource: 'core' | 'core-disconnected' | 'core-error' | 'ignored'
 	/** Safe operator-facing label only (never raw Core exception text). */
 	coreCallError?: string
 	/** Piece statuses returned by Core; 0 is ambiguous — do not over-interpret. */
@@ -344,6 +344,12 @@ export interface ApplicationSettings {
 	 * (shown alongside media NR, and `editorChecked` is exported for blueprints).
 	 */
 	requireEditorCheckForAir?: boolean
+	/**
+	 * When true, Sync to Sofie still pushes the rundown ingest payload, but media
+	 * readiness ignores Core/Package Manager content-status and uses local filesystem
+	 * checks only (same as when sync is off). Use when Package Manager reports false NR.
+	 */
+	ignoreCoreContentStatus?: boolean
 }
 
 export type DailyGenerationStatus = 'in_progress' | 'completed' | 'failed'
