@@ -1,5 +1,6 @@
 import { useNavigate } from '@tanstack/react-router'
 import { useMemo } from 'react'
+import { BsLockFill } from 'react-icons/bs'
 import { useAppDispatch, useAppSelector } from '~/store/app'
 import './piecesList.scss'
 import { addNewPiece, copyPiece, reorderPieces } from '~/store/pieces'
@@ -287,7 +288,7 @@ function PieceRow({
 						className="story-row__lock"
 						title={locks.map((lock) => `${lock.displayName} is editing this piece`).join(', ')}
 					>
-						🔒 {locks.map((lock) => lock.displayName).join(', ')}
+						<BsLockFill aria-hidden /> {locks.map((lock) => lock.displayName).join(', ')}
 					</span>
 				) : null}
 			</td>

@@ -1,4 +1,6 @@
-import { useMemo } from 'react'
+import { useMemo, useRef, useState } from 'react'
+import { Button, Modal } from 'react-bootstrap'
+import { BsLockFill } from 'react-icons/bs'
 import { useAppSelector } from '~/store/app'
 import type { Part, PieceReadiness, RundownReadiness } from '~backend/background/interfaces'
 import { TypeManifestEntity } from '~backend/background/interfaces'
@@ -8,10 +10,11 @@ import { EditorialStatusBadge } from '../editorialStatusBadge'
 import { formatPartOnAirDuration } from '~/util/pieceDuration'
 import { resolveEffectiveScriptCps } from '~/util/scriptReadingTime'
 import { resolveEditorialStatus } from '~/util/editorialStatus'
-import { useRowLocks } from '~/hooks/usePresence'
+import { requestPresenceFocus, useRowLocks } from '~/hooks/usePresence'
 import { useRundownReadinessContext } from '~/hooks/RundownReadinessContext'
 import { useScriptExpand } from '~/hooks/ScriptExpandContext'
 import { PartExpandedPanel } from '../partExpandedPanel'
+import { useToasts } from '~/components/toasts/useToasts'
 
 function getStoryReadiness(
 	partId: string,
@@ -63,9 +66,13 @@ function typeTint(hex: string | undefined): string {
 }
 
 export function SidebarPartRow({ part }: { part: Part }) {
+	const toasts = useToasts()
 	const { readiness } = useRundownReadinessContext()
-	const { expandedPartId, toggleExpandedPart } = useScriptExpand()
+	const { expandedPartId, setExpandedPartId } = useScriptExpand()
 	const expanded = expandedPartId === part.id
+	const [takeoverHolder, setTakeoverHolder] = useState<string | null>(null)
+	const [busy, setBusy] = useState(false)
+	const pointerStart = useRef<{ x: number; y: number } | null>(null)
 
 	const partTypeManifest = useAppSelector((state) =>
 		findTypeManifest(state.typeManifests.manifests, part.partType, TypeManifestEntity.Part)
@@ -89,6 +96,7 @@ export function SidebarPartRow({ part }: { part: Part }) {
 	})
 
 	const typeColour = partTypeManifest?.colour ?? '#666'
+	const lockNames = locks.map((lock) => lock.displayName).join(', ')
 
 	const rowClass = [
 		'story-row',
@@ -103,16 +111,82 @@ export function SidebarPartRow({ part }: { part: Part }) {
 		.filter(Boolean)
 		.join(' ')
 
+	const openStory = async (force: boolean) => {
+		setBusy(true)
+		try {
+			const result = await requestPresenceFocus({
+				entityType: 'part',
+				entityId: part.id,
+				rundownId: part.rundownId,
+				force
+			})
+			if (result.ok) {
+				setTakeoverHolder(null)
+				setExpandedPartId(part.id)
+				return
+			}
+			if (result.reason === 'unavailable') {
+				// Don't block editing if presence is down; still open locally.
+				console.warn('Story lock unavailable; opening without exclusive lock')
+				setTakeoverHolder(null)
+				setExpandedPartId(part.id)
+				return
+			}
+			setTakeoverHolder(result.holder.displayName || lockNames || 'Another user')
+		} catch (error) {
+			console.error(error)
+			toasts.show({
+				headerContent: 'Story lock',
+				bodyContent: 'Could not open this story. Check your connection and try again.'
+			})
+		} finally {
+			setBusy(false)
+		}
+	}
+
+	const handleActivate = () => {
+		if (busy) {
+			return
+		}
+		if (expanded) {
+			setExpandedPartId(null)
+			return
+		}
+		// Fast path: known foreign lock from presence snapshot → confirm before kicking.
+		if (locks.length > 0) {
+			setTakeoverHolder(lockNames || locks[0]?.displayName || 'Another user')
+			return
+		}
+		void openStory(false)
+	}
+
 	return (
 		<div className="story-row-block">
 			<div
 				className={rowClass}
 				tabIndex={0}
-				onClick={() => toggleExpandedPart(part.id)}
+				role="button"
+				aria-expanded={expanded}
+				aria-busy={busy || undefined}
+				onPointerDown={(event) => {
+					pointerStart.current = { x: event.clientX, y: event.clientY }
+				}}
+				onClick={(event) => {
+					// Ignore click that followed a drag gesture (react-dnd).
+					const start = pointerStart.current
+					pointerStart.current = null
+					if (
+						start &&
+						(Math.abs(event.clientX - start.x) > 4 || Math.abs(event.clientY - start.y) > 4)
+					) {
+						return
+					}
+					handleActivate()
+				}}
 				onKeyDown={(event) => {
 					if (event.key === 'Enter' || event.key === ' ') {
 						event.preventDefault()
-						toggleExpandedPart(part.id)
+						handleActivate()
 					}
 				}}
 				style={{
@@ -148,9 +222,9 @@ export function SidebarPartRow({ part }: { part: Part }) {
 					{locks.length ? (
 						<span
 							className="story-row__lock"
-							title={locks.map((lock) => `${lock.displayName} is editing this story`).join(', ')}
+							title={`${lockNames} is editing this story`}
 						>
-							🔒 {locks.map((lock) => lock.displayName).join(', ')}
+							<BsLockFill aria-hidden /> {lockNames}
 						</span>
 					) : null}
 				</div>
@@ -167,6 +241,34 @@ export function SidebarPartRow({ part }: { part: Part }) {
 				</div>
 			</div>
 			{expanded ? <PartExpandedPanel part={part} /> : null}
+
+			<Modal
+				show={takeoverHolder !== null}
+				onHide={() => setTakeoverHolder(null)}
+				onClick={(e: React.MouseEvent) => e.stopPropagation()}
+			>
+				<Modal.Header closeButton>
+					<Modal.Title>Story is locked</Modal.Title>
+				</Modal.Header>
+				<Modal.Body>
+					{takeoverHolder ?? 'Another user'} is currently editing this story. Opening it will kick
+					them out and any unsaved changes they have may be lost.
+				</Modal.Body>
+				<Modal.Footer>
+					<Button variant="secondary" disabled={busy} onClick={() => setTakeoverHolder(null)}>
+						Cancel
+					</Button>
+					<Button
+						variant="danger"
+						disabled={busy}
+						onClick={() => {
+							void openStory(true)
+						}}
+					>
+						Kick out and open
+					</Button>
+				</Modal.Footer>
+			</Modal>
 		</div>
 	)
 }
