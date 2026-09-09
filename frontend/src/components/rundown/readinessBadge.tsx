@@ -54,7 +54,7 @@ export function ReadinessBadge({
 
 export type ReadinessProvenanceContext = {
 	pieceSource?: ReadinessStatusSource
-	coreCallSource?: 'core' | 'core-disconnected' | 'core-error'
+	coreCallSource?: 'core' | 'core-disconnected' | 'core-error' | 'ignored'
 	/** Safe operator-facing label only. */
 	coreCallError?: string
 }
@@ -67,6 +67,10 @@ function formatProvenanceLine(ctx: ReadinessProvenanceContext): string | undefin
 
 	if (source === 'core') {
 		return 'via Package Manager'
+	}
+
+	if (ctx.coreCallSource === 'ignored') {
+		return 'via local scan (Sofie media status ignored)'
 	}
 
 	if (ctx.coreCallSource === 'core-disconnected') {

@@ -26,7 +26,10 @@ function RouteComponent() {
 				This probe checks whether Sofie Core is reachable, this Rundown Editor peripheral device
 				is attached to a studio, and Core&apos;s rundown content-status API responds. A green
 				result does <strong>not</strong> mean Package Manager itself is connected — PM can be
-				offline while this call still succeeds (pieces would simply show not-ready).
+				offline while this call still succeeds (pieces would simply show not-ready). If
+				Settings → Connection has &quot;Ignore Sofie media status&quot; enabled, rundown
+				readiness badges skip this API entirely and use local file checks only (sync still
+				pushes the rundown).
 			</p>
 
 			{loading && !diagnostics && <p>Loading…</p>}

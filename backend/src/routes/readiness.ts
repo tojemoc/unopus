@@ -1,6 +1,9 @@
 import type { Application, Request, Response } from 'express'
 import { getUserFromSession, parseSessionCookie } from '../background/auth/authStore'
-import { fetchCoreContentStatusForRundown } from '../background/coreContentStatus'
+import {
+	fetchCoreContentStatusForRundown,
+	type CorePieceContentStatus
+} from '../background/coreContentStatus'
 import {
 	countReadinessProvenance,
 	evaluateRundownReadiness
@@ -9,6 +12,7 @@ import { mutations as piecesMutations } from '../background/api/pieces'
 import { mutations as typeManifestMutations } from '../background/api/typeManifests'
 import { coreHandler } from '../background/coreHandler'
 import { TypeManifestEntity } from '../background/interfaces'
+import { readApplicationSettingsSync } from '../background/settingsResolver'
 
 /**
  * Retrieves the session user from the request's cookie.
@@ -60,8 +64,27 @@ export function registerReadinessRoutes(app: Application): void {
 				(manifest) => manifest.entityType === TypeManifestEntity.Piece
 			)
 
-			const coreResult = await fetchCoreContentStatusForRundown(rundownId)
-			const coreStatuses = coreResult.source === 'core' ? coreResult.statuses : undefined
+			const ignoreCoreContentStatus = Boolean(
+				readApplicationSettingsSync()?.ignoreCoreContentStatus
+			)
+
+			let coreCallSource: 'core' | 'core-disconnected' | 'core-error' | 'ignored'
+			let coreCallError: string | undefined
+			let corePieceStatusCount = 0
+			let coreStatuses: Map<string, CorePieceContentStatus> | undefined
+
+			if (ignoreCoreContentStatus) {
+				// Sync to Sofie still pushes ingest; readiness uses local FS only.
+				coreCallSource = 'ignored'
+				coreStatuses = undefined
+			} else {
+				const coreResult = await fetchCoreContentStatusForRundown(rundownId)
+				coreCallSource = coreResult.source
+				coreCallError = coreResult.source === 'core-error' ? coreResult.error : undefined
+				corePieceStatusCount = coreResult.source === 'core' ? coreResult.statuses.size : 0
+				coreStatuses = coreResult.source === 'core' ? coreResult.statuses : undefined
+			}
+
 			const readiness = await evaluateRundownReadiness(pieces, pieceManifests, coreStatuses)
 			const provenance = countReadinessProvenance(readiness)
 
@@ -69,9 +92,9 @@ export function registerReadinessRoutes(app: Application): void {
 				...readiness,
 				diagnostics: {
 					coreConnectionStatus: coreHandler.connectionInfo.status,
-					coreCallSource: coreResult.source,
-					coreCallError: coreResult.source === 'core-error' ? coreResult.error : undefined,
-					corePieceStatusCount: coreResult.source === 'core' ? coreResult.statuses.size : 0,
+					coreCallSource,
+					coreCallError,
+					corePieceStatusCount,
 					piecesFromCore: provenance.piecesFromCore,
 					piecesFromFsFallback: provenance.piecesFromFsFallback,
 					checkedAt: new Date().toISOString()
