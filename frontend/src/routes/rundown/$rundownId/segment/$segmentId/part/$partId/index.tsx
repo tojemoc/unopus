@@ -2,6 +2,7 @@ import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useEffect } from 'react'
 import { useScriptExpand } from '~/hooks/ScriptExpandContext'
 import { requestPresenceFocus } from '~/hooks/usePresence'
+import { getSocket } from '~/lib/socket'
 import { useAppSelector } from '~/store/app'
 import { useToasts } from '~/components/toasts/useToasts'
 
@@ -38,7 +39,13 @@ function RouteComponent() {
 			rundownId,
 			force: false
 		}).then((result) => {
-			if (cancelled) return
+			if (cancelled) {
+				// Focus may have been acquired after cleanup — release it.
+				if (result.ok) {
+					getSocket().emit('presence:blur')
+				}
+				return
+			}
 			if (result.ok || result.reason === 'unavailable') {
 				setExpandedPartId(partId)
 				return
@@ -50,6 +57,7 @@ function RouteComponent() {
 		})
 		return () => {
 			cancelled = true
+			getSocket().emit('presence:blur')
 			setExpandedPartId((prev) => (prev === partId ? null : prev))
 		}
 	}, [partId, partExists, rundownId, setExpandedPartId, toasts])
