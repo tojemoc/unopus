@@ -1,4 +1,5 @@
 import type { Part, Piece, Rundown, Segment, SerializedRundown } from '~backend/background/interfaces'
+import { formatPayloadStringValue } from './payloadStringValue'
 
 type RowKind = 'piece' | 'part' | 'segment'
 
@@ -51,10 +52,7 @@ const PIECE_FIELDS = [
 ] as const satisfies readonly (keyof Piece)[]
 
 function formatCellValue(value: unknown): string {
-	if (value === undefined || value === null) return ''
-	if (typeof value === 'boolean') return value ? 'true' : 'false'
-	if (typeof value === 'number') return Number.isFinite(value) ? String(value) : ''
-	return String(value)
+	return formatPayloadStringValue(value)
 }
 
 function escapeCsvCell(value: string): string {

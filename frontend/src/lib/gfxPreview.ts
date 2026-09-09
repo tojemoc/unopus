@@ -1,5 +1,6 @@
 import { request } from './mediaApi'
 import { isSameOriginPreviewBase } from './isSameOriginPreviewBase'
+import { formatPayloadStringValue } from '~/util/payloadStringValue'
 
 export { isSameOriginPreviewBase }
 
@@ -29,7 +30,7 @@ export function buildQueryPreviewUrl(
 		if (value === undefined || value === null || value === '') {
 			continue
 		}
-		params.set(key, String(value))
+		params.set(key, formatPayloadStringValue(value))
 	}
 	const query = params.toString()
 	return `${joinPreviewPath(baseUrl, `${template}/index.html`)}${query ? `?${query}` : ''}`
@@ -62,7 +63,7 @@ export function buildCasparTemplateDataXml(payload: Record<string, unknown>): st
 			continue
 		}
 		const safeId = escapeXmlAttribute(id)
-		const text = String(value)
+		const text = formatPayloadStringValue(value)
 		const dataAttr = escapeXmlAttribute(text)
 		components.push(
 			`<componentData id="${safeId}"><data value="${dataAttr}">${escapeXmlText(text)}</data></componentData>`

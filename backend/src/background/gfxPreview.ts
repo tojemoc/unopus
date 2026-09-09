@@ -73,6 +73,30 @@ function escapeXmlText(value: string): string {
 }
 
 /**
+ * Coerce payload values to text for Caspar templateData / query preview.
+ * Objects and arrays become JSON — never `"[object Object]"`.
+ */
+function formatPayloadStringValue(value: unknown): string {
+	if (value === undefined || value === null) {
+		return ''
+	}
+	if (typeof value === 'string') {
+		return value
+	}
+	if (typeof value === 'number') {
+		return Number.isFinite(value) ? String(value) : ''
+	}
+	if (typeof value === 'boolean') {
+		return value ? 'true' : 'false'
+	}
+	try {
+		return JSON.stringify(value)
+	} catch {
+		return String(value)
+	}
+}
+
+/**
  * Build CasparCG-compatible templateData XML from a flat payload object.
  * Each key becomes `<componentData id="key"><data value="…"/></componentData>`.
  */
@@ -84,7 +108,7 @@ export function buildCasparTemplateDataXml(payload: Record<string, unknown>): st
 			continue
 		}
 		const safeId = escapeXmlAttribute(id)
-		const text = String(value)
+		const text = formatPayloadStringValue(value)
 		const dataAttr = escapeXmlAttribute(text)
 		components.push(
 			`<componentData id="${safeId}"><data value="${dataAttr}">${escapeXmlText(text)}</data></componentData>`

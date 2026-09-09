@@ -11,6 +11,7 @@ import {
 import { fetchPreviewBaseUrl } from '~/lib/mediaApi'
 import type { Piece, TypeManifest } from '~backend/background/interfaces'
 import { resolveSourceEnabled, trimSourceText } from '~/util/sourcePayload'
+import { formatPayloadStringValue } from '~/util/payloadStringValue'
 
 const GFX_PREVIEW_MESSAGE = 'sofie-gfx-preview'
 const GFX_PREVIEW_READY = 'sofie-gfx-preview-ready'
@@ -45,7 +46,7 @@ function formatQueryString(payload: Record<string, unknown>): string {
 		if (value === undefined || value === null || value === '') {
 			continue
 		}
-		params.set(key, String(value))
+		params.set(key, formatPayloadStringValue(value))
 	}
 	const query = params.toString()
 	return query ? `?${query}` : ''

@@ -34,6 +34,10 @@ import {
 	resolvePieceName,
 	previewPayloadSnapshotKey
 } from '~/util/pieceName'
+import {
+	formatPayloadStringValue,
+	normalizeStringTypedPayload
+} from '~/util/payloadStringValue'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type PieceFormApi = any
@@ -130,8 +134,7 @@ function PayloadField({
 										id={field.name}
 										name={field.name}
 										type="text"
-										// eslint-disable-next-line @typescript-eslint/no-explicit-any
-										value={field.state.value as any}
+										value={formatPayloadStringValue(field.state.value)}
 										onBlur={field.handleBlur}
 										onChange={(e) => field.handleChange(e.target.value)}
 									/>
@@ -139,11 +142,7 @@ function PayloadField({
 										fieldInfo.id === 'script' ||
 										fieldInfo.id === 'headline') && (
 										<ScriptReadingCounter
-											text={
-												typeof field.state.value === 'string'
-													? field.state.value
-													: String(field.state.value ?? '')
-											}
+											text={formatPayloadStringValue(field.state.value)}
 										/>
 									)}
 								</>
@@ -307,13 +306,23 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 
 	const { clip, headline, content, bypass, source, other } = categorizePayloadFields(manifest)
 
+	const stringFieldIds = (manifest?.payload ?? [])
+		.filter((field) => field.type === ManifestFieldType.String)
+		.map((field) => field.id)
+
 	const form = useForm({
-		defaultValues: piece,
+		defaultValues: {
+			...piece,
+			payload: normalizeStringTypedPayload(piece.payload, stringFieldIds)
+		},
 		onSubmit: async (values) => {
-			const mergedPayload = {
-				...(piece.payload ?? {}),
-				...(values.value.payload ?? {})
-			}
+			const mergedPayload = normalizeStringTypedPayload(
+				{
+					...(piece.payload ?? {}),
+					...(values.value.payload ?? {})
+				},
+				stringFieldIds
+			)
 			const derivedName = resolvePieceName(manifest, mergedPayload, piece.name)
 
 			const pieceToSave: Piece = {

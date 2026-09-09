@@ -13,6 +13,7 @@ import { ScriptReadingCounter } from '~/components/rundown/scriptReadingCounter'
 import { useAppDispatch, useAppSelector } from '~/store/app'
 import { updatePart } from '~/store/parts'
 import { updatePiece } from '~/store/pieces'
+import { formatPayloadStringValue } from '~/util/payloadStringValue'
 
 export const Route = createFileRoute('/rundown/$rundownId/rewrite')({
 	component: DailyRewritePage
@@ -126,7 +127,7 @@ function DailyRewritePage() {
 			return row.part.script ?? ''
 		}
 		const raw = row.piece.payload?.[row.field.id]
-		return raw === undefined || raw === null ? '' : String(raw)
+		return formatPayloadStringValue(raw)
 	}
 
 	const setValue = (key: string, value: string) => {

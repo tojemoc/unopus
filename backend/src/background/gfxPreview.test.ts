@@ -42,6 +42,14 @@ describe('buildCasparTemplateDataXml', () => {
 		assert.doesNotMatch(xml, /id="title"/)
 		assert.doesNotMatch(xml, /id="role"/)
 	})
+
+	it('JSON-stringifies object/array values instead of [object Object]', () => {
+		const cities = [{ region: 'BA', name: 'BRATISLAVA', temp: '4' }]
+		const xml = buildCasparTemplateDataXml({ cities })
+		assert.match(xml, /id="cities"/)
+		assert.match(xml, /value="\[\{&quot;region&quot;:&quot;BA&quot;/)
+		assert.doesNotMatch(xml, /\[object Object\]/)
+	})
 })
 
 describe('resolveGfxTemplate', () => {

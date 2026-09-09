@@ -222,7 +222,7 @@ export function PartExpandedPanel({ part }: { part: Part }) {
 
 			{expandedPiece ? (
 				<div className="part-expanded-piece">
-					<PiecePropertiesForm piece={expandedPiece} />
+					<PiecePropertiesForm key={expandedPiece.id} piece={expandedPiece} />
 					<div className="part-expanded-piece__actions">
 						<Button
 							size="sm"
