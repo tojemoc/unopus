@@ -44,16 +44,30 @@ function unknownReadiness(files: MediaFileEntry[]): MediaFileEntry[] {
 }
 
 /**
+ * When Core/PM status is ignored, listed files are already known to exist on the
+ * ingest filesystem (`listRundownMedia` only returns live entries). Treat them as
+ * confirmed so the media picker keeps Ready outcomes instead of "not yet confirmed".
+ */
+function localFsReadiness(files: MediaFileEntry[]): MediaFileEntry[] {
+	return files.map((file) => ({
+		...file,
+		readiness: 'confirmed' as const,
+		reason: undefined
+	}))
+}
+
+/**
  * Attach Core/Package Manager readiness to filesystem media listings for the
- * active rundown only. Local fs existence never becomes confirmed/not-confirmed.
+ * active rundown only. Local fs existence never becomes confirmed/not-confirmed
+ * unless application setting `ignoreCoreContentStatus` is enabled.
  */
 export async function enrichMediaListingWithCoreReadiness(
 	rundownId: string,
 	files: MediaFileEntry[]
 ): Promise<MediaFileEntry[]> {
 	if (Boolean(readApplicationSettingsSync()?.ignoreCoreContentStatus)) {
-		// Setting: sync rundown only — do not paint media picker with Package Manager status.
-		return unknownReadiness(files)
+		// Sync rundown only — skip Package Manager; keep local Ready for files on ingest.
+		return localFsReadiness(files)
 	}
 
 	const ingestRoot = getIngestMediaRoot()
