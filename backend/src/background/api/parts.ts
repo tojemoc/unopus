@@ -35,6 +35,7 @@ import { recordEntityEdit } from '../auth/authStore'
 import type { AuthenticatedSocket } from '../auth/socketAuth'
 import type { SessionUser } from '../auth/types'
 import {
+	resolveEffectiveIluDurationMode,
 	resolvePartOnAirDuration,
 	resolvePieceOnAirDuration
 } from '../storyDuration'
@@ -64,6 +65,10 @@ async function mutatePart(part: Part): Promise<MutatedPart> {
 		duration: piece.duration ?? undefined,
 		pieceType: piece.objectType
 	}))
+	const durationMode = resolveEffectiveIluDurationMode(
+		part.durationMode,
+		settings?.iluDurationMode
+	)
 	const effectivePartDuration = part.skip
 		? undefined
 		: isPositiveDurationSeconds(part.duration)
@@ -73,10 +78,11 @@ async function mutatePart(part: Part): Promise<MutatedPart> {
 						duration: part.duration ?? undefined,
 						script: part.script,
 						partType: part.partType,
-						skip: part.skip
+						skip: part.skip,
+						durationMode: part.durationMode
 					},
 					durationPieces,
-					{ scriptCps: settings?.scriptCps }
+					{ scriptCps: settings?.scriptCps, defaultDurationMode: settings?.iluDurationMode }
 				) ?? (part.duration ?? undefined))
 
 	const pieces = rawPieces.map((piece) => ({
@@ -88,11 +94,10 @@ async function mutatePart(part: Part): Promise<MutatedPart> {
 			) ?? (piece.duration ?? undefined)
 	}))
 
-	const iluDurationMode = settings?.iluDurationMode ?? 'auto'
 	const autoNext =
 		!part.skip &&
 		partUsesScriptDuration(part.partType) &&
-		iluDurationMode === 'auto'
+		durationMode === 'auto'
 			? true
 			: undefined
 
@@ -457,6 +462,7 @@ export const mutations = {
 				script: sourcePart.script,
 				partType: sourcePart.partType,
 				duration: sourcePart.duration,
+				durationMode: sourcePart.durationMode,
 				id: uuid(),
 				payload: {}
 			})
@@ -569,7 +575,7 @@ export const mutations = {
 				rundownId: null,
 				segmentId: null
 			} as Record<string, unknown>,
-			['duration']
+			['duration', 'durationMode']
 		)
 
 		try {

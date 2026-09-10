@@ -40,8 +40,15 @@ export function SidebarSegment({ segment }: { segment: Segment }) {
 	const parts = useAppSelector((s) => selectPartsBySegmentId(s, segment.id))
 	const allPieces = useAppSelector(selectAllPieces)
 	const userScriptCps = useAppSelector((s) => s.auth.user?.scriptCps)
-	const settingsCps = useAppSelector((s) => s.settings.settings?.scriptCps)
-	const scriptCps = resolveEffectiveScriptCps({ userScriptCps, settingsCps })
+	const settings = useAppSelector((s) => s.settings.settings)
+	const scriptCps = resolveEffectiveScriptCps({
+		userScriptCps,
+		settingsCps: settings?.scriptCps
+	})
+	const durationOpts = {
+		scriptCps,
+		defaultDurationMode: settings?.iluDurationMode ?? ('auto' as const)
+	}
 	const sortedParts = useMemo(() => [...parts].sort((a, b) => a.rank - b.rank), [parts])
 
 	const segmentDuration = sortedParts.reduce((acc, part) => {
@@ -52,7 +59,7 @@ export function SidebarSegment({ segment }: { segment: Segment }) {
 				duration: piece.duration,
 				skip: piece.skip
 			}))
-		return acc + (resolvePartOnAirDuration(part, partPieces, { scriptCps }) ?? 0)
+		return acc + (resolvePartOnAirDuration(part, partPieces, durationOpts) ?? 0)
 	}, 0)
 
 	const handleReorderPart = (

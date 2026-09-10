@@ -28,8 +28,18 @@ export function RundownNavbar({ rundown }: { rundown: Rundown }) {
 		state.pieces.pieces.filter((p) => p.rundownId === rundown.id)
 	)
 	const userScriptCps = useAppSelector((s) => s.auth.user?.scriptCps)
-	const settingsCps = useAppSelector((s) => s.settings.settings?.scriptCps)
-	const scriptCps = resolveEffectiveScriptCps({ userScriptCps, settingsCps })
+	const settings = useAppSelector((s) => s.settings.settings)
+	const scriptCps = resolveEffectiveScriptCps({
+		userScriptCps,
+		settingsCps: settings?.scriptCps
+	})
+	const durationOpts = useMemo(
+		() => ({
+			scriptCps,
+			defaultDurationMode: settings?.iluDurationMode ?? 'auto'
+		}),
+		[scriptCps, settings?.iluDurationMode]
+	)
 
 	const insertTarget = usePartInsertTarget(rundown.id)
 
@@ -53,10 +63,10 @@ export function RundownNavbar({ rundown }: { rundown: Rundown }) {
 						duration: piece.duration,
 						skip: piece.skip
 					}))
-				return resolvePartOnAirDuration(part, partPieces, { scriptCps }) ?? 0
+				return resolvePartOnAirDuration(part, partPieces, durationOpts) ?? 0
 			})
 			.reduce((a, b) => a + b, 0)
-	}, [parts, pieces, scriptCps])
+	}, [parts, pieces, durationOpts])
 
 	let diff: string | number = '-'
 	if (rundown.expectedStartTime && rundown.expectedEndTime) {

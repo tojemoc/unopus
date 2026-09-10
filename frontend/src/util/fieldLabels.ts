@@ -24,6 +24,7 @@ const LABELS: Record<string, string> = {
 	dailyCloneTimezone: 'Daily clone timezone',
 	scriptCps: 'Script reading speed (CPS)',
 	iluDurationMode: 'ILU duration mode in Sofie',
+	durationMode: 'Take after duration',
 	skipStatusUnlessEditorChecked: 'Show Skipped status unless editor-checked',
 	requireEditorCheckForAir: 'Require editor check before on-air',
 	ignoreCoreContentStatus: 'Ignore Sofie media status (sync rundown only)'

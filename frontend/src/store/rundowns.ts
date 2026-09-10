@@ -1,6 +1,5 @@
 import type {
 	MutationRundownCopy,
-	Part,
 	Rundown,
 	SerializedRundown
 } from '~backend/background/interfaces.js'
@@ -10,6 +9,7 @@ import { ipcAPI } from '~/lib/IPC'
 import { loadPieces } from './pieces'
 import { loadParts } from './parts'
 import { loadSegments } from './segments'
+import { convertOldPartToNew } from '~/util/convertOldPart'
 
 export interface NewRundownPayload {
 	playlistId: string | null
@@ -154,30 +154,6 @@ const rundownsSlice = createSlice({
 	}
 })
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function convertOldPartToNew(part: any): Part {
-	if ('payload' in part && 'type' in part.payload) {
-		// Destructure payload and remove legacy fields
-		const { type, script, duration, ...restPayload } = part.payload
-
-		return {
-			id: part.id,
-			playlistId: part.playlistId ?? null,
-			rundownId: part.rundownId,
-			segmentId: part.segmentId,
-			name: part.name,
-			rank: part.rank,
-			float: part.float,
-			partType: type ?? 'unknown',
-			script,
-			duration,
-			payload: restPayload // Keep only remaining payload fields
-		}
-	}
-
-	// Already in new structure
-	return part
-}
 // Export the auto-generated action creator with the same name
 export const { initRundowns } = rundownsSlice.actions
 export const { pushRundown } = rundownsSlice.actions

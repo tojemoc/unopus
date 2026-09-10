@@ -14,7 +14,12 @@ import { useToasts } from '../toasts/useToasts'
 import { formatPartOnAirDuration, resolvePartOnAirDuration, formatSecondsClock } from '~/util/pieceDuration'
 import { ScriptReadingCounter } from './scriptReadingCounter'
 import { ClockDurationInput } from './clockDurationInput'
-import { partUsesScriptDuration, resolveEffectiveScriptCps } from '~/util/scriptReadingTime'
+import {
+	partUsesScriptDuration,
+	resolveEffectiveScriptCps
+} from '~/util/scriptReadingTime'
+import { resolveEffectiveIluDurationMode } from '~backend/background/storyDuration'
+import type { IluDurationMode } from '~backend/background/interfaces'
 
 export function PartPropertiesForm({ part }: { part: Part }) {
 	const dispatch = useAppDispatch()
@@ -28,8 +33,16 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 		state.pieces.pieces.filter((piece) => piece.partId === part.id)
 	)
 	const userScriptCps = useAppSelector((s) => s.auth.user?.scriptCps)
-	const settingsCps = useAppSelector((s) => s.settings.settings?.scriptCps)
-	const scriptCps = resolveEffectiveScriptCps({ userScriptCps, settingsCps })
+	const settings = useAppSelector((s) => s.settings.settings)
+	const scriptCps = resolveEffectiveScriptCps({
+		userScriptCps,
+		settingsCps: settings?.scriptCps
+	})
+	const siteDurationMode = settings?.iluDurationMode ?? 'auto'
+	const durationOpts = useMemo(
+		() => ({ scriptCps, defaultDurationMode: siteDurationMode }),
+		[scriptCps, siteDurationMode]
+	)
 	const effectivePartDuration = useMemo(
 		() =>
 			resolvePartOnAirDuration(
@@ -39,9 +52,13 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 					duration: piece.duration,
 					skip: piece.skip
 				})),
-				{ scriptCps }
+				durationOpts
 			),
-		[livePart, childPieces, scriptCps]
+		[livePart, childPieces, durationOpts]
+	)
+	const effectiveDurationMode = resolveEffectiveIluDurationMode(
+		livePart.durationMode,
+		siteDurationMode
 	)
 
 	useEffect(() => {
@@ -100,6 +117,9 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 		}
 
 		form.setFieldValue('duration', livePart.duration)
+		if (!form.getFieldMeta('durationMode')?.isDirty) {
+			form.setFieldValue('durationMode', livePart.durationMode)
+		}
 	}, [livePart, form])
 
 	return (
@@ -228,6 +248,51 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 					</Form.Group>
 				)}
 				<form.Field
+					name="durationMode"
+					children={(field) => {
+						const scriptDriven = partUsesScriptDuration(livePart.partType)
+						if (!scriptDriven) {
+							return null
+						}
+						const selectValue: IluDurationMode | '' =
+							field.state.value === 'auto' || field.state.value === 'manual'
+								? field.state.value
+								: ''
+
+						return (
+							<>
+								<Form.Group className="mb-3">
+									<Form.Label htmlFor={field.name}>{friendlyLabel('durationMode')}</Form.Label>
+									<Form.Select
+										id={field.name}
+										name={field.name}
+										value={selectValue}
+										onBlur={field.handleBlur}
+										onChange={(e) => {
+											const next = e.target.value
+											field.handleChange(
+												next === 'auto' || next === 'manual' ? next : undefined
+											)
+										}}
+									>
+										<option value="">
+											Site default ({siteDurationMode === 'manual' ? 'until next take' : 'auto'})
+										</option>
+										<option value="auto">Auto — Sofie may take after On air</option>
+										<option value="manual">Until next take — wait for take</option>
+									</Form.Select>
+									<Form.Text className="text-muted">
+										{effectiveDurationMode === 'auto'
+											? 'On air follows script reading time (CPS). Sofie may auto-take.'
+											: 'On air sticks when you set it. Sofie waits for the next take.'}
+									</Form.Text>
+								</Form.Group>
+								<FieldInfo field={field} />
+							</>
+						)
+					}}
+				/>
+				<form.Field
 					name="duration"
 					children={(field) => {
 						const storedDuration =
@@ -240,7 +305,7 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 						const effectiveHint =
 							effectivePartDuration &&
 							(!storedDuration || storedDuration !== effectivePartDuration)
-								? formatPartOnAirDuration(livePart, childPieces, { scriptCps })
+								? formatPartOnAirDuration(livePart, childPieces, durationOpts)
 								: undefined
 
 						return (
@@ -259,10 +324,16 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 										onBlur={field.handleBlur}
 										onCommit={(seconds) => field.handleChange(seconds)}
 									/>
-									{scriptDriven ? (
+									{scriptDriven && effectiveDurationMode === 'auto' ? (
 										<Form.Text className="text-muted">
-											ILU duration follows the script reading time (CPS). Saving the script
-											updates the story and ILU piece lengths.
+											Auto mode: ILU duration follows the script reading time (CPS). Switch to
+											until next take to keep a manual On air length.
+										</Form.Text>
+									) : null}
+									{scriptDriven && effectiveDurationMode === 'manual' ? (
+										<Form.Text className="text-muted">
+											Until next take: your On air value is kept. Empty uses the script estimate
+											for planning only.
 										</Form.Text>
 									) : null}
 									{effectiveHint ? (

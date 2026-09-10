@@ -69,6 +69,13 @@ export function PiecesList({ part }: { part: Part }) {
 	const userScriptCps = useAppSelector((s) => s.auth.user?.scriptCps)
 	const settings = useAppSelector((s) => s.settings.settings)
 	const scriptCps = resolveEffectiveScriptCps({ userScriptCps, settingsCps: settings?.scriptCps })
+	const durationOpts = useMemo(
+		() => ({
+			scriptCps,
+			defaultDurationMode: settings?.iluDurationMode ?? 'auto'
+		}),
+		[scriptCps, settings?.iluDurationMode]
+	)
 
 	const showSourceColumn = pieces.some(
 		(piece: Piece) => getPieceSourceDurationSeconds(piece) !== undefined
@@ -83,9 +90,9 @@ export function PiecesList({ part }: { part: Part }) {
 					duration: piece.duration,
 					skip: piece.skip
 				})),
-				{ scriptCps }
+				durationOpts
 			),
-		[part, pieces, scriptCps]
+		[part, pieces, durationOpts]
 	)
 
 	const handleReorderPiece = (sourceIndex: number, targetIndex: number) => {

@@ -115,6 +115,62 @@ describe('storyDuration', () => {
 		assert.deepEqual(plan.pieceUpdates, [{ id: 'il', duration: 2, force: true }])
 	})
 
+	it('manual / until-next-take keeps stored On air and does not force CPS overwrite', () => {
+		const script = 'a'.repeat(30) // 2s @ 15 CPS
+		assert.equal(
+			resolvePartOnAirDuration(
+				{ partType: 'ilu', script, duration: 99, durationMode: 'manual' },
+				[{ pieceType: 'headline', duration: 99 }],
+				{ scriptCps: 15 }
+			),
+			99
+		)
+
+		const plan = planStoryDurationSync(
+			{ partType: 'ilu', script, duration: 99, durationMode: 'manual' },
+			[
+				{ id: 'il', pieceType: 'headline', duration: 2 },
+				{ id: 'l3d', pieceType: 'l3d-headline' }
+			],
+			{ scriptCps: 15 }
+		)
+
+		assert.equal(plan.partDuration, undefined)
+		assert.equal(plan.forcePartDuration, undefined)
+		assert.deepEqual(plan.pieceUpdates, [{ id: 'il', duration: 99, force: true }])
+	})
+
+	it('manual mode falls back to script estimate when On air is unset', () => {
+		const script = 'a'.repeat(30)
+		assert.equal(
+			resolvePartOnAirDuration(
+				{ partType: 'ilu', script, duration: undefined, durationMode: 'manual' },
+				[{ pieceType: 'headline', duration: undefined }],
+				{ scriptCps: 15 }
+			),
+			2
+		)
+
+		const plan = planStoryDurationSync(
+			{ partType: 'ilu', script, duration: undefined, durationMode: 'manual' },
+			[{ id: 'il', pieceType: 'headline', duration: undefined }],
+			{ scriptCps: 15 }
+		)
+		assert.equal(plan.partDuration, undefined)
+		assert.deepEqual(plan.pieceUpdates, [{ id: 'il', duration: 2, force: true }])
+	})
+
+	it('site defaultDurationMode manual applies when part has no override', () => {
+		const script = 'a'.repeat(30)
+		const plan = planStoryDurationSync(
+			{ partType: 'ilu', script, duration: 45 },
+			[{ id: 'il', pieceType: 'headline', duration: 2 }],
+			{ scriptCps: 15, defaultDurationMode: 'manual' }
+		)
+		assert.equal(plan.partDuration, undefined)
+		assert.deepEqual(plan.pieceUpdates, [{ id: 'il', duration: 45, force: true }])
+	})
+
 	it('excludes skipped pieces from duration and sync', () => {
 		assert.equal(
 			resolvePartOnAirDuration(

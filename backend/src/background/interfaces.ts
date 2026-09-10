@@ -64,6 +64,9 @@ export interface Segment extends IHasPayload {
 	segmentType: string
 }
 
+/** How ILU story duration is sent to Sofie (auto-take after time vs wait for take). */
+export type IluDurationMode = 'auto' | 'manual'
+
 export interface Part extends IHasPayload {
 	/** Id of the part as reported by the ingest gateway. Must be unique for each part in the rundown */
 	id: string
@@ -89,6 +92,13 @@ export interface Part extends IHasPayload {
 
 	script?: string
 	duration?: number | null
+	/**
+	 * Per-story override of site `iluDurationMode` for ILU-family parts.
+	 * `auto` → CPS drives On air and Sofie may `autoNext`.
+	 * `manual` → On air sticks when set; Sofie waits for take (until next take).
+	 * Undefined → use ApplicationSettings.iluDurationMode.
+	 */
+	durationMode?: IluDurationMode
 	partType: string
 	/** True when the part was created from a part-type preset button */
 	fromPreset?: boolean
@@ -299,9 +309,6 @@ export interface RundownReadiness {
 	diagnostics?: RundownReadinessDiagnostics
 }
 
-/** How ILU story duration is sent to Sofie (auto-take after time vs wait for take). */
-export type IluDurationMode = 'auto' | 'manual'
-
 export interface ApplicationSettings {
 	coreUrl?: string
 	corePort?: number
@@ -331,7 +338,8 @@ export interface ApplicationSettings {
 	scriptCps?: number
 	/**
 	 * When `auto`, ILU parts export `autoNext: true` so Sofie can take after the reading time.
-	 * When `manual`, duration is still sent but auto-take is not requested.
+	 * When `manual`, duration is still sent but auto-take is not requested (until next take).
+	 * Individual parts can override this with `Part.durationMode`.
 	 */
 	iluDurationMode?: IluDurationMode
 	/**
