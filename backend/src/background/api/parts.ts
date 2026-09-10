@@ -41,7 +41,6 @@ import {
 } from '../storyDuration'
 import { syncStoryDurationsForPart, broadcastStoryDurationSync } from '../storyDurationSync'
 import { partUsesScriptDuration } from '../scriptReadingTime'
-import { isPositiveDurationSeconds } from '../storyDuration'
 import { readApplicationSettingsSync } from '../settingsResolver'
 import { encodeJsonMergePatchClears } from '../jsonMergePatch'
 
@@ -69,21 +68,21 @@ async function mutatePart(part: Part): Promise<MutatedPart> {
 		part.durationMode,
 		settings?.iluDurationMode
 	)
+	// Always resolve (do not short-circuit on stored duration): Auto mode must
+	// prefer CPS script time even when a stale manual On air is still in the DB.
 	const effectivePartDuration = part.skip
 		? undefined
-		: isPositiveDurationSeconds(part.duration)
-			? part.duration
-			: (resolvePartOnAirDuration(
-					{
-						duration: part.duration ?? undefined,
-						script: part.script,
-						partType: part.partType,
-						skip: part.skip,
-						durationMode: part.durationMode
-					},
-					durationPieces,
-					{ scriptCps: settings?.scriptCps, defaultDurationMode: settings?.iluDurationMode }
-				) ?? (part.duration ?? undefined))
+		: (resolvePartOnAirDuration(
+				{
+					duration: part.duration ?? undefined,
+					script: part.script,
+					partType: part.partType,
+					skip: part.skip,
+					durationMode: part.durationMode
+				},
+				durationPieces,
+				{ scriptCps: settings?.scriptCps, defaultDurationMode: settings?.iluDurationMode }
+			) ?? (part.duration ?? undefined))
 
 	const pieces = rawPieces.map((piece) => ({
 		...piece,

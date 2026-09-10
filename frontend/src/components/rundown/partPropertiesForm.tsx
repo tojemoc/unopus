@@ -43,18 +43,14 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 		() => ({ scriptCps, defaultDurationMode: siteDurationMode }),
 		[scriptCps, siteDurationMode]
 	)
-	const effectivePartDuration = useMemo(
+	const durationChildPieces = useMemo(
 		() =>
-			resolvePartOnAirDuration(
-				livePart,
-				childPieces.map((piece) => ({
-					pieceType: piece.pieceType,
-					duration: piece.duration,
-					skip: piece.skip
-				})),
-				durationOpts
-			),
-		[livePart, childPieces, durationOpts]
+			childPieces.map((piece) => ({
+				pieceType: piece.pieceType,
+				duration: piece.duration,
+				skip: piece.skip
+			})),
+		[childPieces]
 	)
 
 	useEffect(() => {
@@ -245,14 +241,24 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 				)}
 				<form.Subscribe
 					selector={(state) =>
-						[state.values.partType, state.values.durationMode] as const
+						[state.values.partType, state.values.durationMode, state.values.duration] as const
 					}
 				>
-					{([draftPartType, draftDurationMode]) => {
+					{([draftPartType, draftDurationMode, draftDuration]) => {
 						const scriptDriven = partUsesScriptDuration(draftPartType)
 						const draftEffectiveDurationMode = resolveEffectiveIluDurationMode(
 							draftDurationMode,
 							siteDurationMode
+						)
+						const draftEffectivePartDuration = resolvePartOnAirDuration(
+							{
+								...livePart,
+								partType: draftPartType,
+								durationMode: draftDurationMode,
+								duration: draftDuration
+							},
+							durationChildPieces,
+							durationOpts
 						)
 
 						return (
@@ -322,9 +328,18 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 												? field.state.value
 												: undefined
 										const effectiveHint =
-											effectivePartDuration &&
-											(!storedDuration || storedDuration !== effectivePartDuration)
-												? formatPartOnAirDuration(livePart, childPieces, durationOpts)
+											draftEffectivePartDuration &&
+											(!storedDuration || storedDuration !== draftEffectivePartDuration)
+												? formatPartOnAirDuration(
+														{
+															...livePart,
+															partType: draftPartType,
+															durationMode: draftDurationMode,
+															duration: draftDuration
+														},
+														durationChildPieces,
+														durationOpts
+													)
 												: undefined
 
 										return (
@@ -336,8 +351,8 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 														name={field.name}
 														valueSeconds={storedDuration}
 														placeholder={
-															effectivePartDuration
-																? formatSecondsClock(effectivePartDuration)
+															draftEffectivePartDuration
+																? formatSecondsClock(draftEffectivePartDuration)
 																: 'mm:ss'
 														}
 														onBlur={field.handleBlur}
