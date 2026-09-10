@@ -70,9 +70,11 @@ async function mutatePart(part: Part): Promise<MutatedPart> {
 	)
 	// Always resolve (do not short-circuit on stored duration): Auto mode must
 	// prefer CPS script time even when a stale manual On air is still in the DB.
+	// No fallback to raw part.duration — resolver already returns valid stored
+	// values and must leave zero/negative durations as undefined for Sofie.
 	const effectivePartDuration = part.skip
 		? undefined
-		: (resolvePartOnAirDuration(
+		: resolvePartOnAirDuration(
 				{
 					duration: part.duration ?? undefined,
 					script: part.script,
@@ -82,7 +84,7 @@ async function mutatePart(part: Part): Promise<MutatedPart> {
 				},
 				durationPieces,
 				{ scriptCps: settings?.scriptCps, defaultDurationMode: settings?.iluDurationMode }
-			) ?? (part.duration ?? undefined))
+			)
 
 	const pieces = rawPieces.map((piece) => ({
 		...piece,
