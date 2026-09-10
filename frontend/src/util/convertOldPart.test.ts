@@ -76,4 +76,26 @@ describe('convertOldPartToNew', () => {
 		assert.equal(converted.script, 'Top-level wins')
 		assert.equal(converted.partType, 'gfx')
 	})
+
+	it('preserves explicit top-level null duration instead of payload.duration', () => {
+		const part = {
+			id: 'cleared',
+			playlistId: null,
+			rundownId: 'rd',
+			segmentId: 'seg',
+			name: 'Cleared',
+			rank: 0,
+			float: false,
+			duration: null,
+			payload: {
+				type: 'cam',
+				duration: 12,
+				name: 'Cleared'
+			}
+		}
+
+		const converted = convertOldPartToNew(part)
+		assert.equal(converted.duration, null)
+		assert.equal(converted.partType, 'cam')
+	})
 })

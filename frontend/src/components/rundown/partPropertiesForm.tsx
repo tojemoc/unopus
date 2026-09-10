@@ -56,10 +56,6 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 			),
 		[livePart, childPieces, durationOpts]
 	)
-	const effectiveDurationMode = resolveEffectiveIluDurationMode(
-		livePart.durationMode,
-		siteDurationMode
-	)
 
 	useEffect(() => {
 		let cancelled = false
@@ -247,107 +243,137 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 						</Form.Text>
 					</Form.Group>
 				)}
-				<form.Field
-					name="durationMode"
-					children={(field) => {
-						const scriptDriven = partUsesScriptDuration(livePart.partType)
-						if (!scriptDriven) {
-							return null
-						}
-						const selectValue: IluDurationMode | '' =
-							field.state.value === 'auto' || field.state.value === 'manual'
-								? field.state.value
-								: ''
+				<form.Subscribe
+					selector={(state) =>
+						[state.values.partType, state.values.durationMode] as const
+					}
+				>
+					{([draftPartType, draftDurationMode]) => {
+						const scriptDriven = partUsesScriptDuration(draftPartType)
+						const draftEffectiveDurationMode = resolveEffectiveIluDurationMode(
+							draftDurationMode,
+							siteDurationMode
+						)
 
 						return (
 							<>
-								<Form.Group className="mb-3">
-									<Form.Label htmlFor={field.name}>{friendlyLabel('durationMode')}</Form.Label>
-									<Form.Select
-										id={field.name}
-										name={field.name}
-										value={selectValue}
-										onBlur={field.handleBlur}
-										onChange={(e) => {
-											const next = e.target.value
-											field.handleChange(
-												next === 'auto' || next === 'manual' ? next : undefined
+								{scriptDriven ? (
+									<form.Field
+										name="durationMode"
+										children={(field) => {
+											const selectValue: IluDurationMode | '' =
+												field.state.value === 'auto' || field.state.value === 'manual'
+													? field.state.value
+													: ''
+
+											return (
+												<>
+													<Form.Group className="mb-3">
+														<Form.Label htmlFor={field.name}>
+															{friendlyLabel('durationMode')}
+														</Form.Label>
+														<Form.Select
+															id={field.name}
+															name={field.name}
+															value={selectValue}
+															onBlur={field.handleBlur}
+															onChange={(e) => {
+																const next = e.target.value
+																field.handleChange(
+																	next === 'auto' || next === 'manual'
+																		? next
+																		: undefined
+																)
+															}}
+														>
+															<option value="">
+																Site default (
+																{siteDurationMode === 'manual'
+																	? 'until next take'
+																	: 'auto'}
+																)
+															</option>
+															<option value="auto">
+																Auto — Sofie may take after On air
+															</option>
+															<option value="manual">
+																Until next take — wait for take
+															</option>
+														</Form.Select>
+														<Form.Text className="text-muted">
+															{draftEffectiveDurationMode === 'auto'
+																? 'On air follows script reading time (CPS). Sofie may auto-take.'
+																: 'On air sticks when you set it. Sofie waits for the next take.'}
+														</Form.Text>
+													</Form.Group>
+													<FieldInfo field={field} />
+												</>
 											)
 										}}
-									>
-										<option value="">
-											Site default ({siteDurationMode === 'manual' ? 'until next take' : 'auto'})
-										</option>
-										<option value="auto">Auto — Sofie may take after On air</option>
-										<option value="manual">Until next take — wait for take</option>
-									</Form.Select>
-									<Form.Text className="text-muted">
-										{effectiveDurationMode === 'auto'
-											? 'On air follows script reading time (CPS). Sofie may auto-take.'
-											: 'On air sticks when you set it. Sofie waits for the next take.'}
-									</Form.Text>
-								</Form.Group>
-								<FieldInfo field={field} />
-							</>
-						)
-					}}
-				/>
-				<form.Field
-					name="duration"
-					children={(field) => {
-						const storedDuration =
-							typeof field.state.value === 'number' &&
-							Number.isFinite(field.state.value) &&
-							field.state.value > 0
-								? field.state.value
-								: undefined
-						const scriptDriven = partUsesScriptDuration(livePart.partType)
-						const effectiveHint =
-							effectivePartDuration &&
-							(!storedDuration || storedDuration !== effectivePartDuration)
-								? formatPartOnAirDuration(livePart, childPieces, durationOpts)
-								: undefined
-
-						return (
-							<>
-								<Form.Group className="mb-3">
-									<Form.Label htmlFor={field.name}>On air (mm:ss)</Form.Label>
-									<ClockDurationInput
-										id={field.name}
-										name={field.name}
-										valueSeconds={storedDuration}
-										placeholder={
-											effectivePartDuration
-												? formatSecondsClock(effectivePartDuration)
-												: 'mm:ss'
-										}
-										onBlur={field.handleBlur}
-										onCommit={(seconds) => field.handleChange(seconds)}
 									/>
-									{scriptDriven && effectiveDurationMode === 'auto' ? (
-										<Form.Text className="text-muted">
-											Auto mode: ILU duration follows the script reading time (CPS). Switch to
-											until next take to keep a manual On air length.
-										</Form.Text>
-									) : null}
-									{scriptDriven && effectiveDurationMode === 'manual' ? (
-										<Form.Text className="text-muted">
-											Until next take: your On air value is kept. Empty uses the script estimate
-											for planning only.
-										</Form.Text>
-									) : null}
-									{effectiveHint ? (
-										<Form.Text className="text-muted d-block">
-											Effective on-air duration: {effectiveHint}
-											{!storedDuration ? ' (from script or child pieces until you set a value)' : ''}
-										</Form.Text>
-									) : null}
-								</Form.Group>
-								<FieldInfo field={field} />
+								) : null}
+								<form.Field
+									name="duration"
+									children={(field) => {
+										const storedDuration =
+											typeof field.state.value === 'number' &&
+											Number.isFinite(field.state.value) &&
+											field.state.value > 0
+												? field.state.value
+												: undefined
+										const effectiveHint =
+											effectivePartDuration &&
+											(!storedDuration || storedDuration !== effectivePartDuration)
+												? formatPartOnAirDuration(livePart, childPieces, durationOpts)
+												: undefined
+
+										return (
+											<>
+												<Form.Group className="mb-3">
+													<Form.Label htmlFor={field.name}>On air (mm:ss)</Form.Label>
+													<ClockDurationInput
+														id={field.name}
+														name={field.name}
+														valueSeconds={storedDuration}
+														placeholder={
+															effectivePartDuration
+																? formatSecondsClock(effectivePartDuration)
+																: 'mm:ss'
+														}
+														onBlur={field.handleBlur}
+														onCommit={(seconds) => field.handleChange(seconds)}
+													/>
+													{scriptDriven && draftEffectiveDurationMode === 'auto' ? (
+														<Form.Text className="text-muted">
+															Auto mode: ILU duration follows the script reading time
+															(CPS). Switch to until next take to keep a manual On air
+															length.
+														</Form.Text>
+													) : null}
+													{scriptDriven && draftEffectiveDurationMode === 'manual' ? (
+														<Form.Text className="text-muted">
+															Until next take: your On air value is kept. Empty uses the
+															script estimate for planning only.
+														</Form.Text>
+													) : null}
+													{effectiveHint ? (
+														<Form.Text className="text-muted d-block">
+															Effective on-air duration: {effectiveHint}
+															{!storedDuration
+																? ' (from script or child pieces until you set a value)'
+																: ''}
+														</Form.Text>
+													) : null}
+												</Form.Group>
+												<FieldInfo field={field} />
+											</>
+										)
+									}}
+								/>
 							</>
 						)
 					}}
-				/>
+				</form.Subscribe>
 				<form.Field
 					name="script"
 					children={(field) => (

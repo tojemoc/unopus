@@ -101,12 +101,16 @@ async function mutatePart(part: Part): Promise<MutatedPart> {
 			? true
 			: undefined
 
+	// Drop any stored/imported autoNext so manual / until-next-take cannot leak it.
+	const payloadWithoutAutoNext = { ...(part.payload ?? {}) }
+	delete payloadWithoutAutoNext.autoNext
+
 	return {
 		externalId: part.id,
 		name: part.name,
 		rank: part.rank,
 		payload: {
-			...part.payload,
+			...payloadWithoutAutoNext,
 			segmentId: part.segmentId,
 			externalId: part.id,
 			rank: part.rank,

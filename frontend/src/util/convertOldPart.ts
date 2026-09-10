@@ -30,7 +30,7 @@ export function convertOldPartToNew(part: any): Part {
 			durationMode: part.durationMode,
 			partType: type ?? 'unknown',
 			script: part.script ?? script,
-			duration: part.duration ?? duration,
+			duration: part.duration === undefined ? duration : part.duration,
 			payload: restPayload
 		}
 	}
