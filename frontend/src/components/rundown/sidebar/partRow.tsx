@@ -85,6 +85,13 @@ export function SidebarPartRow({ part }: { part: Part }) {
 		[allPieces, part.id]
 	)
 	const scriptCps = resolveEffectiveScriptCps({ userScriptCps, settingsCps: settings?.scriptCps })
+	const durationOpts = useMemo(
+		() => ({
+			scriptCps,
+			defaultDurationMode: settings?.iluDurationMode ?? 'auto'
+		}),
+		[scriptCps, settings?.iluDurationMode]
+	)
 
 	const storyReadiness = getStoryReadiness(part.id, partPieces, readiness)
 	const locks = useRowLocks('part', part.id)
@@ -236,7 +243,7 @@ export function SidebarPartRow({ part }: { part: Part }) {
 							duration: piece.duration,
 							skip: piece.skip
 						})),
-						{ scriptCps }
+						durationOpts
 					) || '--:--'}
 				</div>
 			</div>

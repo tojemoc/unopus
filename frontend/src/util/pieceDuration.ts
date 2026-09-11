@@ -10,11 +10,17 @@ import {
 	resolvePieceOnAirDuration,
 	resolvePartOnAirDuration,
 	pieceInheritsPartDuration,
+	resolveEffectiveIluDurationMode,
 	type StoryDurationOptions
 } from '~backend/background/storyDuration'
 import { formatSecondsClock } from './pieceDurationFormat.js'
 
-export { resolvePieceOnAirDuration, resolvePartOnAirDuration, pieceInheritsPartDuration }
+export {
+	resolvePieceOnAirDuration,
+	resolvePartOnAirDuration,
+	pieceInheritsPartDuration,
+	resolveEffectiveIluDurationMode
+}
 
 export const DEFAULT_WIPE_DURATION_SECONDS = 2.5
 
@@ -71,7 +77,13 @@ export function formatPieceOnAirDuration(
  * Format part effective on-air duration as a clock string.
  */
 export function formatPartOnAirDuration(
-	part: { duration?: number | null; script?: string; partType?: string; skip?: boolean },
+	part: {
+		duration?: number | null
+		script?: string
+		partType?: string
+		skip?: boolean
+		durationMode?: 'auto' | 'manual' | null
+	},
 	pieces: Array<{ pieceType: string; duration?: number | null; skip?: boolean }>,
 	options?: StoryDurationOptions
 ): string {

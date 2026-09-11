@@ -201,10 +201,11 @@ async function syncStoryDurationsForPartLocked(
 			duration: part.duration ?? undefined,
 			script: part.script,
 			partType: part.partType,
-			skip: part.skip
+			skip: part.skip,
+			durationMode: part.durationMode
 		},
 		pieces,
-		{ scriptCps }
+		{ scriptCps, defaultDurationMode: settings?.iluDurationMode }
 	)
 
 	db.exec('BEGIN IMMEDIATE')

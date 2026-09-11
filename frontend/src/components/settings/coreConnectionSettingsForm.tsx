@@ -317,11 +317,12 @@ export function CoreConnectionSettingsForm({ settings }: { settings: Application
 									}
 								>
 									<option value="auto">Auto — Sofie may take after reading time</option>
-									<option value="manual">Manual — wait for take (duration still sent)</option>
+									<option value="manual">Until next take — wait for take (duration still sent)</option>
 								</Form.Select>
 								<Form.Text className="text-muted">
-									When Auto, ILU parts export <code>autoNext: true</code> so Sofie can skip after
-									the script duration. Manual keeps the duration but does not request auto-take.
+									Default for ILU / DoubleBox stories. Auto exports <code>autoNext: true</code> so
+									Sofie can take after the script duration. Until next take keeps the duration but
+									does not request auto-take. Each story can override this under Story properties.
 								</Form.Text>
 							</Form.Group>
 							<FieldInfo field={field} />

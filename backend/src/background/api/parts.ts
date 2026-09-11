@@ -35,12 +35,12 @@ import { recordEntityEdit } from '../auth/authStore'
 import type { AuthenticatedSocket } from '../auth/socketAuth'
 import type { SessionUser } from '../auth/types'
 import {
+	resolveEffectiveIluDurationMode,
 	resolvePartOnAirDuration,
 	resolvePieceOnAirDuration
 } from '../storyDuration'
 import { syncStoryDurationsForPart, broadcastStoryDurationSync } from '../storyDurationSync'
 import { partUsesScriptDuration } from '../scriptReadingTime'
-import { isPositiveDurationSeconds } from '../storyDuration'
 import { readApplicationSettingsSync } from '../settingsResolver'
 import { encodeJsonMergePatchClears } from '../jsonMergePatch'
 
@@ -64,20 +64,27 @@ async function mutatePart(part: Part): Promise<MutatedPart> {
 		duration: piece.duration ?? undefined,
 		pieceType: piece.objectType
 	}))
+	const durationMode = resolveEffectiveIluDurationMode(
+		part.durationMode,
+		settings?.iluDurationMode
+	)
+	// Always resolve (do not short-circuit on stored duration): Auto mode must
+	// prefer CPS script time even when a stale manual On air is still in the DB.
+	// No fallback to raw part.duration — resolver already returns valid stored
+	// values and must leave zero/negative durations as undefined for Sofie.
 	const effectivePartDuration = part.skip
 		? undefined
-		: isPositiveDurationSeconds(part.duration)
-			? part.duration
-			: (resolvePartOnAirDuration(
-					{
-						duration: part.duration ?? undefined,
-						script: part.script,
-						partType: part.partType,
-						skip: part.skip
-					},
-					durationPieces,
-					{ scriptCps: settings?.scriptCps }
-				) ?? (part.duration ?? undefined))
+		: resolvePartOnAirDuration(
+				{
+					duration: part.duration ?? undefined,
+					script: part.script,
+					partType: part.partType,
+					skip: part.skip,
+					durationMode: part.durationMode
+				},
+				durationPieces,
+				{ scriptCps: settings?.scriptCps, defaultDurationMode: settings?.iluDurationMode }
+			)
 
 	const pieces = rawPieces.map((piece) => ({
 		...piece,
@@ -88,20 +95,23 @@ async function mutatePart(part: Part): Promise<MutatedPart> {
 			) ?? (piece.duration ?? undefined)
 	}))
 
-	const iluDurationMode = settings?.iluDurationMode ?? 'auto'
 	const autoNext =
 		!part.skip &&
 		partUsesScriptDuration(part.partType) &&
-		iluDurationMode === 'auto'
+		durationMode === 'auto'
 			? true
 			: undefined
+
+	// Drop any stored/imported autoNext so manual / until-next-take cannot leak it.
+	const payloadWithoutAutoNext = { ...(part.payload ?? {}) }
+	delete payloadWithoutAutoNext.autoNext
 
 	return {
 		externalId: part.id,
 		name: part.name,
 		rank: part.rank,
 		payload: {
-			...part.payload,
+			...payloadWithoutAutoNext,
 			segmentId: part.segmentId,
 			externalId: part.id,
 			rank: part.rank,
@@ -457,6 +467,7 @@ export const mutations = {
 				script: sourcePart.script,
 				partType: sourcePart.partType,
 				duration: sourcePart.duration,
+				durationMode: sourcePart.durationMode,
 				id: uuid(),
 				payload: {}
 			})
@@ -569,7 +580,7 @@ export const mutations = {
 				rundownId: null,
 				segmentId: null
 			} as Record<string, unknown>,
-			['duration']
+			['duration', 'durationMode']
 		)
 
 		try {
