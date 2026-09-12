@@ -1,0 +1,147 @@
+import assert from 'node:assert/strict'
+import { describe, it } from 'node:test'
+import {
+	clampPayloadToFieldMaxLengths,
+	clampToFieldMaxLength,
+	findPayloadMaxLengthViolation,
+	isWithinFieldMaxLength,
+	maxLengthExcludesAllOptions,
+	resolveFieldMaxLength
+} from './payloadMaxLength.js'
+
+describe('resolveFieldMaxLength', () => {
+	it('returns undefined when unset or invalid', () => {
+		assert.equal(resolveFieldMaxLength({ id: 'h', label: 'H', type: 'string' as never }), undefined)
+		assert.equal(
+			resolveFieldMaxLength({ id: 'h', label: 'H', type: 'string' as never, maxLength: 0 }),
+			undefined
+		)
+		assert.equal(
+			resolveFieldMaxLength({ id: 'h', label: 'H', type: 'string' as never, maxLength: -3 }),
+			undefined
+		)
+		assert.equal(
+			resolveFieldMaxLength({
+				id: 'h',
+				label: 'H',
+				type: 'string' as never,
+				maxLength: Number.NaN
+			}),
+			undefined
+		)
+	})
+
+	it('floors positive values', () => {
+		assert.equal(
+			resolveFieldMaxLength({ id: 'h', label: 'H', type: 'string' as never, maxLength: 40 }),
+			40
+		)
+		assert.equal(
+			resolveFieldMaxLength({ id: 'h', label: 'H', type: 'string' as never, maxLength: 40.9 }),
+			40
+		)
+	})
+})
+
+describe('clampToFieldMaxLength', () => {
+	it('passes through when no limit', () => {
+		assert.equal(
+			clampToFieldMaxLength({ id: 'h', label: 'H', type: 'string' as never }, 'hello world'),
+			'hello world'
+		)
+	})
+
+	it('truncates to the configured limit', () => {
+		assert.equal(
+			clampToFieldMaxLength(
+				{ id: 'h', label: 'H', type: 'string' as never, maxLength: 5 },
+				'abcdefgh'
+			),
+			'abcde'
+		)
+		assert.equal(
+			clampToFieldMaxLength({ id: 'h', label: 'H', type: 'string' as never, maxLength: 5 }, 'abcd'),
+			'abcd'
+		)
+	})
+})
+
+describe('isWithinFieldMaxLength', () => {
+	it('allows any value when no limit is set', () => {
+		assert.equal(
+			isWithinFieldMaxLength({ id: 'h', label: 'H', type: 'string' as never }, 'anything long'),
+			true
+		)
+	})
+
+	it('rejects values longer than maxLength', () => {
+		const field = { id: 'h', label: 'H', type: 'string' as never, maxLength: 5 }
+		assert.equal(isWithinFieldMaxLength(field, 'abcde'), true)
+		assert.equal(isWithinFieldMaxLength(field, 'abcdef'), false)
+	})
+})
+
+describe('findPayloadMaxLengthViolation', () => {
+	it('returns undefined when payload is within limits', () => {
+		assert.equal(
+			findPayloadMaxLengthViolation(
+				[{ id: 'headline', label: 'Headline', type: 'string' as never, maxLength: 5 }],
+				{ headline: 'abcde' }
+			),
+			undefined
+		)
+	})
+
+	it('rejects option values that exceed maxLength', () => {
+		const msg = findPayloadMaxLengthViolation(
+			[
+				{
+					id: 'style',
+					label: 'Style',
+					type: 'string' as never,
+					maxLength: 4,
+					options: ['short', 'toolong']
+				}
+			],
+			{ style: 'toolong' }
+		)
+		assert.equal(msg, 'Style exceeds max length (4)')
+	})
+})
+
+describe('maxLengthExcludesAllOptions', () => {
+	it('is false when there are no fixed options', () => {
+		assert.equal(maxLengthExcludesAllOptions(undefined, 3), false)
+		assert.equal(maxLengthExcludesAllOptions([], 3), false)
+	})
+
+	it('is false when at least one option still fits', () => {
+		assert.equal(maxLengthExcludesAllOptions(['ab', 'toolong'], 2), false)
+	})
+
+	it('is true when every option is longer than the limit', () => {
+		assert.equal(maxLengthExcludesAllOptions(['abcd', 'efgh'], 3), true)
+	})
+})
+
+describe('clampPayloadToFieldMaxLengths', () => {
+	it('clamps string fields using the piece manifest', () => {
+		assert.deepEqual(
+			clampPayloadToFieldMaxLengths(
+				[
+					{ id: 'headline', label: 'Headline', type: 'string' as never, maxLength: 5 },
+					{ id: 'count', label: 'Count', type: 'number' as never, maxLength: 1 }
+				],
+				{ headline: 'abcdefgh', count: 42, other: 'untouched' }
+			),
+			{ headline: 'abcde', count: 42, other: 'untouched' }
+		)
+	})
+
+	it('returns a shallow copy when there are no field limits', () => {
+		const payload = { headline: 'hello' }
+		const next = clampPayloadToFieldMaxLengths(undefined, payload)
+		assert.deepEqual(next, payload)
+		assert.notEqual(next, payload)
+	})
+})

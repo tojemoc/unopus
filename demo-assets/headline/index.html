@@ -26,6 +26,7 @@
 				background: linear-gradient(90deg, #c41e3a 0%, #8b0000 100%);
 				padding: 16px 20px;
 				border-radius: 4px;
+				width: min(100%, 36rem);
 				max-width: 100%;
 			}
 			.headline img {
@@ -40,7 +41,10 @@
 				font-size: 28px;
 				font-weight: bold;
 				line-height: 1.2;
-				word-break: break-word;
+				white-space: nowrap;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				min-width: 0;
 			}
 		</style>
 	</head>

@@ -13,6 +13,11 @@ import { ScriptReadingCounter } from '~/components/rundown/scriptReadingCounter'
 import { useAppDispatch, useAppSelector } from '~/store/app'
 import { updatePart } from '~/store/parts'
 import { updatePiece } from '~/store/pieces'
+import {
+	clampToFieldMaxLength,
+	findPayloadMaxLengthViolation,
+	resolveFieldMaxLength
+} from '~/util/payloadMaxLength'
 
 export const Route = createFileRoute('/rundown/$rundownId/rewrite')({
 	component: DailyRewritePage
@@ -230,6 +235,21 @@ function DailyRewritePage() {
 			const nextPayload = { ...(piece.payload ?? {}) }
 			for (const row of groupRows) {
 				nextPayload[row.field.id] = coerceFieldValue(row.field, snapshots[row.key])
+			}
+			const manifest = pieceManifestByType.get(piece.pieceType)
+			const violation = findPayloadMaxLengthViolation(manifest?.payload, nextPayload)
+			if (violation) {
+				setRowState((prev) => {
+					const next = { ...prev }
+					for (const key of keys) next[key] = 'error'
+					return next
+				})
+				setRowErrors((prev) => {
+					const next = { ...prev }
+					for (const key of keys) next[key] = violation
+					return next
+				})
+				return false
 			}
 			await dispatch(
 				updatePiece({
@@ -486,6 +506,8 @@ function RewriteRow({
 	const subdir =
 		row.kind === 'piece' && row.field.subdir ? row.field.subdir : 'clips'
 
+	const errorId = `${row.key}-error`
+
 	return (
 		<tr>
 			<td>
@@ -511,28 +533,68 @@ function RewriteRow({
 						<Form.Control
 							as="textarea"
 							rows={3}
+							aria-label={label}
+							aria-invalid={error ? true : undefined}
+							aria-describedby={error ? errorId : undefined}
 							value={value}
 							onChange={(e) => onChange(e.target.value)}
 						/>
 						<ScriptReadingCounter text={value} />
 					</>
 				) : row.kind === 'piece' && row.field.type === ManifestFieldType.Boolean ? (
-					<Form.Select value={value} onChange={(e) => onChange(e.target.value)}>
+					<Form.Select
+						aria-label={label}
+						aria-invalid={error ? true : undefined}
+						aria-describedby={error ? errorId : undefined}
+						value={value}
+						onChange={(e) => onChange(e.target.value)}
+					>
 						<option value="false">No</option>
 						<option value="true">Yes</option>
 					</Form.Select>
 				) : (
-					<Form.Control
-						type={
-							row.kind === 'piece' && row.field.type === ManifestFieldType.Number
-								? 'number'
-								: 'text'
-						}
-						value={value}
-						onChange={(e) => onChange(e.target.value)}
-					/>
+					<>
+						<Form.Control
+							type={
+								row.kind === 'piece' && row.field.type === ManifestFieldType.Number
+									? 'number'
+									: 'text'
+							}
+							aria-label={label}
+							aria-invalid={error ? true : undefined}
+							aria-describedby={error ? errorId : undefined}
+							value={value}
+							maxLength={
+								row.kind === 'piece' ? resolveFieldMaxLength(row.field) : undefined
+							}
+							onChange={(e) => {
+								if (row.kind === 'piece' && row.field.type === ManifestFieldType.String) {
+									onChange(clampToFieldMaxLength(row.field, e.target.value))
+									return
+								}
+								onChange(e.target.value)
+							}}
+						/>
+						{row.kind === 'piece' &&
+							row.field.type === ManifestFieldType.String &&
+							(() => {
+								const maxLength = resolveFieldMaxLength(row.field)
+								if (maxLength === undefined) {
+									return null
+								}
+								return (
+									<Form.Text className="text-muted d-block">
+										{value.length} / {maxLength}
+									</Form.Text>
+								)
+							})()}
+					</>
 				)}
-				{error && <div className="text-danger small mt-1">{error}</div>}
+				{error && (
+					<div id={errorId} className="text-danger small mt-1">
+						{error}
+					</div>
+				)}
 			</td>
 			<td>
 				{state === 'idle' && <span className="text-muted">—</span>}
