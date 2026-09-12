@@ -233,12 +233,6 @@ export interface PayloadManifest {
 	 * Set in megarepo piece-type manifests (`sofie-rundown-editor-piece-types.json`).
 	 */
 	dailyEditable?: boolean
-	/**
-	 * Max characters for string fields (e.g. GFX titles that must fit a fixed template).
-	 * Enforced in the piece editor — titles do not auto-scale or wrap at the clip edge.
-	 * Optional; set per field under Settings → Piece Types, or in megarepo manifests.
-	 */
-	maxLength?: number
 }
 
 /** Core/Package Manager confirmation for a scanned media file (not local fs existence). */
