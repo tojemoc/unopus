@@ -10,6 +10,7 @@ import typeManifestReducer from './typeManifest.js'
 import settingsReducer from './settings.js'
 import { authReducer } from './auth.js'
 import { presenceReducer } from './presence.js'
+import { playoutReducer } from './playout.js'
 
 export const store = configureStore({
 	reducer: {
@@ -23,6 +24,7 @@ export const store = configureStore({
 		settings: settingsReducer,
 		typeManifests: typeManifestReducer,
 		coreConnectionStatus: connectionStatusReducer,
-		presence: presenceReducer
+		presence: presenceReducer,
+		playout: playoutReducer
 	}
 })

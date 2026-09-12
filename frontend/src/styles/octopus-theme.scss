@@ -279,6 +279,12 @@
 			outline: 1px dashed var(--re-accent);
 			outline-offset: -1px;
 		}
+
+		&.story-row--on-air {
+			outline: 2px solid #c62828;
+			outline-offset: -2px;
+			background: color-mix(in srgb, #c62828 12%, transparent);
+		}
 	}
 
 	.story-row-block {
@@ -343,6 +349,19 @@
 		height: 0.7em;
 		flex-shrink: 0;
 	}
+}
+
+.story-row__on-air {
+	flex-shrink: 0;
+	display: inline-flex;
+	align-items: center;
+	font-size: 0.58rem;
+	font-weight: 800;
+	letter-spacing: 0.06em;
+	color: #fff;
+	background: #c62828;
+	border-radius: 2px;
+	padding: 0.08rem 0.35rem;
 }
 
 .story-table-empty {
@@ -665,4 +684,9 @@
 .sidebar-item-header .item-title {
 	font-size: 0.92rem;
 	font-weight: 700;
+}
+
+
+.sidebar-segment--on-air > .segment-header-row {
+	box-shadow: inset 3px 0 0 #c62828;
 }
