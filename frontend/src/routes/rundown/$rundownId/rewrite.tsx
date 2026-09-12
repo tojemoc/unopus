@@ -512,13 +512,18 @@ function RewriteRow({
 						<Form.Control
 							as="textarea"
 							rows={3}
+							aria-label={label}
 							value={value}
 							onChange={(e) => onChange(e.target.value)}
 						/>
 						<ScriptReadingCounter text={value} />
 					</>
 				) : row.kind === 'piece' && row.field.type === ManifestFieldType.Boolean ? (
-					<Form.Select value={value} onChange={(e) => onChange(e.target.value)}>
+					<Form.Select
+						aria-label={label}
+						value={value}
+						onChange={(e) => onChange(e.target.value)}
+					>
 						<option value="false">No</option>
 						<option value="true">Yes</option>
 					</Form.Select>
@@ -530,6 +535,7 @@ function RewriteRow({
 									? 'number'
 									: 'text'
 							}
+							aria-label={label}
 							value={value}
 							maxLength={
 								row.kind === 'piece' ? resolveFieldMaxLength(row.field) : undefined
