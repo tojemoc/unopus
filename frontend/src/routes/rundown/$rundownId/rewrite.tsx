@@ -13,7 +13,11 @@ import { ScriptReadingCounter } from '~/components/rundown/scriptReadingCounter'
 import { useAppDispatch, useAppSelector } from '~/store/app'
 import { updatePart } from '~/store/parts'
 import { updatePiece } from '~/store/pieces'
-import { clampToFieldMaxLength, resolveFieldMaxLength } from '~/util/payloadMaxLength'
+import {
+	clampToFieldMaxLength,
+	findPayloadMaxLengthViolation,
+	resolveFieldMaxLength
+} from '~/util/payloadMaxLength'
 
 export const Route = createFileRoute('/rundown/$rundownId/rewrite')({
 	component: DailyRewritePage
@@ -231,6 +235,21 @@ function DailyRewritePage() {
 			const nextPayload = { ...(piece.payload ?? {}) }
 			for (const row of groupRows) {
 				nextPayload[row.field.id] = coerceFieldValue(row.field, snapshots[row.key])
+			}
+			const manifest = pieceManifestByType.get(piece.pieceType)
+			const violation = findPayloadMaxLengthViolation(manifest?.payload, nextPayload)
+			if (violation) {
+				setRowState((prev) => {
+					const next = { ...prev }
+					for (const key of keys) next[key] = 'error'
+					return next
+				})
+				setRowErrors((prev) => {
+					const next = { ...prev }
+					for (const key of keys) next[key] = violation
+					return next
+				})
+				return false
 			}
 			await dispatch(
 				updatePiece({
@@ -487,6 +506,8 @@ function RewriteRow({
 	const subdir =
 		row.kind === 'piece' && row.field.subdir ? row.field.subdir : 'clips'
 
+	const errorId = `${row.key}-error`
+
 	return (
 		<tr>
 			<td>
@@ -513,6 +534,8 @@ function RewriteRow({
 							as="textarea"
 							rows={3}
 							aria-label={label}
+							aria-invalid={error ? true : undefined}
+							aria-describedby={error ? errorId : undefined}
 							value={value}
 							onChange={(e) => onChange(e.target.value)}
 						/>
@@ -521,6 +544,8 @@ function RewriteRow({
 				) : row.kind === 'piece' && row.field.type === ManifestFieldType.Boolean ? (
 					<Form.Select
 						aria-label={label}
+						aria-invalid={error ? true : undefined}
+						aria-describedby={error ? errorId : undefined}
 						value={value}
 						onChange={(e) => onChange(e.target.value)}
 					>
@@ -536,6 +561,8 @@ function RewriteRow({
 									: 'text'
 							}
 							aria-label={label}
+							aria-invalid={error ? true : undefined}
+							aria-describedby={error ? errorId : undefined}
 							value={value}
 							maxLength={
 								row.kind === 'piece' ? resolveFieldMaxLength(row.field) : undefined
@@ -563,7 +590,11 @@ function RewriteRow({
 							})()}
 					</>
 				)}
-				{error && <div className="text-danger small mt-1">{error}</div>}
+				{error && (
+					<div id={errorId} className="text-danger small mt-1">
+						{error}
+					</div>
+				)}
 			</td>
 			<td>
 				{state === 'idle' && <span className="text-muted">—</span>}

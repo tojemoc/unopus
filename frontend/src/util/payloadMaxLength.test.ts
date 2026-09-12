@@ -4,6 +4,7 @@ import {
 	clampToFieldMaxLength,
 	findPayloadMaxLengthViolation,
 	isWithinFieldMaxLength,
+	maxLengthExcludesAllOptions,
 	resolveFieldMaxLength
 } from './payloadMaxLength.js'
 
@@ -104,5 +105,20 @@ describe('findPayloadMaxLengthViolation', () => {
 			{ style: 'toolong' }
 		)
 		assert.equal(msg, 'Style exceeds max length (4)')
+	})
+})
+
+describe('maxLengthExcludesAllOptions', () => {
+	it('is false when there are no fixed options', () => {
+		assert.equal(maxLengthExcludesAllOptions(undefined, 3), false)
+		assert.equal(maxLengthExcludesAllOptions([], 3), false)
+	})
+
+	it('is false when at least one option still fits', () => {
+		assert.equal(maxLengthExcludesAllOptions(['ab', 'toolong'], 2), false)
+	})
+
+	it('is true when every option is longer than the limit', () => {
+		assert.equal(maxLengthExcludesAllOptions(['abcd', 'efgh'], 3), true)
 	})
 })

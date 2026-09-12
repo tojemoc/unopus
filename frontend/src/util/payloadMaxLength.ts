@@ -50,3 +50,18 @@ export function findPayloadMaxLengthViolation(
 	}
 	return undefined
 }
+
+/**
+ * True when a proposed maxLength would make every fixed-choice option invalid.
+ * Fields without options are unrestricted here (always false).
+ */
+export function maxLengthExcludesAllOptions(
+	options: string[] | undefined,
+	maxLength: number
+): boolean {
+	if (!options?.length || !Number.isFinite(maxLength) || maxLength < 1) {
+		return false
+	}
+	const limit = Math.floor(maxLength)
+	return options.every((option) => option.length > limit)
+}

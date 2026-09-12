@@ -8,6 +8,7 @@ import { useAppDispatch } from '~/store/app'
 import { updateTypeManifest, removeTypeManifest } from '~/store/typeManifest'
 import type { TypeManifest, PayloadManifest } from '~backend/background/interfaces'
 import { ManifestFieldType } from '~backend/background/interfaces'
+import { maxLengthExcludesAllOptions } from '~/util/payloadMaxLength'
 
 // Generic type manifest form
 export function TypeManifestForm({
@@ -24,8 +25,19 @@ export function TypeManifestForm({
 		defaultValues: manifest,
 		onSubmit: async (values) => {
 			try {
+				const sanitizedPayload = (values.value.payload ?? []).map((field) => {
+					if (field.type === ManifestFieldType.String) {
+						return field
+					}
+					const { maxLength, ...rest } = field
+					void maxLength
+					return rest
+				})
 				await dispatch(
-					updateTypeManifest({ originalId: manifest.id, typeManifest: values.value })
+					updateTypeManifest({
+						originalId: manifest.id,
+						typeManifest: { ...values.value, payload: sanitizedPayload }
+					})
 				).unwrap()
 				form.reset()
 			} catch (e) {
@@ -224,9 +236,16 @@ export function TypeManifestForm({
 																name={field.name}
 																value={field.state.value ?? ''}
 																onBlur={field.handleBlur}
-																onChange={(e) =>
-																	field.handleChange(e.target.value as ManifestFieldType)
-																}
+																onChange={(e) => {
+																	const nextType = e.target.value as ManifestFieldType
+																	field.handleChange(nextType)
+																	if (nextType !== ManifestFieldType.String) {
+																		form.setFieldValue(
+																			`payload[${index}].maxLength`,
+																			undefined
+																		)
+																	}
+																}}
 															>
 																<option value={ManifestFieldType.String}>String</option>
 																<option value={ManifestFieldType.Number}>Number</option>
@@ -239,42 +258,52 @@ export function TypeManifestForm({
 												/>
 											</td>
 											<td>
-												<form.Field
-													name={`payload[${index}].maxLength`}
-													children={(field) => (
-														<>
-															<Form.Control
-																name={field.name}
-																type="number"
-																min={1}
-																step={1}
-																placeholder="—"
-																aria-label="Max length"
-																value={
-																	typeof field.state.value === 'number' &&
-																	Number.isFinite(field.state.value)
-																		? field.state.value
-																		: ''
-																}
-																onBlur={field.handleBlur}
-																onChange={(e) => {
-																	const raw = e.target.value
-																	if (raw === '') {
-																		field.handleChange(undefined)
-																		return
+												{payload[index]?.type === ManifestFieldType.String ? (
+													<form.Field
+														name={`payload[${index}].maxLength`}
+														children={(field) => (
+															<>
+																<Form.Control
+																	name={field.name}
+																	type="number"
+																	min={1}
+																	step={1}
+																	placeholder="—"
+																	aria-label="Max length"
+																	value={
+																		typeof field.state.value === 'number' &&
+																		Number.isFinite(field.state.value)
+																			? field.state.value
+																			: ''
 																	}
-																	const parsed = Number(raw)
-																	if (!Number.isFinite(parsed) || parsed < 1) {
-																		field.handleChange(undefined)
-																		return
-																	}
-																	field.handleChange(Math.floor(parsed))
-																}}
-															/>
-															<FieldInfo field={field} />
-														</>
-													)}
-												/>
+																	onBlur={field.handleBlur}
+																	onChange={(e) => {
+																		const raw = e.target.value
+																		if (raw === '') {
+																			field.handleChange(undefined)
+																			return
+																		}
+																		const parsed = Number(raw)
+																		if (!Number.isFinite(parsed) || parsed < 1) {
+																			field.handleChange(undefined)
+																			return
+																		}
+																		const next = Math.floor(parsed)
+																		const options = payload[index]?.options
+																		if (maxLengthExcludesAllOptions(options, next)) {
+																			// Keep the current limit so the user can correct it.
+																			return
+																		}
+																		field.handleChange(next)
+																	}}
+																/>
+																<FieldInfo field={field} />
+															</>
+														)}
+													/>
+												) : (
+													<span className="text-muted">—</span>
+												)}
 											</td>
 											<td>
 												<form.Field
