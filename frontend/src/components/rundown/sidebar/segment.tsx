@@ -38,6 +38,9 @@ export function SidebarSegment({ segment }: { segment: Segment }) {
 	const { expandedPartId } = useScriptExpand()
 
 	const parts = useAppSelector((s) => selectPartsBySegmentId(s, segment.id))
+	const isOnAirSegment = useAppSelector(
+		(s) => s.playout.byRundownId[segment.rundownId]?.currentSegmentId === segment.id
+	)
 	const allPieces = useAppSelector(selectAllPieces)
 	const userScriptCps = useAppSelector((s) => s.auth.user?.scriptCps)
 	const settings = useAppSelector((s) => s.settings.settings)
@@ -117,7 +120,7 @@ export function SidebarSegment({ segment }: { segment: Segment }) {
 			)
 
 	return (
-		<div className={`sidebar-segment ${isOpen ? 'open' : 'closed'}`}>
+		<div className={`sidebar-segment ${isOpen ? 'open' : 'closed'}${isOnAirSegment ? ' sidebar-segment--on-air' : ''}`}>
 			<div className="copy-item segment-header-row">
 				<Stack direction="horizontal">
 					<span

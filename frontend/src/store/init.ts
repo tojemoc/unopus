@@ -9,6 +9,7 @@ import { pushPiece } from './pieces'
 import { pushPart } from './parts'
 import { pushSegment } from './segments'
 import { setPresenceFocuses, type PresenceFocus } from './presence'
+import { setRundownPlayoutState, type RundownPlayoutState } from './playout'
 import { getSocket } from '~/lib/socket'
 
 export function initStore(dispatch: AppDispatch): void {
@@ -64,5 +65,11 @@ export function initStore(dispatch: AppDispatch): void {
 
 	getSocket().on('presence:update', (focuses: PresenceFocus[]) => {
 		dispatch(setPresenceFocuses(Array.isArray(focuses) ? focuses : []))
+	})
+
+	getSocket().on('playout:update', (update: RundownPlayoutState) => {
+		if (update && typeof update.rundownId === 'string') {
+			dispatch(setRundownPlayoutState(update))
+		}
 	})
 }

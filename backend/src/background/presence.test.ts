@@ -5,6 +5,9 @@ import {
 	listPresenceFocuses,
 	resetPresenceForTests,
 	setPresenceFocus,
+	SYSTEM_DISPLAY_NAME,
+	SYSTEM_USER_ID,
+	syncSystemPartLocks,
 	trySetPresenceFocus
 } from './presence.js'
 
@@ -186,6 +189,42 @@ describe('presence', () => {
 		assert.equal(listPresenceFocuses('r1')[0]?.leaseId, 'lease-new')
 
 		clearPresenceFocus('s1', 'lease-new')
+		assert.equal(listPresenceFocuses('r1').length, 0)
+	})
+
+	it('places System locks on previous/current/next parts and blocks force takeover', () => {
+		syncSystemPartLocks('r1', ['prev', 'cur', 'next'])
+
+		const locks = listPresenceFocuses('r1')
+		assert.equal(locks.length, 3)
+		assert.ok(locks.every((lock) => lock.userId === SYSTEM_USER_ID))
+		assert.ok(locks.every((lock) => lock.displayName === SYSTEM_DISPLAY_NAME))
+
+		const blocked = trySetPresenceFocus(
+			{
+				socketId: 's1',
+				userId: 'u1',
+				displayName: 'Kubo',
+				entityType: 'part',
+				entityId: 'cur',
+				rundownId: 'r1',
+				leaseId: 'lease-user'
+			},
+			{ force: true }
+		)
+		assert.equal(blocked.ok, false)
+		if (!blocked.ok) {
+			assert.equal(blocked.holder.userId, SYSTEM_USER_ID)
+			assert.equal(blocked.holder.displayName, SYSTEM_DISPLAY_NAME)
+		}
+
+		syncSystemPartLocks('r1', ['cur'])
+		assert.deepEqual(
+			listPresenceFocuses('r1').map((lock) => lock.entityId).sort(),
+			['cur']
+		)
+
+		syncSystemPartLocks('r1', [])
 		assert.equal(listPresenceFocuses('r1').length, 0)
 	})
 })
