@@ -11,6 +11,7 @@ import { createSelector } from '@reduxjs/toolkit'
 import { IconButton } from '../iconButton'
 import { useToasts } from '../toasts/useToasts'
 import { findTypeManifest, normalizeTypeId, toolbarManifests } from '~/util/typeManifest'
+import { clampPayloadToFieldMaxLengths } from '~/util/payloadMaxLength'
 import { useRundownReadinessContext } from '~/hooks/RundownReadinessContext'
 import { ReadinessBadge } from './readinessBadge'
 import { EditorialStatusBadge } from './editorialStatusBadge'
@@ -376,6 +377,7 @@ function NewPieceButtons({ part, existingPieces }: { part: Part; existingPieces:
 				(t) =>
 					normalizeTypeId(typeManifests, t.pieceType, TypeManifestEntity.Piece) === resolvedPieceType
 			)?.payload ?? {}
+		const payload = clampPayloadToFieldMaxLengths(manifest?.payload, defaultPayload)
 
 		dispatch(
 			addNewPiece({
@@ -385,7 +387,7 @@ function NewPieceButtons({ part, existingPieces }: { part: Part; existingPieces:
 				partId: part.id,
 				name: manifest && manifest.includeTypeInName ? manifest.name : 'New piece',
 				pieceType: resolvedPieceType,
-				payload: defaultPayload
+				payload
 			})
 		)
 			.unwrap()

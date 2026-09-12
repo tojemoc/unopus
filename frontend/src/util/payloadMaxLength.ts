@@ -1,4 +1,4 @@
-import type { PayloadManifest } from '~backend/background/interfaces'
+import type { PayloadManifest, PayloadValue } from '~backend/background/interfaces'
 
 /** Positive integer max length from a payload field, or undefined when unset. */
 export function resolveFieldMaxLength(field: PayloadManifest): number | undefined {
@@ -49,6 +49,24 @@ export function findPayloadMaxLengthViolation(
 		}
 	}
 	return undefined
+}
+
+/** Return a copy of payload with string fields clamped to each field's maxLength. */
+export function clampPayloadToFieldMaxLengths(
+	fields: PayloadManifest[] | undefined,
+	payload: Record<string, PayloadValue> | undefined
+): Record<string, PayloadValue> {
+	const next: Record<string, PayloadValue> = { ...(payload ?? {}) }
+	if (!fields?.length) {
+		return next
+	}
+	for (const field of fields) {
+		const raw = next[field.id]
+		if (typeof raw === 'string') {
+			next[field.id] = clampToFieldMaxLength(field, raw)
+		}
+	}
+	return next
 }
 
 /**

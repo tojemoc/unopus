@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
+	clampPayloadToFieldMaxLengths,
 	clampToFieldMaxLength,
 	findPayloadMaxLengthViolation,
 	isWithinFieldMaxLength,
@@ -120,5 +121,27 @@ describe('maxLengthExcludesAllOptions', () => {
 
 	it('is true when every option is longer than the limit', () => {
 		assert.equal(maxLengthExcludesAllOptions(['abcd', 'efgh'], 3), true)
+	})
+})
+
+describe('clampPayloadToFieldMaxLengths', () => {
+	it('clamps string fields using the piece manifest', () => {
+		assert.deepEqual(
+			clampPayloadToFieldMaxLengths(
+				[
+					{ id: 'headline', label: 'Headline', type: 'string' as never, maxLength: 5 },
+					{ id: 'count', label: 'Count', type: 'number' as never, maxLength: 1 }
+				],
+				{ headline: 'abcdefgh', count: 42, other: 'untouched' }
+			),
+			{ headline: 'abcde', count: 42, other: 'untouched' }
+		)
+	})
+
+	it('returns a shallow copy when there are no field limits', () => {
+		const payload = { headline: 'hello' }
+		const next = clampPayloadToFieldMaxLengths(undefined, payload)
+		assert.deepEqual(next, payload)
+		assert.notEqual(next, payload)
 	})
 })
