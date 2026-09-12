@@ -34,6 +34,7 @@ import {
 	resolvePieceName,
 	previewPayloadSnapshotKey
 } from '~/util/pieceName'
+import { clampToFieldMaxLength, resolveFieldMaxLength } from '~/util/payloadMaxLength'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type PieceFormApi = any
@@ -132,9 +133,27 @@ function PayloadField({
 										type="text"
 										// eslint-disable-next-line @typescript-eslint/no-explicit-any
 										value={field.state.value as any}
+										maxLength={resolveFieldMaxLength(fieldInfo)}
 										onBlur={field.handleBlur}
-										onChange={(e) => field.handleChange(e.target.value)}
+										onChange={(e) =>
+											field.handleChange(clampToFieldMaxLength(fieldInfo, e.target.value))
+										}
 									/>
+									{(() => {
+										const maxLength = resolveFieldMaxLength(fieldInfo)
+										if (maxLength === undefined) {
+											return null
+										}
+										const current =
+											typeof field.state.value === 'string'
+												? field.state.value.length
+												: String(field.state.value ?? '').length
+										return (
+											<Form.Text className="text-muted d-block">
+												{current} / {maxLength}
+											</Form.Text>
+										)
+									})()}
 									{(fieldInfo.id === 'text' ||
 										fieldInfo.id === 'script' ||
 										fieldInfo.id === 'headline') && (

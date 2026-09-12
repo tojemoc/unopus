@@ -163,6 +163,7 @@ export function TypeManifestForm({
 							<th>Id</th>
 							<th>Label</th>
 							<th>Type</th>
+							<th>Max length</th>
 							<th>Include in name</th>
 							<th>Daily editable</th>
 							<th>&nbsp;</th>
@@ -173,7 +174,7 @@ export function TypeManifestForm({
 							{(payload) =>
 								!payload || payload.length === 0 ? (
 									<tr>
-										<td colSpan={6} className="text-center">
+										<td colSpan={7} className="text-center">
 											No fields defined
 										</td>
 									</tr>
@@ -232,6 +233,44 @@ export function TypeManifestForm({
 																<option value={ManifestFieldType.Boolean}>Boolean</option>
 																<option value={ManifestFieldType.MediaPick}>Media pick</option>
 															</Form.Select>
+															<FieldInfo field={field} />
+														</>
+													)}
+												/>
+											</td>
+											<td>
+												<form.Field
+													name={`payload[${index}].maxLength`}
+													children={(field) => (
+														<>
+															<Form.Control
+																name={field.name}
+																type="number"
+																min={1}
+																step={1}
+																placeholder="—"
+																aria-label="Max length"
+																value={
+																	typeof field.state.value === 'number' &&
+																	Number.isFinite(field.state.value)
+																		? field.state.value
+																		: ''
+																}
+																onBlur={field.handleBlur}
+																onChange={(e) => {
+																	const raw = e.target.value
+																	if (raw === '') {
+																		field.handleChange(undefined)
+																		return
+																	}
+																	const parsed = Number(raw)
+																	if (!Number.isFinite(parsed) || parsed < 1) {
+																		field.handleChange(undefined)
+																		return
+																	}
+																	field.handleChange(Math.floor(parsed))
+																}}
+															/>
 															<FieldInfo field={field} />
 														</>
 													)}
