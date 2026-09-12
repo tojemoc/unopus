@@ -137,6 +137,21 @@ export function startPlayoutLockService(): void {
 }
 
 /**
+ * Snapshot of the last published playout payloads (for late-joining sockets).
+ */
+export function listCachedPlayoutUpdates(): RundownPlayoutUpdate[] {
+	const updates: RundownPlayoutUpdate[] = []
+	for (const serialized of lastPayloadByRundown.values()) {
+		try {
+			updates.push(JSON.parse(serialized) as RundownPlayoutUpdate)
+		} catch {
+			// ignore corrupt cache entries
+		}
+	}
+	return updates
+}
+
+/**
  * Stop the playout lock poller. Test helper.
  */
 export function stopPlayoutLockServiceForTests(): void {
