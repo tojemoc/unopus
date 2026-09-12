@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { clampToFieldMaxLength, resolveFieldMaxLength } from './payloadMaxLength.js'
+import {
+	clampToFieldMaxLength,
+	findPayloadMaxLengthViolation,
+	isWithinFieldMaxLength,
+	resolveFieldMaxLength
+} from './payloadMaxLength.js'
 
 describe('resolveFieldMaxLength', () => {
 	it('returns undefined when unset or invalid', () => {
@@ -56,5 +61,48 @@ describe('clampToFieldMaxLength', () => {
 			clampToFieldMaxLength({ id: 'h', label: 'H', type: 'string' as never, maxLength: 5 }, 'abcd'),
 			'abcd'
 		)
+	})
+})
+
+describe('isWithinFieldMaxLength', () => {
+	it('allows any value when no limit is set', () => {
+		assert.equal(
+			isWithinFieldMaxLength({ id: 'h', label: 'H', type: 'string' as never }, 'anything long'),
+			true
+		)
+	})
+
+	it('rejects values longer than maxLength', () => {
+		const field = { id: 'h', label: 'H', type: 'string' as never, maxLength: 5 }
+		assert.equal(isWithinFieldMaxLength(field, 'abcde'), true)
+		assert.equal(isWithinFieldMaxLength(field, 'abcdef'), false)
+	})
+})
+
+describe('findPayloadMaxLengthViolation', () => {
+	it('returns undefined when payload is within limits', () => {
+		assert.equal(
+			findPayloadMaxLengthViolation(
+				[{ id: 'headline', label: 'Headline', type: 'string' as never, maxLength: 5 }],
+				{ headline: 'abcde' }
+			),
+			undefined
+		)
+	})
+
+	it('rejects option values that exceed maxLength', () => {
+		const msg = findPayloadMaxLengthViolation(
+			[
+				{
+					id: 'style',
+					label: 'Style',
+					type: 'string' as never,
+					maxLength: 4,
+					options: ['short', 'toolong']
+				}
+			],
+			{ style: 'toolong' }
+		)
+		assert.equal(msg, 'Style exceeds max length (4)')
 	})
 })

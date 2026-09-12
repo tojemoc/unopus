@@ -34,7 +34,12 @@ import {
 	resolvePieceName,
 	previewPayloadSnapshotKey
 } from '~/util/pieceName'
-import { clampToFieldMaxLength, resolveFieldMaxLength } from '~/util/payloadMaxLength'
+import {
+	clampToFieldMaxLength,
+	findPayloadMaxLengthViolation,
+	isWithinFieldMaxLength,
+	resolveFieldMaxLength
+} from '~/util/payloadMaxLength'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type PieceFormApi = any
@@ -99,22 +104,36 @@ function PayloadField({
 							fieldInfo.options.length > 0 && (
 								<div>
 									<ButtonGroup role="radiogroup" aria-label={fieldInfo.label}>
-										{fieldInfo.options.map((option) => (
-											<Button
-												key={option}
-												type="button"
-												role="radio"
-												aria-checked={(field.state.value || '') === option}
-												variant={
-													(field.state.value || '') === option
-														? 'primary'
-														: 'outline-secondary'
-												}
-												onClick={() => field.handleChange(option)}
-											>
-												{option || 'None'}
-											</Button>
-										))}
+										{fieldInfo.options.map((option) => {
+											const optionAllowed = isWithinFieldMaxLength(fieldInfo, option)
+											return (
+												<Button
+													key={option}
+													type="button"
+													role="radio"
+													aria-checked={(field.state.value || '') === option}
+													variant={
+														(field.state.value || '') === option
+															? 'primary'
+															: 'outline-secondary'
+													}
+													disabled={!optionAllowed}
+													title={
+														optionAllowed
+															? undefined
+															: `Exceeds max length (${resolveFieldMaxLength(fieldInfo)})`
+													}
+													onClick={() => {
+														if (!isWithinFieldMaxLength(fieldInfo, option)) {
+															return
+														}
+														field.handleChange(option)
+													}}
+												>
+													{option || 'None'}
+												</Button>
+											)
+										})}
 									</ButtonGroup>
 									{fieldInfo.optionsHelperText && (
 										<Form.Text className="text-muted d-block mt-1">
@@ -332,6 +351,14 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 			const mergedPayload = {
 				...(piece.payload ?? {}),
 				...(values.value.payload ?? {})
+			}
+			const maxLengthViolation = findPayloadMaxLengthViolation(manifest?.payload, mergedPayload)
+			if (maxLengthViolation) {
+				toasts.show({
+					headerContent: 'Saving piece',
+					bodyContent: maxLengthViolation
+				})
+				return
 			}
 			const derivedName = resolvePieceName(manifest, mergedPayload, piece.name)
 
