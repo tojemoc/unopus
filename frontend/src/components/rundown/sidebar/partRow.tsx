@@ -71,6 +71,8 @@ export function SidebarPartRow({ part }: { part: Part }) {
 	const { expandedPartId, setExpandedPartId } = useScriptExpand()
 	const expanded = expandedPartId === part.id
 	const [takeoverHolder, setTakeoverHolder] = useState<string | null>(null)
+	/** True when the modal is for a System (playout) lock — never key off displayName alone. */
+	const [takeoverIsSystem, setTakeoverIsSystem] = useState(false)
 	const [busy, setBusy] = useState(false)
 	const pointerStart = useRef<{ x: number; y: number } | null>(null)
 
@@ -134,6 +136,7 @@ export function SidebarPartRow({ part }: { part: Part }) {
 			})
 			if (result.ok) {
 				setTakeoverHolder(null)
+				setTakeoverIsSystem(false)
 				setExpandedPartId(part.id)
 				return
 			}
@@ -141,10 +144,12 @@ export function SidebarPartRow({ part }: { part: Part }) {
 				// Don't block editing if presence is down; still open locally.
 				console.warn('Story lock unavailable; opening without exclusive lock')
 				setTakeoverHolder(null)
+				setTakeoverIsSystem(false)
 				setExpandedPartId(part.id)
 				return
 			}
 			setTakeoverHolder(result.holder.displayName || lockNames || 'Another user')
+			setTakeoverIsSystem(result.holder.userId === 'system')
 		} catch (error) {
 			console.error(error)
 			toasts.show({
@@ -168,9 +173,11 @@ export function SidebarPartRow({ part }: { part: Part }) {
 		if (locks.length > 0) {
 			if (lockedBySystem) {
 				setTakeoverHolder('System')
+				setTakeoverIsSystem(true)
 				return
 			}
 			setTakeoverHolder(lockNames || locks[0]?.displayName || 'Another user')
+			setTakeoverIsSystem(false)
 			return
 		}
 		void openStory(false)
@@ -265,14 +272,17 @@ export function SidebarPartRow({ part }: { part: Part }) {
 
 			<Modal
 				show={takeoverHolder !== null}
-				onHide={() => setTakeoverHolder(null)}
+				onHide={() => {
+					setTakeoverHolder(null)
+					setTakeoverIsSystem(false)
+				}}
 				onClick={(e: React.MouseEvent) => e.stopPropagation()}
 			>
 				<Modal.Header closeButton>
 					<Modal.Title>Story is locked</Modal.Title>
 				</Modal.Header>
 				<Modal.Body>
-					{takeoverHolder === 'System' || lockedBySystem ? (
+					{takeoverIsSystem ? (
 						<>
 							This story is locked by <strong>System</strong> because it is Sofie&apos;s previous,
 							current, or next part. It cannot be edited until playout moves on.
@@ -285,10 +295,17 @@ export function SidebarPartRow({ part }: { part: Part }) {
 					)}
 				</Modal.Body>
 				<Modal.Footer>
-					<Button variant="secondary" disabled={busy} onClick={() => setTakeoverHolder(null)}>
-						{takeoverHolder === 'System' || lockedBySystem ? 'OK' : 'Cancel'}
+					<Button
+						variant="secondary"
+						disabled={busy}
+						onClick={() => {
+							setTakeoverHolder(null)
+							setTakeoverIsSystem(false)
+						}}
+					>
+						{takeoverIsSystem ? 'OK' : 'Cancel'}
 					</Button>
-					{takeoverHolder === 'System' || lockedBySystem ? null : (
+					{takeoverIsSystem ? null : (
 						<Button
 							variant="danger"
 							disabled={busy}

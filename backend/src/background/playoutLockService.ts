@@ -18,6 +18,7 @@ export interface RundownPlayoutUpdate {
 }
 
 let intervalHandle: ReturnType<typeof setInterval> | undefined
+let refreshInFlight: Promise<void> | undefined
 const lastPayloadByRundown = new Map<string, string>()
 
 /**
@@ -124,15 +125,27 @@ export async function refreshPlayoutLocksFromCore(): Promise<void> {
 }
 
 /**
+ * Run a refresh cycle, skipping if one is already in flight (avoids stale Core replies).
+ */
+function refreshPlayoutLocksFromCoreGuarded(): void {
+	if (refreshInFlight) {
+		return
+	}
+	refreshInFlight = refreshPlayoutLocksFromCore().finally(() => {
+		refreshInFlight = undefined
+	})
+}
+
+/**
  * Start the Sofie playout → System lock bridge. Idempotent.
  */
 export function startPlayoutLockService(): void {
 	if (intervalHandle) {
 		return
 	}
-	void refreshPlayoutLocksFromCore()
+	refreshPlayoutLocksFromCoreGuarded()
 	intervalHandle = setInterval(() => {
-		void refreshPlayoutLocksFromCore()
+		refreshPlayoutLocksFromCoreGuarded()
 	}, POLL_INTERVAL_MS)
 }
 
@@ -159,5 +172,6 @@ export function stopPlayoutLockServiceForTests(): void {
 		clearInterval(intervalHandle)
 		intervalHandle = undefined
 	}
+	refreshInFlight = undefined
 	lastPayloadByRundown.clear()
 }
