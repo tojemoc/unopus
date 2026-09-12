@@ -1,6 +1,7 @@
 import { coreHandler } from './coreHandler'
 import { initSocketServer } from '../socketServer'
 import { startDailyTemplateScheduler } from './dailyTemplateScheduler'
+import { startPlayoutLockService } from './playoutLockService'
 
 export interface BasicPayload extends Record<string, unknown> {
 	playerId: number
@@ -19,5 +20,6 @@ export class ControlAPI {
 		initSocketServer(port)
 		await coreHandler.init()
 		startDailyTemplateScheduler()
+		startPlayoutLockService()
 	}
 }

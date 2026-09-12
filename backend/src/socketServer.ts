@@ -21,6 +21,7 @@ import { registerCoreDiagnosticsRoutes } from './routes/coreDiagnostics'
 import { registerConfigRoutes } from './routes/config'
 import { registerDailyGenerationRoutes } from './routes/dailyGeneration'
 import { registerPresenceHandlers } from './background/api/presence'
+import { listCachedPlayoutUpdates } from './background/playoutLockService'
 import { getBundledGfxTemplatesRoot, resolveGfxTemplateRoots } from './background/media'
 
 const frontendPath = path.resolve(__dirname, '../../frontend/dist')
@@ -121,6 +122,11 @@ export async function initSocketServer(port: number = 3010) {
 			})
 
 			handlers.map((handler: SocketIOHandler) => handler(socket, io))
+
+			// Replay last known Sofie playout positions so late joiners get ON AIR / System locks.
+			for (const update of listCachedPlayoutUpdates()) {
+				socket.emit('playout:update', update)
+			}
 		})
 
 		app.use('/demo-assets', (req, res, next) => {

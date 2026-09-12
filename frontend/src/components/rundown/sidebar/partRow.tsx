@@ -71,6 +71,8 @@ export function SidebarPartRow({ part }: { part: Part }) {
 	const { expandedPartId, setExpandedPartId } = useScriptExpand()
 	const expanded = expandedPartId === part.id
 	const [takeoverHolder, setTakeoverHolder] = useState<string | null>(null)
+	/** True when the modal is for a System (playout) lock — never key off displayName alone. */
+	const [takeoverIsSystem, setTakeoverIsSystem] = useState(false)
 	const [busy, setBusy] = useState(false)
 	const pointerStart = useRef<{ x: number; y: number } | null>(null)
 
@@ -95,6 +97,10 @@ export function SidebarPartRow({ part }: { part: Part }) {
 
 	const storyReadiness = getStoryReadiness(part.id, partPieces, readiness)
 	const locks = useRowLocks('part', part.id)
+	const playoutState = useAppSelector((state) => state.playout.byRundownId[part.rundownId])
+	const isOnAir = playoutState?.currentPartId === part.id
+	const systemLocks = locks.filter((lock) => lock.userId === 'system')
+	const lockedBySystem = systemLocks.length > 0
 	const editorial = resolveEditorialStatus({
 		skip: part.skip,
 		editorChecked: part.editorChecked,
@@ -113,7 +119,8 @@ export function SidebarPartRow({ part }: { part: Part }) {
 		part.float ? 'story-row--floated' : '',
 		storyReadiness?.state === 'ready' ? 'story-row--ready' : '',
 		storyReadiness?.state === 'not-ready' ? 'story-row--not-ready' : '',
-		locks.length ? 'story-row--locked' : ''
+		locks.length ? 'story-row--locked' : '',
+		isOnAir ? 'story-row--on-air' : ''
 	]
 		.filter(Boolean)
 		.join(' ')
@@ -129,6 +136,7 @@ export function SidebarPartRow({ part }: { part: Part }) {
 			})
 			if (result.ok) {
 				setTakeoverHolder(null)
+				setTakeoverIsSystem(false)
 				setExpandedPartId(part.id)
 				return
 			}
@@ -136,10 +144,12 @@ export function SidebarPartRow({ part }: { part: Part }) {
 				// Don't block editing if presence is down; still open locally.
 				console.warn('Story lock unavailable; opening without exclusive lock')
 				setTakeoverHolder(null)
+				setTakeoverIsSystem(false)
 				setExpandedPartId(part.id)
 				return
 			}
 			setTakeoverHolder(result.holder.displayName || lockNames || 'Another user')
+			setTakeoverIsSystem(result.holder.userId === 'system')
 		} catch (error) {
 			console.error(error)
 			toasts.show({
@@ -161,7 +171,13 @@ export function SidebarPartRow({ part }: { part: Part }) {
 		}
 		// Fast path: known foreign lock from presence snapshot → confirm before kicking.
 		if (locks.length > 0) {
+			if (lockedBySystem) {
+				setTakeoverHolder('System')
+				setTakeoverIsSystem(true)
+				return
+			}
 			setTakeoverHolder(lockNames || locks[0]?.displayName || 'Another user')
+			setTakeoverIsSystem(false)
 			return
 		}
 		void openStory(false)
@@ -226,6 +242,11 @@ export function SidebarPartRow({ part }: { part: Part }) {
 				</div>
 				<div className="col-title" title={part.name}>
 					<span className="story-row__title">{part.name}</span>
+					{isOnAir ? (
+						<span className="story-row__on-air" title="On air in Sofie">
+							ON AIR
+						</span>
+					) : null}
 					{locks.length ? (
 						<span
 							className="story-row__lock"
@@ -251,29 +272,50 @@ export function SidebarPartRow({ part }: { part: Part }) {
 
 			<Modal
 				show={takeoverHolder !== null}
-				onHide={() => setTakeoverHolder(null)}
+				onHide={() => {
+					setTakeoverHolder(null)
+					setTakeoverIsSystem(false)
+				}}
 				onClick={(e: React.MouseEvent) => e.stopPropagation()}
 			>
 				<Modal.Header closeButton>
 					<Modal.Title>Story is locked</Modal.Title>
 				</Modal.Header>
 				<Modal.Body>
-					{takeoverHolder ?? 'Another user'} is currently editing this story. Opening it will kick
-					them out and any unsaved changes they have may be lost.
+					{takeoverIsSystem ? (
+						<>
+							This story is locked by <strong>System</strong> because it is Sofie&apos;s previous,
+							current, or next part. It cannot be edited until playout moves on.
+						</>
+					) : (
+						<>
+							{takeoverHolder ?? 'Another user'} is currently editing this story. Opening it will kick
+							them out and any unsaved changes they have may be lost.
+						</>
+					)}
 				</Modal.Body>
 				<Modal.Footer>
-					<Button variant="secondary" disabled={busy} onClick={() => setTakeoverHolder(null)}>
-						Cancel
-					</Button>
 					<Button
-						variant="danger"
+						variant="secondary"
 						disabled={busy}
 						onClick={() => {
-							void openStory(true)
+							setTakeoverHolder(null)
+							setTakeoverIsSystem(false)
 						}}
 					>
-						Kick out and open
+						{takeoverIsSystem ? 'OK' : 'Cancel'}
 					</Button>
+					{takeoverIsSystem ? null : (
+						<Button
+							variant="danger"
+							disabled={busy}
+							onClick={() => {
+								void openStory(true)
+							}}
+						>
+							Kick out and open
+						</Button>
+					)}
 				</Modal.Footer>
 			</Modal>
 		</div>
