@@ -4,6 +4,8 @@ const DEFAULT_MAX_CHARS = 160
 export function firstScriptLine(script: string | undefined | null, maxChars = DEFAULT_MAX_CHARS): string {
 	const text = (script ?? '').replace(/\s+/g, ' ').trim()
 	if (!text) return ''
+	if (maxChars <= 0) return ''
+	if (maxChars === 1) return '…'
 	if (text.length <= maxChars) return text
-	return `${text.slice(0, Math.max(1, maxChars - 1)).trimEnd()}…`
+	return `${text.slice(0, maxChars - 1).trimEnd()}…`
 }

@@ -18,4 +18,14 @@ describe('firstScriptLine', () => {
 		assert.equal(excerpt.endsWith('…'), true)
 		assert.ok(excerpt.length <= 20)
 	})
+
+	it('returns empty string when maxChars is non-positive', () => {
+		assert.equal(firstScriptLine('Osobné údaje', 0), '')
+		assert.equal(firstScriptLine('Osobné údaje', -5), '')
+	})
+
+	it('returns only an ellipsis when maxChars is 1', () => {
+		assert.equal(firstScriptLine('Osobné údaje', 1), '…')
+		assert.equal(firstScriptLine('A', 1), '…')
+	})
 })
