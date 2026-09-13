@@ -1,6 +1,24 @@
 import assert from 'node:assert/strict'
+import { existsSync, readFileSync } from 'node:fs'
+import path from 'node:path'
 import { describe, it } from 'node:test'
 import { convertOldPartToNew } from './convertOldPart.js'
+
+function resolveSmokeRundownPath(): string | undefined {
+	const candidates = [
+		process.env.SOFIE_MEGAREPO_ASSETS,
+		'/workspace/assets',
+		path.resolve(process.cwd(), '../assets'),
+		path.resolve(process.cwd(), 'assets'),
+		path.resolve(process.cwd(), '.sofie-assets')
+	]
+	for (const dir of candidates) {
+		if (!dir) continue
+		const file = path.join(dir, 'spravy-v3-smoke-rundown.json')
+		if (existsSync(file)) return file
+	}
+	return undefined
+}
 
 describe('convertOldPartToNew', () => {
 	it('keeps top-level script when partType is already set (smoke / modern export)', () => {
@@ -97,5 +115,19 @@ describe('convertOldPartToNew', () => {
 		const converted = convertOldPartToNew(part)
 		assert.equal(converted.duration, null)
 		assert.equal(converted.partType, 'cam')
+	})
+
+	it('keeps scripts from the megarepo smoke rundown JSON', () => {
+		const smokePath = resolveSmokeRundownPath()
+		assert.ok(smokePath, 'spravy-v3-smoke-rundown.json not found (set SOFIE_MEGAREPO_ASSETS)')
+		const rundown = JSON.parse(readFileSync(smokePath, 'utf8')) as {
+			parts: Array<{ id: string; partType?: string; script?: string; payload?: { type?: string } }>
+		}
+		const weather = rundown.parts.find((part) => part.id === 'part-weather')
+		assert.ok(weather, 'part-weather missing from smoke rundown')
+		assert.ok((weather.script ?? '').includes('Zajtra sa oteplí'), 'smoke weather script missing')
+		const converted = convertOldPartToNew(weather)
+		assert.equal(converted.script, weather.script)
+		assert.ok((converted.script ?? '').includes('Zajtra sa oteplí'))
 	})
 })

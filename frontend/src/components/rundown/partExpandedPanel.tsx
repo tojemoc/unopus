@@ -15,7 +15,7 @@ import { resolveEffectiveScriptCps } from '~/util/scriptReadingTime'
 import { usePresenceFocus } from '~/hooks/usePresence'
 import { useRundownReadinessContext } from '~/hooks/RundownReadinessContext'
 
-export function PartExpandedPanel({ part }: { part: Part }) {
+export function PartExpandedPanel({ part, readOnly = false }: { part: Part; readOnly?: boolean }) {
 	const dispatch = useAppDispatch()
 	const toasts = useToasts()
 	const { readiness } = useRundownReadinessContext()
@@ -71,6 +71,7 @@ export function PartExpandedPanel({ part }: { part: Part }) {
 	const addableTypes = toolbarManifests(manifests, TypeManifestEntity.Piece)
 
 	const savePart = async () => {
+		if (readOnly) return
 		setSaving(true)
 		try {
 			await dispatch(
@@ -159,6 +160,7 @@ export function PartExpandedPanel({ part }: { part: Part }) {
 				<Form.Control
 					size="sm"
 					value={name}
+					disabled={readOnly}
 					onChange={(e) => setName(e.target.value)}
 					aria-label="Story title"
 				/>
@@ -168,6 +170,7 @@ export function PartExpandedPanel({ part }: { part: Part }) {
 						id={`float-${livePart.id}`}
 						label="Floated"
 						checked={float}
+						disabled={readOnly}
 						onChange={(e) => setFloat(e.target.checked)}
 					/>
 					<Form.Check
@@ -175,6 +178,7 @@ export function PartExpandedPanel({ part }: { part: Part }) {
 						id={`skip-${livePart.id}`}
 						label="Skipped"
 						checked={skip}
+						disabled={readOnly}
 						onChange={(e) => setSkip(e.target.checked)}
 					/>
 					<Form.Check
@@ -182,6 +186,7 @@ export function PartExpandedPanel({ part }: { part: Part }) {
 						id={`checked-${livePart.id}`}
 						label="Checked"
 						checked={editorChecked}
+						disabled={readOnly}
 						onChange={(e) => setEditorChecked(e.target.checked)}
 					/>
 					<ClockDurationInput
@@ -189,11 +194,16 @@ export function PartExpandedPanel({ part }: { part: Part }) {
 						valueSeconds={duration}
 						placeholder="mm:ss"
 						aria-label="On air duration"
+						disabled={readOnly}
 						onCommit={commitDuration}
 					/>
-					<Button size="sm" variant="primary" disabled={saving} onClick={() => void savePart()}>
-						{saving ? 'Saving…' : 'Save'}
-					</Button>
+					{readOnly ? (
+						<span className="part-expanded-panel__readonly">On air — script is read-only</span>
+					) : (
+						<Button size="sm" variant="primary" disabled={saving} onClick={() => void savePart()}>
+							{saving ? 'Saving…' : 'Save'}
+						</Button>
+					)}
 				</div>
 			</div>
 
@@ -205,8 +215,12 @@ export function PartExpandedPanel({ part }: { part: Part }) {
 				as="textarea"
 				rows={5}
 				value={script}
+				readOnly={readOnly}
+				disabled={readOnly}
 				onChange={(e) => setScript(e.target.value)}
-				onBlur={() => void savePart()}
+				onBlur={() => {
+					if (!readOnly) void savePart()
+				}}
 			/>
 			<ScriptReadingCounter text={script} />
 
@@ -216,11 +230,11 @@ export function PartExpandedPanel({ part }: { part: Part }) {
 				pieces={pieces}
 				cps={scriptCps}
 				expandedPieceId={expandedPieceId}
-				onSelectPiece={setExpandedPieceId}
+				onSelectPiece={readOnly ? () => undefined : setExpandedPieceId}
 				readiness={readiness}
 			/>
 
-			{expandedPiece ? (
+			{!readOnly && expandedPiece ? (
 				<div className="part-expanded-piece">
 					<PiecePropertiesForm piece={expandedPiece} />
 					<div className="part-expanded-piece__actions">
@@ -245,19 +259,21 @@ export function PartExpandedPanel({ part }: { part: Part }) {
 				</div>
 			) : null}
 
-			<Stack direction="horizontal" gap={1} className="part-expanded-panel__add flex-wrap">
-				{addableTypes.map((manifest) => (
-					<button
-						key={manifest.id}
-						type="button"
-						className="script-add-piece"
-						style={{ borderColor: manifest.colour }}
-						onClick={() => void insertPieceAtEnd(manifest.id)}
-					>
-						+ {manifest.shortName ?? manifest.name}
-					</button>
-				))}
-			</Stack>
+			{readOnly ? null : (
+				<Stack direction="horizontal" gap={1} className="part-expanded-panel__add flex-wrap">
+					{addableTypes.map((manifest) => (
+						<button
+							key={manifest.id}
+							type="button"
+							className="script-add-piece"
+							style={{ borderColor: manifest.colour }}
+							onClick={() => void insertPieceAtEnd(manifest.id)}
+						>
+							+ {manifest.shortName ?? manifest.name}
+						</button>
+					))}
+				</Stack>
+			)}
 		</div>
 	)
 }
