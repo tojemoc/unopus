@@ -1,4 +1,4 @@
-import { ManifestFieldType, type PayloadManifest, type TypeManifest } from '~backend/background/interfaces'
+import type { PayloadManifest, TypeManifest } from '~backend/background/interfaces'
 
 const HEADLINE_FIELD_IDS = new Set(['text', 'headline', 'script'])
 
@@ -13,15 +13,28 @@ const PRIMARY_CONTENT_FIELD_IDS = new Set([
 	'role'
 ])
 
-/** Media clip fields shown first (ILU / SYN / VO / VT). */
-export function isPrimaryClipField(field: PayloadManifest): boolean {
+/**
+ * Media path fields eligible for clip preview (SYN/ILU).
+ * Excludes UI-only companions like `volume` so numeric/string volumes are never
+ * treated as media paths.
+ */
+export function isClipPreviewPathField(field: PayloadManifest): boolean {
 	if (field.id === 'iluFile') {
 		return true
 	}
-	if (field.type === ManifestFieldType.MediaPick && field.subdir === 'clips') {
+	if (field.type === 'mediaPick' && field.subdir === 'clips') {
 		return true
 	}
 	return field.id === 'fileName' && field.subdir === 'clips'
+}
+
+/** Media clip fields shown first in the piece form (ILU / SYN / VO / VT), including volume. */
+export function isPrimaryClipField(field: PayloadManifest): boolean {
+	/** ILU mixer volume sits next to the clip picker (not buried in "other"). */
+	if (field.id === 'volume') {
+		return true
+	}
+	return isClipPreviewPathField(field)
 }
 
 export function isHeadlineField(field: PayloadManifest): boolean {
@@ -86,7 +99,7 @@ function formatIncludeInNameValue(field: PayloadManifest, raw: unknown): string 
 	if (raw === undefined || raw === null || raw === '') {
 		return undefined
 	}
-	if (field.type === ManifestFieldType.MediaPick) {
+	if (field.type === 'mediaPick') {
 		const path = String(raw)
 		return path.split('/').pop() || path
 	}
@@ -140,7 +153,7 @@ export function resolveClipPreviewPath(
 	}
 
 	for (const field of manifest.payload) {
-		if (!isPrimaryClipField(field)) {
+		if (!isClipPreviewPathField(field)) {
 			continue
 		}
 		const value = payload[field.id]
