@@ -975,7 +975,10 @@ export async function getMutatedPartsFromSegment(segmentId: string): Promise<Mut
 	const { result: parts } = await mutations.read({ segmentId })
 
 	if (parts && Array.isArray(parts)) {
-		return await Promise.all(parts.map(mutatePart))
+		// Omit skip/float parts on full rundown sync — otherwise Sofie re-creates them
+		// after Reload even though live toggle correctly dataPartDelete'd them.
+		const active = parts.filter((part) => !partExcludedFromSofie(part))
+		return await Promise.all(active.map(mutatePart))
 	}
 
 	return []
