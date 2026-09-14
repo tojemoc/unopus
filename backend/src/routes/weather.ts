@@ -12,7 +12,7 @@ function statusForError(error: unknown): number {
 	if (/not authenticated/i.test(msg)) return 401
 	if (/API key|rejected the API key/i.test(msg)) return 400
 	if (/not found|no weather piece|Missing partId|no recognisable/i.test(msg)) return 400
-	if (/HTTP 5/i.test(msg)) return 502
+	if (/unavailable|HTTP 5/i.test(msg)) return 502
 	return 500
 }
 
