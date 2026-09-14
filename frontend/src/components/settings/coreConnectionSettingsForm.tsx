@@ -414,6 +414,65 @@ export function CoreConnectionSettingsForm({ settings }: { settings: Application
 					)}
 				/>
 
+				<hr className="my-4" />
+				<h3 className="h5">Weather (iMeteo)</h3>
+				<p className="text-muted small">
+					Partner forecast API for Počasie parts. Paste the assigned <code>X-API-KEY</code>, then
+					use <strong>Sync from iMeteo</strong> on a weather story. Recommended call rate is a few
+					times per day (not continuous polling).
+				</p>
+
+				<form.Field
+					name="imeteoApiKey"
+					children={(field) => (
+						<>
+							<Form.Group className="mb-3">
+								<Form.Label htmlFor={field.name}>{friendlyLabel('imeteoApiKey')}</Form.Label>
+								<Form.Control
+									id={field.name}
+									name={field.name}
+									type="password"
+									autoComplete="off"
+									value={field.state.value ?? ''}
+									onBlur={field.handleBlur}
+									placeholder="Paste partner API key"
+									onChange={(e) => field.handleChange(e.target.value)}
+								/>
+								<Form.Text className="text-muted">
+									Stored in local application settings. Leave empty and Save to clear.
+								</Form.Text>
+							</Form.Group>
+							<FieldInfo field={field} />
+						</>
+					)}
+				/>
+
+				<form.Field
+					name="imeteoForecastDay"
+					children={(field) => (
+						<>
+							<Form.Group className="mb-3">
+								<Form.Label htmlFor={field.name}>
+									{friendlyLabel('imeteoForecastDay')}
+								</Form.Label>
+								<Form.Control
+									id={field.name}
+									name={field.name}
+									type="text"
+									value={field.state.value ?? 'tomorrow'}
+									onBlur={field.handleBlur}
+									placeholder="tomorrow"
+									onChange={(e) => field.handleChange(e.target.value)}
+								/>
+								<Form.Text className="text-muted">
+									<code>today</code>, <code>tomorrow</code> (default), or <code>YYYY-MM-DD</code>.
+								</Form.Text>
+							</Form.Group>
+							<FieldInfo field={field} />
+						</>
+					)}
+				/>
+
 				<div className="mb-3">
 					<Button variant="outline-primary" onClick={() => void testConnection()} disabled={testing}>
 						{testing ? 'Testing…' : 'Test Connection'}

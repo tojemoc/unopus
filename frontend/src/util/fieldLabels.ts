@@ -27,7 +27,9 @@ const LABELS: Record<string, string> = {
 	durationMode: 'Take after duration',
 	skipStatusUnlessEditorChecked: 'Show Skipped status unless editor-checked',
 	requireEditorCheckForAir: 'Require editor check before on-air',
-	ignoreCoreContentStatus: 'Ignore Sofie media status (sync rundown only)'
+	ignoreCoreContentStatus: 'Ignore Sofie media status (sync rundown only)',
+	imeteoApiKey: 'iMeteo Partner API key',
+	imeteoForecastDay: 'iMeteo forecast day'
 }
 
 /**

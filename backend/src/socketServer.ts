@@ -20,6 +20,7 @@ import { registerReadinessRoutes } from './routes/readiness'
 import { registerCoreDiagnosticsRoutes } from './routes/coreDiagnostics'
 import { registerConfigRoutes } from './routes/config'
 import { registerDailyGenerationRoutes } from './routes/dailyGeneration'
+import { registerWeatherRoutes } from './routes/weather'
 import { registerPresenceHandlers } from './background/api/presence'
 import { listCachedPlayoutUpdates } from './background/playoutLockService'
 import { getBundledGfxTemplatesRoot, resolveGfxTemplateRoots } from './background/media'
@@ -91,6 +92,7 @@ export async function initSocketServer(port: number = 3010) {
 	registerCoreDiagnosticsRoutes(app)
 	registerConfigRoutes(app)
 	registerDailyGenerationRoutes(app)
+	registerWeatherRoutes(app)
 
 	if (io) {
 		type SocketIOHandler = (socket: Socket, io: Server) => void
