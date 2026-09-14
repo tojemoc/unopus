@@ -9,6 +9,7 @@ import { ReadinessBadge, getPieceReadinessTooltip } from '../readinessBadge'
 import { EditorialStatusBadge } from '../editorialStatusBadge'
 import { formatPartOnAirDuration } from '~/util/pieceDuration'
 import { resolveEffectiveScriptCps } from '~/util/scriptReadingTime'
+import { firstScriptLine } from '~/util/scriptPreview'
 import { resolveEditorialStatus } from '~/util/editorialStatus'
 import { requestPresenceFocus, useRowLocks } from '~/hooks/usePresence'
 import { useRundownReadinessContext } from '~/hooks/RundownReadinessContext'
@@ -108,6 +109,7 @@ export function SidebarPartRow({ part }: { part: Part }) {
 		requireEditorCheckForAir: Boolean(settings?.requireEditorCheckForAir)
 	})
 
+	const scriptPreview = firstScriptLine(part.script)
 	const typeColour = partTypeManifest?.colour ?? '#666'
 	const lockNames = locks.map((lock) => lock.displayName).join(', ')
 
@@ -169,13 +171,13 @@ export function SidebarPartRow({ part }: { part: Part }) {
 			setExpandedPartId(null)
 			return
 		}
+		// On-air / lookahead stories stay readable so the prompter script is not hidden.
+		if (lockedBySystem) {
+			setExpandedPartId(part.id)
+			return
+		}
 		// Fast path: known foreign lock from presence snapshot → confirm before kicking.
 		if (locks.length > 0) {
-			if (lockedBySystem) {
-				setTakeoverHolder('System')
-				setTakeoverIsSystem(true)
-				return
-			}
 			setTakeoverHolder(lockNames || locks[0]?.displayName || 'Another user')
 			setTakeoverIsSystem(false)
 			return
@@ -240,7 +242,7 @@ export function SidebarPartRow({ part }: { part: Part }) {
 						{partTypeManifest?.shortName ?? part.partType.slice(0, 4).toUpperCase()}
 					</span>
 				</div>
-				<div className="col-title" title={part.name}>
+				<div className="col-title" title={part.script?.trim() ? `${part.name}\n${part.script}` : part.name}>
 					<span className="story-row__title">{part.name}</span>
 					{isOnAir ? (
 						<span className="story-row__on-air" title="On air in Sofie">
@@ -255,6 +257,7 @@ export function SidebarPartRow({ part }: { part: Part }) {
 							<BsLockFill aria-hidden /> {lockNames}
 						</span>
 					) : null}
+					{scriptPreview ? <div className="story-row__script">{scriptPreview}</div> : null}
 				</div>
 				<div className="col-duration">
 					{formatPartOnAirDuration(
@@ -268,7 +271,7 @@ export function SidebarPartRow({ part }: { part: Part }) {
 					) || '--:--'}
 				</div>
 			</div>
-			{expanded ? <PartExpandedPanel part={part} /> : null}
+			{expanded ? <PartExpandedPanel part={part} readOnly={lockedBySystem} /> : null}
 
 			<Modal
 				show={takeoverHolder !== null}

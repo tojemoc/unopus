@@ -16,6 +16,7 @@ export function ClockDurationInput({
 	onCommit,
 	size = 'sm',
 	style,
+	disabled,
 	'aria-label': ariaLabel
 }: {
 	id?: string
@@ -26,6 +27,7 @@ export function ClockDurationInput({
 	onCommit: (seconds: number | null) => void
 	size?: 'sm' | 'lg'
 	style?: React.CSSProperties
+	disabled?: boolean
 	'aria-label'?: string
 }) {
 	const fromProp =
@@ -51,6 +53,8 @@ export function ClockDurationInput({
 			placeholder={placeholder}
 			style={style}
 			aria-label={ariaLabel}
+			disabled={disabled}
+			readOnly={disabled}
 			value={draft}
 			onFocus={() => {
 				focusedRef.current = true
