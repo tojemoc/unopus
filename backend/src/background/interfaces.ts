@@ -364,6 +364,15 @@ export interface ApplicationSettings {
 	 * checks only (same as when sync is off). Use when Package Manager reports false NR.
 	 */
 	ignoreCoreContentStatus?: boolean
+	/**
+	 * iMeteo.sk Partner API key (`X-API-KEY`) for weather sync on Počasie parts.
+	 * Stored in application settings — never hard-coded in source.
+	 */
+	imeteoApiKey?: string
+	/**
+	 * Forecast day for iMeteo sync: `today`, `tomorrow` (default), or `YYYY-MM-DD`.
+	 */
+	imeteoForecastDay?: string
 }
 
 export type DailyGenerationStatus = 'in_progress' | 'completed' | 'failed'

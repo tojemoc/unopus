@@ -14,6 +14,7 @@ import { findTypeManifest, toolbarManifests } from '~/util/typeManifest'
 import { resolveEffectiveScriptCps } from '~/util/scriptReadingTime'
 import { usePresenceFocus } from '~/hooks/usePresence'
 import { useRundownReadinessContext } from '~/hooks/RundownReadinessContext'
+import { syncWeatherFromImeteo } from '~/lib/weatherApi'
 
 export function PartExpandedPanel({ part, readOnly = false }: { part: Part; readOnly?: boolean }) {
 	const dispatch = useAppDispatch()
@@ -47,6 +48,12 @@ export function PartExpandedPanel({ part, readOnly = false }: { part: Part; read
 	const durationRef = useRef(duration)
 	const [expandedPieceId, setExpandedPieceId] = useState<string | null>(null)
 	const [saving, setSaving] = useState(false)
+	const [weatherSyncing, setWeatherSyncing] = useState(false)
+
+	const hasWeatherPiece = useMemo(
+		() => pieces.some((piece) => piece.pieceType === 'weather' && !piece.skip),
+		[pieces]
+	)
 
 	const commitDuration = (next: number | null | undefined) => {
 		durationRef.current = next
@@ -95,6 +102,27 @@ export function PartExpandedPanel({ part, readOnly = false }: { part: Part; read
 			})
 		} finally {
 			setSaving(false)
+		}
+	}
+
+	const syncWeather = async () => {
+		if (readOnly || !hasWeatherPiece) return
+		setWeatherSyncing(true)
+		try {
+			const result = await syncWeatherFromImeteo(livePart.id)
+			setScript(result.forecastText)
+			toasts.show({
+				headerContent: 'Weather synced',
+				bodyContent: `${result.cities.length} cities from iMeteo (${result.date} / ${result.day})`
+			})
+		} catch (e) {
+			console.error(e)
+			toasts.show({
+				headerContent: 'Weather sync failed',
+				bodyContent: e instanceof Error ? e.message : 'Encountered an unexpected error'
+			})
+		} finally {
+			setWeatherSyncing(false)
 		}
 	}
 
@@ -200,9 +228,22 @@ export function PartExpandedPanel({ part, readOnly = false }: { part: Part; read
 					{readOnly ? (
 						<span className="part-expanded-panel__readonly">On air — script is read-only</span>
 					) : (
-						<Button size="sm" variant="primary" disabled={saving} onClick={() => void savePart()}>
-							{saving ? 'Saving…' : 'Save'}
-						</Button>
+						<>
+							{hasWeatherPiece && (
+								<Button
+									size="sm"
+									variant="outline-info"
+									disabled={weatherSyncing || saving}
+									onClick={() => void syncWeather()}
+									title="Fetch forecast from iMeteo and fill cities + script"
+								>
+									{weatherSyncing ? 'Syncing…' : 'Sync from iMeteo'}
+								</Button>
+							)}
+							<Button size="sm" variant="primary" disabled={saving} onClick={() => void savePart()}>
+								{saving ? 'Saving…' : 'Save'}
+							</Button>
+						</>
 					)}
 				</div>
 			</div>

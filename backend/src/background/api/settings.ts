@@ -244,7 +244,9 @@ export const mutations = {
 				'dailyCloneTime',
 				'dailyCloneTimezone',
 				'previewBaseUrl',
-				'ingestMediaRoot'
+				'ingestMediaRoot',
+				'imeteoApiKey',
+				'imeteoForecastDay'
 			] as const) {
 				if (key in payload && (payload[key] === undefined || payload[key] === '')) {
 					patch[key] = null
