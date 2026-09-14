@@ -10,6 +10,7 @@ export function DeletePartButton({
 	partId,
 	partName,
 	disabled,
+	onDeleted,
 	renderButton,
 	...rest
 }: {
@@ -18,6 +19,8 @@ export function DeletePartButton({
 	partId: string
 	partName: string
 	disabled: boolean
+	/** Called after a successful delete (e.g. collapse an inline editor). */
+	onDeleted?: () => void
 	renderButton?: (props: {
 		onClick: (e: React.MouseEvent) => void
 		disabled: boolean
@@ -32,12 +35,13 @@ export function DeletePartButton({
 			entityName={partName}
 			disabled={disabled}
 			onDelete={() => dispatch(removePart({ id: partId })).unwrap()}
-			onSuccessNavigate={() =>
-				navigate({
+			onSuccessNavigate={() => {
+				onDeleted?.()
+				void navigate({
 					to: '/rundown/$rundownId/segment/$segmentId',
 					params: { rundownId, segmentId }
 				})
-			}
+			}}
 			renderButton={renderButton}
 			{...rest}
 		/>

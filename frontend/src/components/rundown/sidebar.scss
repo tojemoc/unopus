@@ -109,6 +109,34 @@
 		color: var(--re-text);
 	}
 
+	.sidebar-item-header__rename-trigger {
+		all: unset;
+		flex: 1;
+		line-height: 1.25;
+		overflow-wrap: anywhere;
+		word-break: normal;
+		color: var(--re-text);
+		cursor: text;
+		border-radius: 0.2rem;
+
+		&:hover {
+			background: color-mix(in srgb, var(--re-surface-1) 55%, transparent);
+		}
+
+		&:focus-visible {
+			outline: 2px solid var(--re-accent);
+			outline-offset: 1px;
+		}
+	}
+
+	.sidebar-item-header__rename {
+		flex: 1;
+		min-width: 0;
+		font-size: 0.92rem;
+		font-weight: 700;
+		padding-block: 0.1rem;
+	}
+
 	.segment-toggle {
 		display: inline-flex;
 		align-items: center;
