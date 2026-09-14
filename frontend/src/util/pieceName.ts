@@ -18,6 +18,10 @@ export function isPrimaryClipField(field: PayloadManifest): boolean {
 	if (field.id === 'iluFile') {
 		return true
 	}
+	/** ILU mixer volume sits next to the clip picker (not buried in "other"). */
+	if (field.id === 'volume') {
+		return true
+	}
 	if (field.type === ManifestFieldType.MediaPick && field.subdir === 'clips') {
 		return true
 	}
