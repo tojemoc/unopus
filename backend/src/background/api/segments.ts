@@ -850,7 +850,8 @@ export async function getMutatedSegmentsFromRundown(rundownId: string): Promise<
 	const { result: segments } = await mutations.read({ rundownId })
 
 	if (segments && Array.isArray(segments)) {
-		return await Promise.all(segments.map(mutateSegment))
+		const active = segments.filter((segment) => !segment.float)
+		return await Promise.all(active.map(mutateSegment))
 	}
 
 	return []
