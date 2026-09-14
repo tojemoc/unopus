@@ -108,11 +108,11 @@ export const DraggableComponentWrapper = <T,>({
 		})
 	})
 
-	if (canDrag) {
-		drag(drop(ref))
-	} else {
-		drop(ref)
-	}
+	// Always reconnect both connectors. When canDrag is false, pass null to drag so
+	// HTML5Backend clears draggable=true — otherwise a previously attached drag source
+	// stays on the node and blocks text selection inside expanded panels.
+	drop(ref)
+	drag(canDrag ? ref : null)
 
 	return (
 		<div

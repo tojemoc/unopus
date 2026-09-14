@@ -183,6 +183,8 @@ export function PartExpandedPanel({ part, readOnly = false }: { part: Part; read
 			className="part-expanded-panel"
 			onClick={(e) => e.stopPropagation()}
 			onKeyDown={(e) => e.stopPropagation()}
+			onPointerDown={(e) => e.stopPropagation()}
+			onMouseDown={(e) => e.stopPropagation()}
 		>
 			<div className="part-expanded-panel__meta">
 				<Form.Control
