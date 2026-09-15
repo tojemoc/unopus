@@ -356,8 +356,8 @@ export interface ApplicationSettings {
 	 */
 	iluDurationMode?: IluDurationMode
 	/**
-	 * When true (default), story rows show a one-line script excerpt under the title.
-	 * When false, only the story name is shown in the PART row.
+	 * Site default for the one-line script excerpt under story titles (built-in default ON).
+	 * Each account can override under Settings → Profile.
 	 */
 	showPartScriptExcerpt?: boolean
 	/**

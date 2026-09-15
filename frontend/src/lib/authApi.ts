@@ -8,6 +8,8 @@ export interface AuthUser {
 	active?: boolean
 	/** Personal script CPS; null = use site default from ApplicationSettings. */
 	scriptCps?: number | null
+	/** Personal script excerpt preference; null = use site default (built-in ON). */
+	showPartScriptExcerpt?: boolean | null
 }
 
 const apiBase = import.meta.env.MODE === 'development' ? '' : ''
@@ -51,6 +53,7 @@ export async function logout(): Promise<void> {
 
 export async function updateMyProfile(payload: {
 	scriptCps?: number | null
+	showPartScriptExcerpt?: boolean | null
 }): Promise<AuthUser> {
 	const data = await request<{ user: AuthUser }>('/api/auth/me', {
 		method: 'PATCH',

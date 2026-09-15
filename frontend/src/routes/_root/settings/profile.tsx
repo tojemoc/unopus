@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Alert, Button, Form } from 'react-bootstrap'
 import { DEFAULT_SCRIPT_CPS, normalizeScriptCps } from '~/util/scriptReadingTime'
+import { resolveShowPartScriptExcerpt } from '~/util/scriptExcerptPreference'
 import { friendlyLabel } from '~/util/fieldLabels'
 import { useAppDispatch, useAppSelector } from '~/store/app'
 import { updateMyProfile } from '~/store/auth'
@@ -14,11 +15,19 @@ function ProfileSettingsPage() {
 	const dispatch = useAppDispatch()
 	const user = useAppSelector((s) => s.auth.user)
 	const settingsCps = useAppSelector((s) => s.settings.settings?.scriptCps)
+	const siteShowScriptExcerpt = useAppSelector(
+		(s) => s.settings.settings?.showPartScriptExcerpt
+	)
 	const siteDefaultCps = normalizeScriptCps(settingsCps ?? DEFAULT_SCRIPT_CPS)
+	const siteExcerptDefault = siteShowScriptExcerpt !== false
 
 	const [useSiteDefault, setUseSiteDefault] = useState(user?.scriptCps == null)
-	const [scriptCps, setScriptCps] = useState(
-		user?.scriptCps ?? siteDefaultCps
+	const [scriptCps, setScriptCps] = useState(user?.scriptCps ?? siteDefaultCps)
+	const [useSiteExcerptDefault, setUseSiteExcerptDefault] = useState(
+		user?.showPartScriptExcerpt == null
+	)
+	const [showScriptExcerpt, setShowScriptExcerpt] = useState(
+		resolveShowPartScriptExcerpt(user?.showPartScriptExcerpt, siteShowScriptExcerpt)
 	)
 	const [saved, setSaved] = useState(false)
 	const [error, setError] = useState<string | null>(null)
@@ -28,7 +37,12 @@ function ProfileSettingsPage() {
 		const usesDefault = user.scriptCps == null
 		setUseSiteDefault(usesDefault)
 		setScriptCps(user.scriptCps ?? siteDefaultCps)
-	}, [user, siteDefaultCps])
+		const usesExcerptDefault = user.showPartScriptExcerpt == null
+		setUseSiteExcerptDefault(usesExcerptDefault)
+		setShowScriptExcerpt(
+			resolveShowPartScriptExcerpt(user.showPartScriptExcerpt, siteShowScriptExcerpt)
+		)
+	}, [user, siteDefaultCps, siteShowScriptExcerpt])
 
 	const onSubmit = async (e: FormEvent) => {
 		e.preventDefault()
@@ -37,7 +51,8 @@ function ProfileSettingsPage() {
 		try {
 			await dispatch(
 				updateMyProfile({
-					scriptCps: useSiteDefault ? null : normalizeScriptCps(scriptCps)
+					scriptCps: useSiteDefault ? null : normalizeScriptCps(scriptCps),
+					showPartScriptExcerpt: useSiteExcerptDefault ? null : showScriptExcerpt
 				})
 			).unwrap()
 			setSaved(true)
@@ -84,6 +99,41 @@ function ProfileSettingsPage() {
 					<Form.Text className="text-muted">
 						Your personal reading speed for script → mm:ss estimates (5–40). Stored on your
 						user account and used when you edit rundowns.
+					</Form.Text>
+				</Form.Group>
+
+				<Form.Group className="mb-3">
+					<Form.Label htmlFor="profile-script-excerpt">
+						{friendlyLabel('showPartScriptExcerptProfile')}
+					</Form.Label>
+					<Form.Check
+						type="checkbox"
+						id="profile-use-site-excerpt-default"
+						label={`Use site default (${siteExcerptDefault ? 'on' : 'off'})`}
+						checked={useSiteExcerptDefault}
+						onChange={(e) => {
+							const next = e.target.checked
+							setUseSiteExcerptDefault(next)
+							if (next) {
+								setShowScriptExcerpt(siteExcerptDefault)
+							}
+						}}
+						className="mb-2"
+					/>
+					<Form.Switch
+						id="profile-script-excerpt"
+						checked={useSiteExcerptDefault ? siteExcerptDefault : showScriptExcerpt}
+						disabled={useSiteExcerptDefault}
+						onChange={(e) => setShowScriptExcerpt(e.target.checked)}
+						label={
+							(useSiteExcerptDefault ? siteExcerptDefault : showScriptExcerpt)
+								? 'Show excerpt under story titles'
+								: 'Hide excerpt (denser story list)'
+						}
+					/>
+					<Form.Text className="text-muted">
+						Turn off for your account only. Admins set the site default under Connection /
+						script timing settings.
 					</Form.Text>
 				</Form.Group>
 

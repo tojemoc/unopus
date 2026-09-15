@@ -349,8 +349,9 @@ export function CoreConnectionSettingsForm({ settings }: { settings: Application
 									onChange={(e) => field.handleChange(e.target.checked)}
 								/>
 								<Form.Text className="text-muted">
-									When on, each story row shows a muted one-line preview of the script under the
-									title. Turn off for a denser rundown list.
+									Site default for the muted one-line script preview under each story title
+									(built-in default is on). Each account can override this under Settings →
+									Profile (for example turn it off for a denser list).
 								</Form.Text>
 							</Form.Group>
 							<FieldInfo field={field} />

@@ -16,6 +16,8 @@ interface UserRow {
 	role: UserRole
 	active: number
 	script_cps?: number | null
+	/** 1/0/null — null means follow site default. */
+	show_part_script_excerpt?: number | null
 }
 
 interface SessionRow {
@@ -24,7 +26,7 @@ interface SessionRow {
 	expires_at: number
 }
 
-const USER_SELECT = `SELECT id, username, password_hash, display_name, role, active, script_cps FROM users`
+const USER_SELECT = `SELECT id, username, password_hash, display_name, role, active, script_cps, show_part_script_excerpt FROM users`
 
 /**
  * Add script_cps column to users table if missing (migration).
@@ -38,16 +40,29 @@ function migrateUsersScriptCpsColumn(): void {
 }
 
 /**
+ * Add show_part_script_excerpt column to users table if missing (migration).
+ */
+function migrateUsersShowPartScriptExcerptColumn(): void {
+	const columns = db.prepare(`PRAGMA table_info(users)`).all() as Array<{ name: string }>
+	if (columns.some((column) => column.name === 'show_part_script_excerpt')) {
+		return
+	}
+	db.exec(`ALTER TABLE users ADD COLUMN show_part_script_excerpt INTEGER`)
+}
+
+/**
  * Convert database user row to AuthUser object.
  */
 function rowToUser(row: UserRow): AuthUser {
+	const excerpt = row.show_part_script_excerpt
 	return {
 		id: row.id,
 		username: row.username,
 		displayName: row.display_name,
 		role: row.role,
 		active: row.active === 1,
-		scriptCps: row.script_cps ?? null
+		scriptCps: row.script_cps ?? null,
+		showPartScriptExcerpt: excerpt === 1 ? true : excerpt === 0 ? false : null
 	}
 }
 
@@ -87,6 +102,7 @@ export function initAuthTables(): void {
 	`)
 
 	migrateUsersScriptCpsColumn()
+	migrateUsersShowPartScriptExcerptColumn()
 
 	const countRow = db.prepare(`SELECT COUNT(*) AS count FROM users`).get() as { count: number }
 	if (countRow.count === 0) {
@@ -185,7 +201,7 @@ export function getUserFromSession(sessionId: string | undefined): SessionUser |
 	const row = db
 		.prepare(
 			`
-			SELECT u.id, u.username, u.display_name, u.role, u.active, u.script_cps, s.expires_at
+			SELECT u.id, u.username, u.display_name, u.role, u.active, u.script_cps, u.show_part_script_excerpt, s.expires_at
 			FROM sessions s
 			JOIN users u ON u.id = s.user_id
 			WHERE s.id = ? AND s.expires_at >= ? AND u.active = 1
@@ -206,7 +222,8 @@ export function getUserFromSession(sessionId: string | undefined): SessionUser |
 		display_name: row.display_name,
 		role: row.role,
 		active: row.active,
-		script_cps: row.script_cps
+		script_cps: row.script_cps,
+		show_part_script_excerpt: row.show_part_script_excerpt
 	})
 }
 
@@ -344,11 +361,11 @@ export function createUser(payload: {
 }
 
 /**
- * Update user profile settings (script CPS). Returns null if user not found.
+ * Update user profile settings (script CPS / story excerpt). Returns null if user not found.
  */
 export function updateUserProfile(
 	userId: string,
-	updates: { scriptCps?: number | null }
+	updates: { scriptCps?: number | null; showPartScriptExcerpt?: boolean | null }
 ): AuthUser | null {
 	const existing = db.prepare(`${USER_SELECT} WHERE id = ?`).get(userId) as UserRow | undefined
 	if (!existing) {
@@ -370,7 +387,22 @@ export function updateUserProfile(
 		}
 	}
 
-	db.prepare(`UPDATE users SET script_cps = ? WHERE id = ?`).run(scriptCps, userId)
+	let showPartScriptExcerpt = existing.show_part_script_excerpt ?? null
+	if (updates.showPartScriptExcerpt !== undefined) {
+		if (updates.showPartScriptExcerpt === null) {
+			showPartScriptExcerpt = null
+		} else if (updates.showPartScriptExcerpt === true) {
+			showPartScriptExcerpt = 1
+		} else if (updates.showPartScriptExcerpt === false) {
+			showPartScriptExcerpt = 0
+		} else {
+			return null
+		}
+	}
+
+	db.prepare(
+		`UPDATE users SET script_cps = ?, show_part_script_excerpt = ? WHERE id = ?`
+	).run(scriptCps, showPartScriptExcerpt, userId)
 
 	return rowToUser(
 		db.prepare(`${USER_SELECT} WHERE id = ?`).get(userId) as unknown as UserRow

@@ -11,6 +11,7 @@ import { formatPartOnAirDuration } from '~/util/pieceDuration'
 import { partUsesScriptDuration, resolveEffectiveScriptCps } from '~/util/scriptReadingTime'
 import { resolveEffectiveIluDurationMode } from '~backend/background/storyDuration'
 import { firstScriptLine } from '~/util/scriptPreview'
+import { resolveShowPartScriptExcerpt } from '~/util/scriptExcerptPreference'
 import { resolveEditorialStatus } from '~/util/editorialStatus'
 import { requestPresenceFocus, useRowLocks } from '~/hooks/usePresence'
 import { useRundownReadinessContext } from '~/hooks/RundownReadinessContext'
@@ -86,6 +87,7 @@ export function SidebarPartRow({ part }: { part: Part }) {
 		findTypeManifest(state.typeManifests.manifests, livePart.partType, TypeManifestEntity.Part)
 	)
 	const userScriptCps = useAppSelector((s) => s.auth.user?.scriptCps)
+	const userShowScriptExcerpt = useAppSelector((s) => s.auth.user?.showPartScriptExcerpt)
 	const settings = useAppSelector((s) => s.settings.settings)
 	const allPieces = useAppSelector((s) => s.pieces.pieces)
 	const partPieces = useMemo(
@@ -115,7 +117,10 @@ export function SidebarPartRow({ part }: { part: Part }) {
 		requireEditorCheckForAir: Boolean(settings?.requireEditorCheckForAir)
 	})
 
-	const showScriptExcerpt = settings?.showPartScriptExcerpt !== false
+	const showScriptExcerpt = resolveShowPartScriptExcerpt(
+		userShowScriptExcerpt,
+		settings?.showPartScriptExcerpt
+	)
 	const scriptPreview = showScriptExcerpt ? firstScriptLine(livePart.script) : null
 	const typeColour = partTypeManifest?.colour ?? '#666'
 	const lockNames = locks.map((lock) => lock.displayName).join(', ')
