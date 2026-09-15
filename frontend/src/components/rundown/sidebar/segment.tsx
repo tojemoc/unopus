@@ -1,4 +1,4 @@
-import { useNavigate } from '@tanstack/react-router'
+import { useNavigate, useRouterState } from '@tanstack/react-router'
 import { createSelector } from '@reduxjs/toolkit'
 import { useMemo, useState } from 'react'
 import { useAppDispatch, useAppSelector, type RootState } from '~/store/app'
@@ -37,6 +37,16 @@ export function SidebarSegment({ segment }: { segment: Segment }) {
 	const toasts = useToasts()
 	const [isOpen, setIsOpen] = useState(true)
 	const { expandedPartId } = useScriptExpand()
+
+	// Route segment is the insert target for toolbar part pills — highlight it so
+	// editors can see which story they're adding into (Link.active no longer applies
+	// after click-to-select / double-click-rename replaced the segment Link).
+	const isSelectedSegment = useRouterState({
+		select: (s) => {
+			const match = s.matches.find((m) => m.fullPath.includes('/segment/$segmentId'))
+			return (match?.params as Record<string, string | undefined>)?.segmentId === segment.id
+		}
+	})
 
 	const parts = useAppSelector((s) => selectPartsBySegmentId(s, segment.id))
 	const isOnAirSegment = useAppSelector(
@@ -137,7 +147,10 @@ export function SidebarSegment({ segment }: { segment: Segment }) {
 	const canEdit = canEditRundown(userRole)
 
 	return (
-		<div className={`sidebar-segment ${isOpen ? 'open' : 'closed'}${isOnAirSegment ? ' sidebar-segment--on-air' : ''}`}>
+		<div
+			className={`sidebar-segment ${isOpen ? 'open' : 'closed'}${isOnAirSegment ? ' sidebar-segment--on-air' : ''}${isSelectedSegment ? ' sidebar-segment--selected' : ''}`}
+			aria-current={isSelectedSegment ? 'true' : undefined}
+		>
 			<div className="copy-item segment-header-row">
 				<Stack direction="horizontal">
 					<span
@@ -161,6 +174,7 @@ export function SidebarSegment({ segment }: { segment: Segment }) {
 									to: `/rundown/${segment.rundownId}/segment/${segment.id}`
 								})
 							}}
+							selected={isSelectedSegment}
 							duration={segmentDuration}
 							buttonClassName="segment-button copy-item sidebar-item-header"
 							handleCopy={canEdit ? handleCopySegment : undefined}

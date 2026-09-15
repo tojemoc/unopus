@@ -116,7 +116,7 @@
 		overflow-wrap: anywhere;
 		word-break: normal;
 		color: var(--re-text);
-		cursor: text;
+		cursor: pointer;
 		border-radius: 0.2rem;
 
 		&:hover {
@@ -127,6 +127,15 @@
 			outline: 2px solid var(--re-accent);
 			outline-offset: 1px;
 		}
+
+		&--selected {
+			color: var(--re-link);
+		}
+	}
+
+	.sidebar-item-header--selected {
+		background: color-mix(in srgb, var(--re-row-active) 70%, transparent);
+		border-radius: 0.25rem;
 	}
 
 	.sidebar-item-header__rename {
