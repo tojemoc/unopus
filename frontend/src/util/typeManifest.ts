@@ -30,11 +30,33 @@ export function normalizeTypeId(
 
 export function toolbarManifests(
 	manifests: TypeManifest[] | null | undefined,
-	entityType: TypeManifestEntity
+	entityType: TypeManifestEntity,
+	options?: { includeTechOnly?: boolean }
 ): TypeManifest[] {
+	const includeTech = options?.includeTechOnly === true
 	return (
 		manifests
 			?.filter((m) => m.entityType === entityType)
-			.filter((m) => m.showInToolbar !== false) ?? []
+			// techOnly visibility is role-gated only — ignore stale showInToolbar:false
+			// left in the DB from older asset pins.
+			.filter((m) => (m.techOnly ? includeTech : m.showInToolbar !== false))
+			// Grouped types (e.g. L3D) get their own toolbar control.
+			.filter((m) => !m.toolbarGroup) ?? []
+	)
+}
+
+/** Piece types collapsed into one toolbar control (e.g. L3D variants). */
+export function toolbarGroupedManifests(
+	manifests: TypeManifest[] | null | undefined,
+	entityType: TypeManifestEntity,
+	groupId: string,
+	options?: { includeTechOnly?: boolean }
+): TypeManifest[] {
+	const includeTech = options?.includeTechOnly === true
+	return (
+		manifests
+			?.filter((m) => m.entityType === entityType)
+			.filter((m) => m.toolbarGroup === groupId)
+			.filter((m) => (m.techOnly ? includeTech : true)) ?? []
 	)
 }

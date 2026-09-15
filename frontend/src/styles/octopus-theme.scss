@@ -687,6 +687,17 @@
 	color: var(--re-text);
 }
 
+.script-flow__text--drop {
+	outline: 1px dashed var(--bs-primary);
+	background: color-mix(in srgb, var(--bs-primary) 12%, transparent);
+}
+
+.script-flow__end-drop {
+	flex: 1 0 1.5rem;
+	min-height: 1.25rem;
+	min-width: 1.5rem;
+}
+
 .script-flow__chip {
 	display: inline-flex;
 	align-items: center;
@@ -699,6 +710,14 @@
 	vertical-align: middle;
 	color: var(--re-text);
 	font-size: 0.72rem;
+}
+
+.script-flow__chip[draggable='true'] {
+	cursor: grab;
+}
+
+.script-flow__chip--drop-before {
+	box-shadow: -3px 0 0 var(--bs-primary);
 }
 
 .script-flow__chip--open {

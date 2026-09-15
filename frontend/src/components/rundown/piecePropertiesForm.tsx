@@ -189,21 +189,25 @@ function PayloadField({
 
 						{fieldInfo.type === ManifestFieldType.Number && fieldInfo.id === 'volume' && (
 							<>
-								<Form.Range
-									id={field.name}
-									name={field.name}
-									min={0}
-									max={1}
-									step={0.05}
-									value={
-										typeof field.state.value === 'number' && Number.isFinite(field.state.value)
-											? Math.min(1, Math.max(0, field.state.value))
-											: 0.5
-									}
-									onBlur={field.handleBlur}
-									onChange={(e) => field.handleChange(Number(e.target.value))}
-								/>
-								<div className="d-flex justify-content-between align-items-center gap-2">
+								<div style={{ maxWidth: '14rem' }}>
+									<Form.Range
+										id={field.name}
+										name={field.name}
+										min={0}
+										max={1}
+										step={0.05}
+										value={
+											typeof field.state.value === 'number' && Number.isFinite(field.state.value)
+												? Math.min(1, Math.max(0, field.state.value))
+												: typeof fieldInfo.default === 'number'
+													? fieldInfo.default
+													: 0.5
+										}
+										onBlur={field.handleBlur}
+										onChange={(e) => field.handleChange(Number(e.target.value))}
+									/>
+								</div>
+								<div className="d-flex justify-content-between align-items-center gap-2" style={{ maxWidth: '22rem' }}>
 									<Form.Control
 										type="number"
 										min={0}

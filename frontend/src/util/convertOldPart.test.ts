@@ -121,13 +121,21 @@ describe('convertOldPartToNew', () => {
 		const smokePath = resolveSmokeRundownPath()
 		assert.ok(smokePath, 'spravy-v3-smoke-rundown.json not found (set SOFIE_MEGAREPO_ASSETS)')
 		const rundown = JSON.parse(readFileSync(smokePath, 'utf8')) as {
-			parts: Array<{ id: string; partType?: string; script?: string; payload?: { type?: string } }>
+			parts: Array<{
+				id: string
+				segmentId?: string
+				partType?: string
+				script?: string
+				payload?: { type?: string }
+			}>
 		}
-		const weather = rundown.parts.find((part) => part.id === 'part-weather')
-		assert.ok(weather, 'part-weather missing from smoke rundown')
-		assert.ok((weather.script ?? '').includes('Zajtra sa oteplí'), 'smoke weather script missing')
+		const weather = rundown.parts.find(
+			(part) => part.id === 'part-weather-1-po-asie' || part.segmentId === 'seg-weather'
+		)
+		assert.ok(weather, 'weather part missing from smoke rundown')
+		assert.ok((weather.script ?? '').includes('Zajtra sa'), 'smoke weather script missing')
 		const converted = convertOldPartToNew(weather)
 		assert.equal(converted.script, weather.script)
-		assert.ok((converted.script ?? '').includes('Zajtra sa oteplí'))
+		assert.ok((converted.script ?? '').includes('Zajtra sa'))
 	})
 })

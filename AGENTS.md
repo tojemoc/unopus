@@ -76,7 +76,7 @@ exporting `SOFIE_MEGAREPO_ASSETS`. Mismatch → exit 1 and delete partial downlo
 
 | Knob | Purpose |
 |------|---------|
-| Default `SOFIE_ASSETS_REF` | Pinned sofie commit (currently `df2411f1…`, flat media paths from sofie #20) |
+| Default `SOFIE_ASSETS_REF` | Pinned sofie commit (currently `a1c6b9b7…`, retires `l3d-predstavovak`) |
 | `EXPECTED_SHA256` map | Per-file integrity for that pin |
 | `$GITHUB_ENV` | CI persistence of `SOFIE_MEGAREPO_ASSETS` |
 

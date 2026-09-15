@@ -19,6 +19,7 @@ import { useScriptExpand } from '~/hooks/ScriptExpandContext'
 import { PartExpandedPanel } from '../partExpandedPanel'
 import { useToasts } from '~/components/toasts/useToasts'
 import { updatePart } from '~/store/parts'
+import { canEditRundown } from '~/util/roles'
 
 function getStoryReadiness(
 	partId: string,
@@ -88,6 +89,7 @@ export function SidebarPartRow({ part }: { part: Part }) {
 	)
 	const userScriptCps = useAppSelector((s) => s.auth.user?.scriptCps)
 	const userShowScriptExcerpt = useAppSelector((s) => s.auth.user?.showPartScriptExcerpt)
+	const userRole = useAppSelector((s) => s.auth.user?.role)
 	const settings = useAppSelector((s) => s.settings.settings)
 	const allPieces = useAppSelector((s) => s.pieces.pieces)
 	const partPieces = useMemo(
@@ -149,7 +151,7 @@ export function SidebarPartRow({ part }: { part: Part }) {
 		event.stopPropagation()
 		// Same foreign-lock gate as handleActivate: do not overwrite another editor's
 		// durationMode (or race their later save) without takeover confirmation.
-		if (autoBusy || locks.length > 0 || !scriptDriven) {
+		if (autoBusy || locks.length > 0 || !scriptDriven || !canEditRundown(userRole)) {
 			return
 		}
 		setAutoBusy(true)
@@ -188,7 +190,16 @@ export function SidebarPartRow({ part }: { part: Part }) {
 		.filter(Boolean)
 		.join(' ')
 
+	const canEdit = canEditRundown(userRole)
+
 	const openStory = async (force: boolean) => {
+		// Viewers expand read-only without acquiring (or force-taking) an edit lock.
+		if (!canEdit) {
+			setTakeoverHolder(null)
+			setTakeoverIsSystem(false)
+			setExpandedPartId(livePart.id)
+			return
+		}
 		setBusy(true)
 		try {
 			const result = await requestPresenceFocus({
@@ -234,6 +245,11 @@ export function SidebarPartRow({ part }: { part: Part }) {
 		}
 		// On-air / lookahead stories stay readable so the prompter script is not hidden.
 		if (lockedBySystem) {
+			setExpandedPartId(livePart.id)
+			return
+		}
+		// Viewers: expand without lock / takeover UI.
+		if (!canEdit) {
 			setExpandedPartId(livePart.id)
 			return
 		}
@@ -343,15 +359,17 @@ export function SidebarPartRow({ part }: { part: Part }) {
 							type="button"
 							className={`story-row__auto${autoOn ? ' story-row__auto--on' : ''}`}
 							aria-pressed={autoOn}
-							disabled={autoBusy || locks.length > 0}
+							disabled={autoBusy || locks.length > 0 || !canEditRundown(userRole)}
 							title={
-								locks.length > 0
-									? lockedBySystem
-										? 'AUTO unavailable while System holds this story'
-										: `AUTO unavailable while ${lockNames || 'another user'} is editing`
-									: autoOn
-										? 'AUTO on — script/CPS drives On air; Sofie may auto-take. Click for until next take.'
-										: 'AUTO off — until next take (no autoNext). Click to enable AUTO.'
+								!canEditRundown(userRole)
+									? 'AUTO unavailable in read-only mode'
+									: locks.length > 0
+										? lockedBySystem
+											? 'AUTO unavailable while System holds this story'
+											: `AUTO unavailable while ${lockNames || 'another user'} is editing`
+										: autoOn
+											? 'AUTO on — script/CPS drives On air; Sofie may auto-take. Click for until next take.'
+											: 'AUTO off — until next take (no autoNext). Click to enable AUTO.'
 							}
 							onClick={(event) => {
 								void toggleAuto(event)
@@ -364,7 +382,10 @@ export function SidebarPartRow({ part }: { part: Part }) {
 					) : null}
 				</div>
 			</div>
-			{expanded ? <PartExpandedPanel part={livePart} readOnly={lockedBySystem} /> : null}
+			{expanded ? (
+				<PartExpandedPanel part={livePart} readOnly={lockedBySystem || !canEditRundown(userRole)} />
+			) : null}
+
 
 			<Modal
 				show={takeoverHolder !== null}

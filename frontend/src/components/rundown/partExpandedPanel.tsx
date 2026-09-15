@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Button, Form, Stack } from 'react-bootstrap'
+import { Button, Dropdown, Form, Stack } from 'react-bootstrap'
 import type { Part, Piece } from '~backend/background/interfaces'
 import { TypeManifestEntity } from '~backend/background/interfaces'
 import { useAppDispatch, useAppSelector } from '~/store/app'
@@ -11,12 +11,23 @@ import { ScriptPieceFlow } from './scriptPieceFlow'
 import { PiecePropertiesForm } from './piecePropertiesForm'
 import { ClockDurationInput } from './clockDurationInput'
 import { DeletePartButton } from './deletePartButton'
-import { findTypeManifest, toolbarManifests } from '~/util/typeManifest'
+import { findTypeManifest, toolbarGroupedManifests, toolbarManifests } from '~/util/typeManifest'
 import { resolveEffectiveScriptCps } from '~/util/scriptReadingTime'
 import { usePresenceFocus } from '~/hooks/usePresence'
 import { useRundownReadinessContext } from '~/hooks/RundownReadinessContext'
 import { useScriptExpand } from '~/hooks/ScriptExpandContext'
 import { syncWeatherFromImeteo } from '~/lib/weatherApi'
+import { canSeeTechPieces } from '~/util/roles'
+
+const L3D_VARIANT_LABELS: Record<string, string> = {
+	'l3d-headline': 'Headline',
+	'l3d-mod': 'Moderator',
+	'l3d-syn': 'Synchron',
+	'l3d-tema': 'Tema',
+	'l3d-sjv': 'SJV',
+	'l3d-sport': 'SPORT',
+	'l3d-odporucanie': 'Odporúčanie'
+}
 
 export function PartExpandedPanel({ part, readOnly = false }: { part: Part; readOnly?: boolean }) {
 	const dispatch = useAppDispatch()
@@ -38,9 +49,11 @@ export function PartExpandedPanel({ part, readOnly = false }: { part: Part; read
 		[allPieces, part.id]
 	)
 	const manifests = useAppSelector((s) => s.typeManifests.manifests)
+	const userRole = useAppSelector((s) => s.auth.user?.role)
 	const userScriptCps = useAppSelector((s) => s.auth.user?.scriptCps)
 	const settingsCps = useAppSelector((s) => s.settings.settings?.scriptCps)
 	const scriptCps = resolveEffectiveScriptCps({ userScriptCps, settingsCps })
+	const includeTech = canSeeTechPieces(userRole)
 
 	const [name, setName] = useState(livePart.name)
 	const [script, setScript] = useState(livePart.script ?? '')
@@ -78,7 +91,12 @@ export function PartExpandedPanel({ part, readOnly = false }: { part: Part; read
 		[pieces, expandedPieceId]
 	)
 
-	const addableTypes = toolbarManifests(manifests, TypeManifestEntity.Piece)
+	const addableTypes = toolbarManifests(manifests, TypeManifestEntity.Piece, {
+		includeTechOnly: includeTech
+	})
+	const l3dVariants = toolbarGroupedManifests(manifests, TypeManifestEntity.Piece, 'l3d', {
+		includeTechOnly: includeTech
+	})
 
 	const savePart = async () => {
 		if (readOnly) return
@@ -129,9 +147,10 @@ export function PartExpandedPanel({ part, readOnly = false }: { part: Part; read
 		}
 	}
 
-	const insertPieceAtEnd = async (pieceType: string) => {
-		const offset = script.length
-		const startSeconds = scriptCps > 0 ? offset / scriptCps : 0
+	/** New pieces land at the front of the script (offset 0) so zero-delay cues stay compacted. */
+	const insertPieceAtFront = async (pieceType: string) => {
+		const offset = 0
+		const startSeconds = 0
 		try {
 			const created = await dispatch(
 				addNewPiece({
@@ -231,10 +250,12 @@ export function PartExpandedPanel({ part, readOnly = false }: { part: Part; read
 						onCommit={commitDuration}
 					/>
 					{readOnly ? (
-						<span className="part-expanded-panel__readonly">On air — script is read-only</span>
+						<span className="part-expanded-panel__readonly">
+							{userRole === 'viewer' ? 'Viewer — read-only' : 'On air — script is read-only'}
+						</span>
 					) : (
 						<>
-							{hasWeatherPiece && (
+							{hasWeatherPiece && includeTech && (
 								<Button
 									size="sm"
 									variant="outline-info"
@@ -245,9 +266,6 @@ export function PartExpandedPanel({ part, readOnly = false }: { part: Part; read
 									{weatherSyncing ? 'Syncing…' : 'Sync from iMeteo'}
 								</Button>
 							)}
-							<Button size="sm" variant="primary" disabled={saving} onClick={() => void savePart()}>
-								{saving ? 'Saving…' : 'Save'}
-							</Button>
 							<DeletePartButton
 								rundownId={livePart.rundownId}
 								segmentId={livePart.segmentId}
@@ -257,6 +275,9 @@ export function PartExpandedPanel({ part, readOnly = false }: { part: Part; read
 								size="sm"
 								onDeleted={() => setExpandedPartId(null)}
 							/>
+							<Button size="sm" variant="primary" disabled={saving} onClick={() => void savePart()}>
+								{saving ? 'Saving…' : 'Save'}
+							</Button>
 						</>
 					)}
 				</div>
@@ -285,6 +306,15 @@ export function PartExpandedPanel({ part, readOnly = false }: { part: Part; read
 				cps={scriptCps}
 				expandedPieceId={expandedPieceId}
 				onSelectPiece={readOnly ? () => undefined : setExpandedPieceId}
+				onMovePiece={
+					readOnly
+						? undefined
+						: (pieceId, scriptOffset) => {
+								const piece = pieces.find((p) => p.id === pieceId)
+								if (piece) void placePieceAtOffset(piece, scriptOffset)
+							}
+				}
+				draggable={!readOnly}
 				readiness={readiness}
 			/>
 
@@ -315,13 +345,35 @@ export function PartExpandedPanel({ part, readOnly = false }: { part: Part; read
 
 			{readOnly ? null : (
 				<Stack direction="horizontal" gap={1} className="part-expanded-panel__add flex-wrap">
+					{l3dVariants.length > 0 ? (
+						<Dropdown>
+							<Dropdown.Toggle
+								as="button"
+								type="button"
+								className="script-add-piece"
+								style={{ borderColor: l3dVariants[0]?.colour ?? '#8c564b' }}
+							>
+								+ L3D
+							</Dropdown.Toggle>
+							<Dropdown.Menu>
+								{l3dVariants.map((manifest) => (
+									<Dropdown.Item
+										key={manifest.id}
+										onClick={() => void insertPieceAtFront(manifest.id)}
+									>
+										{L3D_VARIANT_LABELS[manifest.id] ?? manifest.name}
+									</Dropdown.Item>
+								))}
+							</Dropdown.Menu>
+						</Dropdown>
+					) : null}
 					{addableTypes.map((manifest) => (
 						<button
 							key={manifest.id}
 							type="button"
 							className="script-add-piece"
 							style={{ borderColor: manifest.colour }}
-							onClick={() => void insertPieceAtEnd(manifest.id)}
+							onClick={() => void insertPieceAtFront(manifest.id)}
 						>
 							+ {manifest.shortName ?? manifest.name}
 						</button>

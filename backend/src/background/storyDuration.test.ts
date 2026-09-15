@@ -15,7 +15,7 @@ describe('storyDuration', () => {
 			undefined
 		)
 		assert.equal(
-			resolvePieceOnAirDuration({ pieceType: 'l3d-predstavovak', duration: undefined }, 6),
+			resolvePieceOnAirDuration({ pieceType: 'l3d-syn', duration: undefined }, 6),
 			undefined
 		)
 		assert.equal(
@@ -58,11 +58,11 @@ describe('storyDuration', () => {
 		assert.deepEqual(plan.pieceUpdates, [])
 	})
 
-	it('does not plan part → predstavovak / odporucanie fills when unset', () => {
+	it('does not plan part → syn / odporucanie fills when unset', () => {
 		const plan = planStoryDurationSync(
 			{ duration: 6 },
 			[
-				{ id: 'pred', pieceType: 'l3d-predstavovak' },
+				{ id: 'syn', pieceType: 'l3d-syn' },
 				{ id: 'odp', pieceType: 'l3d-odporucanie' },
 				{ id: 'bug', pieceType: 'logo-bug' }
 			]

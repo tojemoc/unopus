@@ -18,6 +18,7 @@ import { DeleteSegmentButton } from '../deleteSegmentButton'
 import { useScriptExpand } from '~/hooks/ScriptExpandContext'
 import { resolvePartOnAirDuration } from '~/util/pieceDuration'
 import { resolveEffectiveScriptCps } from '~/util/scriptReadingTime'
+import { canEditRundown } from '~/util/roles'
 
 const selectAllParts = (state: RootState) => state.parts.parts
 const selectAllPieces = (state: RootState) => state.pieces.pieces
@@ -132,6 +133,9 @@ export function SidebarSegment({ segment }: { segment: Segment }) {
 		}
 	}
 
+	const userRole = useAppSelector((s) => s.auth.user?.role)
+	const canEdit = canEditRundown(userRole)
+
 	return (
 		<div className={`sidebar-segment ${isOpen ? 'open' : 'closed'}${isOnAirSegment ? ' sidebar-segment--on-air' : ''}`}>
 			<div className="copy-item segment-header-row">
@@ -151,27 +155,34 @@ export function SidebarSegment({ segment }: { segment: Segment }) {
 						<SidebarElementHeader
 							label={segment.name}
 							renameValue={segment.name}
-							onRename={handleRenameSegment}
+							onRename={canEdit ? handleRenameSegment : undefined}
+							onSelect={() => {
+								void navigate({
+									to: `/rundown/${segment.rundownId}/segment/${segment.id}`
+								})
+							}}
 							duration={segmentDuration}
 							buttonClassName="segment-button copy-item sidebar-item-header"
-							handleCopy={handleCopySegment}
+							handleCopy={canEdit ? handleCopySegment : undefined}
 							deleteButton={
-								<DeleteSegmentButton
-									rundownId={segment.rundownId}
-									segmentId={segment.id}
-									segmentName={segment.name}
-									disabled={false}
-									style={{ zIndex: 4 }}
-									renderButton={({ onClick, disabled }: ButtonProps) => (
-										<HoverIconButton
-											onClick={onClick}
-											disabled={disabled}
-											className="sync-plus-wrapper ms-auto"
-											defaultIcon={<BsTrash className="icon-md" color="var(--bs-danger)" />}
-											hoverIcon={<BsFillTrashFill className="icon-md" color="var(--bs-danger)" />}
-										/>
-									)}
-								/>
+								canEdit ? (
+									<DeleteSegmentButton
+										rundownId={segment.rundownId}
+										segmentId={segment.id}
+										segmentName={segment.name}
+										disabled={false}
+										style={{ zIndex: 4 }}
+										renderButton={({ onClick, disabled }: ButtonProps) => (
+											<HoverIconButton
+												onClick={onClick}
+												disabled={disabled}
+												className="sync-plus-wrapper ms-auto"
+												defaultIcon={<BsTrash className="icon-md" color="var(--bs-danger)" />}
+												hoverIcon={<BsFillTrashFill className="icon-md" color="var(--bs-danger)" />}
+											/>
+										)}
+									/>
+								) : null
 							}
 						/>
 					</div>
@@ -187,7 +198,7 @@ export function SidebarSegment({ segment }: { segment: Segment }) {
 							id={segment.id}
 							reorder={handleReorderPart}
 							Component={PartRowComponent}
-							canDragItem={(part) => expandedPartId !== part.id}
+							canDragItem={(part) => canEdit && expandedPartId !== part.id}
 						/>
 					) : (
 						<div className="story-table-empty px-2 py-2 text-muted">

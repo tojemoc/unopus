@@ -18,6 +18,7 @@ import { resolveEffectiveScriptCps } from '~/util/scriptReadingTime'
 import { useMemo, useState } from 'react'
 import { RundownPropertiesModal } from './rundownPropertiesModal'
 import { SyncControl } from './syncControl'
+import { canEditRundown } from '~/util/roles'
 
 export function RundownNavbar({ rundown }: { rundown: Rundown }) {
 	const [showSettings, setShowSettings] = useState(false)
@@ -27,6 +28,7 @@ export function RundownNavbar({ rundown }: { rundown: Rundown }) {
 	const pieces = useAppSelector((state) =>
 		state.pieces.pieces.filter((p) => p.rundownId === rundown.id)
 	)
+	const userRole = useAppSelector((s) => s.auth.user?.role)
 	const userScriptCps = useAppSelector((s) => s.auth.user?.scriptCps)
 	const settings = useAppSelector((s) => s.settings.settings)
 	const scriptCps = resolveEffectiveScriptCps({
@@ -95,7 +97,9 @@ export function RundownNavbar({ rundown }: { rundown: Rundown }) {
 				</Stack>
 
 				<div className="rundown-navbar__quick-add">
-					{insertTarget ? (
+					{!canEditRundown(userRole) ? (
+						<PartTypeButtons disabled disabledReason="Viewer role — read-only" />
+					) : insertTarget ? (
 						<PartTypeButtons
 							segment={insertTarget.segment}
 							rank={insertTarget.rank}

@@ -55,6 +55,15 @@ function loadManifestJson(filename: string): TypeManifest[] {
 	}))
 }
 
+/** Re-read piece/part/segment manifests from disk (for Settings → Reload). */
+export function loadTypeManifestsFromAssets(): TypeManifest[] {
+	return [
+		...loadManifestJson('sofie-rundown-editor-piece-types.json'),
+		...loadManifestJson('sofie-rundown-editor-part-types.json'),
+		...loadManifestJson('sofie-rundown-editor-segment-types.json')
+	]
+}
+
 export const PIECE_TYPE_MANIFESTS = loadManifestJson('sofie-rundown-editor-piece-types.json')
 export const PART_TYPE_MANIFESTS = loadManifestJson('sofie-rundown-editor-part-types.json')
 export const SEGMENT_TYPE_MANIFESTS = loadManifestJson('sofie-rundown-editor-segment-types.json')

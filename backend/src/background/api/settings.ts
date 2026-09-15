@@ -7,7 +7,7 @@ import {
 	TypeManifestEntity
 } from '../interfaces'
 import { db } from '../db'
-import { defaultRundownManifest, TYPE_MANIFESTS } from '../manifest'
+import { defaultRundownManifest, loadTypeManifestsFromAssets, TYPE_MANIFESTS } from '../manifest'
 import { mutations as typeManifestMutations } from './typeManifests'
 import { mutations as rundownMutations } from './rundowns'
 import { Server, Socket } from 'socket.io'
@@ -406,6 +406,10 @@ async function seedDefaultTypeManifests(): Promise<void> {
 async function upsertTypeManifestsFromAssets(
 	options?: ReloadTypeManifestsOptions
 ): Promise<void> {
+	// Always re-read JSON from disk so Settings → Reload picks up megarepo
+	// asset edits without requiring a backend restart.
+	const assetManifests = loadTypeManifestsFromAssets()
+
 	const { result: existingManifests } = await typeManifestMutations.read({})
 	const existingList = Array.isArray(existingManifests) ? existingManifests : []
 	const existingKeys = new Set(
@@ -414,7 +418,7 @@ async function upsertTypeManifestsFromAssets(
 
 	const assetKeys = new Set<string>([
 		`${TypeManifestEntity.Rundown}:${defaultRundownManifest.id}`,
-		...TYPE_MANIFESTS.map((manifest) => `${manifest.entityType}:${manifest.id}`)
+		...assetManifests.map((manifest) => `${manifest.entityType}:${manifest.id}`)
 	])
 
 	const rundownKey = `${TypeManifestEntity.Rundown}:${defaultRundownManifest.id}`
@@ -440,7 +444,7 @@ async function upsertTypeManifestsFromAssets(
 		}
 	}
 
-	for (const typeManifest of TYPE_MANIFESTS) {
+	for (const typeManifest of assetManifests) {
 		const key = `${typeManifest.entityType}:${typeManifest.id}`
 		if (existingKeys.has(key)) {
 			const { error } = await typeManifestMutations.update({

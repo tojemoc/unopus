@@ -15,7 +15,6 @@ ellipsis — they do not auto-scale or wrap at the container edge.
 | `l3d-tema` | `headline`, `subline` | 40 / 50 |
 | `l3d-headline` | `headline`, `subline` | 40 / 50 |
 | `l3d-mod` | `name`, `title` | 28 / 40 |
-| `l3d-predstavovak` | `name`, `title` | 28 / 40 |
 | `l3d-syn` | `name`, `role` | 28 / 40 |
 | `l3d-sjv` | `kicker`, `headline` | 20 / 40 |
 | `l3d-sport` | `kicker`, `headline`, `source` | 20 / 40 / 30 |

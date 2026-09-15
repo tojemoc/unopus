@@ -20,6 +20,7 @@ import { syncStoryDurationsForPart, broadcastStoryDurationSync } from '../storyD
 import { Server, Socket } from 'socket.io'
 import type { AuthenticatedSocket } from '../auth/socketAuth'
 import type { SessionUser } from '../auth/types'
+import { forbidRundownMutation } from '../auth/roles'
 import { mutations as typeManifestMutations, resolveManifestId } from './typeManifests'
 import { resolveSourceEnabled, trimSourceText } from '../sourcePayload'
 import { spliceReorder, resolveReorderTargetIndex } from '../util'
@@ -105,9 +106,28 @@ export const mutations = {
 		try {
 			db.exec('BEGIN')
 
+			const pieceManifest = pieceTypeManifestList.find((m) => m.id === resolvedPieceType)
+			const payloadFromDefaults: Record<string, string | number | boolean> = {}
+			for (const field of pieceManifest?.payload ?? []) {
+				if (field.default === undefined) continue
+				payloadFromDefaults[field.id] = field.default
+			}
+			const callerPayload = payload.payload ?? {}
+			const definedCallerPayload: Record<string, string | number | boolean> = {}
+			for (const [key, value] of Object.entries(callerPayload)) {
+				if (value !== undefined) {
+					definedCallerPayload[key] = value as string | number | boolean
+				}
+			}
+			const mergedPayload = {
+				...payloadFromDefaults,
+				...definedCallerPayload
+			}
+
 			const document: Partial<MutationPieceCreate> = {
 				...payload,
 				pieceType: payloadHasType ? resolvedPieceType : defaultPieceType,
+				payload: mergedPayload,
 				start: payload.start ?? 0,
 				// Rank materialization for legacy parts must share this transaction so a
 				// failed INSERT cannot leave rewritten ranks behind.
@@ -507,6 +527,13 @@ export const mutations = {
 
 export function registerPiecesHandlers(socket: Socket, io: Server) {
 	socket.on('pieces', async (action, payload, callback) => {
+		if (action !== IpcOperationType.Read) {
+			const denied = forbidRundownMutation((socket as AuthenticatedSocket).data.user?.role)
+			if (denied) {
+				callback(denied)
+				return
+			}
+		}
 		switch (action) {
 			case IpcOperationType.Create:
 				{

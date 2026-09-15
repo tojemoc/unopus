@@ -2,6 +2,7 @@ import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Alert, Button, Form, Modal, Table } from 'react-bootstrap'
 import type { AuthUser, UserRole } from '~/lib/authApi'
+import { USER_ROLES, roleLabel } from '~/util/roles'
 import * as authApi from '~/lib/authApi'
 import { useAppSelector } from '~/store/app'
 
@@ -146,8 +147,11 @@ function UsersSettingsPage() {
 										void updateRole(user.id, e.target.value as UserRole)
 									}
 								>
-									<option value="editor">Editor</option>
-									<option value="admin">Admin</option>
+									{USER_ROLES.map((r) => (
+										<option key={r} value={r}>
+											{roleLabel(r)}
+										</option>
+									))}
 								</Form.Select>
 							</td>
 							<td>{user.active === false ? 'Inactive' : 'Active'}</td>
@@ -222,8 +226,11 @@ function UsersSettingsPage() {
 				<Form.Group className="mb-3">
 					<Form.Label>Role</Form.Label>
 					<Form.Select value={role} onChange={(e) => setRole(e.target.value as UserRole)}>
-						<option value="editor">Editor</option>
-						<option value="admin">Admin</option>
+						{USER_ROLES.map((r) => (
+							<option key={r} value={r}>
+								{roleLabel(r)}
+							</option>
+						))}
 					</Form.Select>
 				</Form.Group>
 				<Button type="submit" variant="primary">

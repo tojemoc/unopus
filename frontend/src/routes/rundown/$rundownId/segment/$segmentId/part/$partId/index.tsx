@@ -4,6 +4,7 @@ import { useScriptExpand } from '~/hooks/ScriptExpandContext'
 import { releasePresenceFocus, requestPresenceFocus } from '~/hooks/usePresence'
 import { useAppSelector } from '~/store/app'
 import { useToasts } from '~/components/toasts/useToasts'
+import { canEditRundown } from '~/util/roles'
 
 /** Part UI is inline in the script column; route kept for deep links / presence. */
 export const Route = createFileRoute('/rundown/$rundownId/segment/$segmentId/part/$partId/')({
@@ -17,6 +18,8 @@ function RouteComponent() {
 
 	const partsStatus = useAppSelector((state) => state.parts.status)
 	const partsRundownId = useAppSelector((state) => state.parts.rundownId)
+	const userRole = useAppSelector((state) => state.auth.user?.role)
+	const canEdit = canEditRundown(userRole)
 	const part = useAppSelector((state) =>
 		state.parts.parts.find(
 			(p) => p.id === partId && p.rundownId === rundownId && p.segmentId === segmentId
@@ -31,6 +34,12 @@ function RouteComponent() {
 
 	useEffect(() => {
 		if (!partExists) return
+		if (!canEdit) {
+			setExpandedPartId(partId)
+			return () => {
+				setExpandedPartId((prev) => (prev === partId ? null : prev))
+			}
+		}
 		let cancelled = false
 		const leaseId = crypto.randomUUID()
 		void requestPresenceFocus({
@@ -61,7 +70,7 @@ function RouteComponent() {
 			releasePresenceFocus(leaseId)
 			setExpandedPartId((prev) => (prev === partId ? null : prev))
 		}
-	}, [partId, partExists, rundownId, setExpandedPartId, toasts])
+	}, [canEdit, partId, partExists, rundownId, setExpandedPartId, toasts])
 
 	return null
 }

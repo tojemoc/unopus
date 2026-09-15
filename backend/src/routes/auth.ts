@@ -14,6 +14,7 @@ import {
 	updateUserProfile
 } from '../background/auth/authStore'
 import type { SessionUser, UserRole } from '../background/auth/types'
+import { isValidUserRole } from '../background/auth/roles'
 import { normalizeScriptCps } from '../background/scriptReadingTime'
 
 /**
@@ -195,8 +196,8 @@ export function registerAuthRoutes(app: Application): void {
 			sendJson(res, 400, { error: 'username, password, displayName, and role are required' })
 			return
 		}
-		if (body.role !== 'editor' && body.role !== 'admin') {
-			sendJson(res, 400, { error: 'role must be editor or admin' })
+		if (!isValidUserRole(body.role)) {
+			sendJson(res, 400, { error: 'role must be viewer, editor, tech_admin, or admin' })
 			return
 		}
 
@@ -236,8 +237,8 @@ export function registerAuthRoutes(app: Application): void {
 			password?: string
 			active?: boolean
 		}
-		if (body.role !== undefined && body.role !== 'editor' && body.role !== 'admin') {
-			sendJson(res, 400, { error: 'role must be editor or admin' })
+		if (body.role !== undefined && !isValidUserRole(body.role)) {
+			sendJson(res, 400, { error: 'role must be viewer, editor, tech_admin, or admin' })
 			return
 		}
 		if (body.active !== undefined && typeof body.active !== 'boolean') {

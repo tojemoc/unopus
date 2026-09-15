@@ -1,5 +1,6 @@
 import type { Server, Socket } from 'socket.io'
 import type { AuthenticatedSocket } from '../auth/socketAuth'
+import { canEditRundown } from '../auth/roles'
 import {
 	clearPresenceFocus,
 	listPresenceFocuses,
@@ -47,6 +48,15 @@ export function registerPresenceHandlers(socket: Socket, io: Server): void {
 	socket.emit('presence:update', listPresenceFocuses())
 
 	socket.on('presence:focus', (payload: FocusPayload, ack?: FocusAck) => {
+		// Viewers may expand stories read-only; exclusive locks (incl. force takeover) are editors+.
+		if (!canEditRundown(user.role)) {
+			ack?.({
+				ok: false,
+				reason: 'locked',
+				holder: { socketId: '', userId: '', displayName: 'Read-only' }
+			})
+			return
+		}
 		if (!isEntityType(payload?.entityType)) {
 			ack?.({
 				ok: false,
