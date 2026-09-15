@@ -39,8 +39,11 @@ yarn build       # TypeScript emit + Vite production build
 
 CI (`.github/workflows/node.yaml`): PRs run `typecheck` + `lint` only; `yarn build`
 runs on pushes to `main`. Docker/GitHub releases stay in `release.yaml` (main + `v*` tags).
+**`yarn test` is not run in CI.**
 
-No automated test suite exists in this repo.
+Backend/frontend unit tests exist (Node test runner via `yarn test`, including
+`backend/src/background/media.test.ts` for ffprobe duration heuristics). Run them
+locally when touching those areas.
 
 ### ffprobe / clip duration (Docker)
 
