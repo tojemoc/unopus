@@ -13,7 +13,6 @@ payload fields in `sofie-rundown-editor-piece-types.json` (canonical home:
 | `bg-loop` | `fileName` |
 | `wipe` | `fileName` |
 | `l3d-tema` | `headline`, `subline` |
-| `l3d-predstavovak` | `name`, `title` (topic / guest nameplate) |
 | `l3d-mod` | `name`, `title` |
 | `l3d-headline` | `headline`, `subline` |
 | `l3d-syn` | `name`, `role` (+ optional timed `start`/`duration`) |

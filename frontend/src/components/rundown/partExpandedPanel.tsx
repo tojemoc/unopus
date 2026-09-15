@@ -22,7 +22,6 @@ import { canSeeTechPieces } from '~/util/roles'
 const L3D_VARIANT_LABELS: Record<string, string> = {
 	'l3d-headline': 'Headline',
 	'l3d-mod': 'Moderator',
-	'l3d-predstavovak': 'Predstavovak',
 	'l3d-syn': 'Synchron',
 	'l3d-tema': 'Tema',
 	'l3d-sjv': 'SJV',
@@ -267,9 +266,6 @@ export function PartExpandedPanel({ part, readOnly = false }: { part: Part; read
 									{weatherSyncing ? 'Syncing…' : 'Sync from iMeteo'}
 								</Button>
 							)}
-							<Button size="sm" variant="primary" disabled={saving} onClick={() => void savePart()}>
-								{saving ? 'Saving…' : 'Save'}
-							</Button>
 							<DeletePartButton
 								rundownId={livePart.rundownId}
 								segmentId={livePart.segmentId}
@@ -279,6 +275,9 @@ export function PartExpandedPanel({ part, readOnly = false }: { part: Part; read
 								size="sm"
 								onDeleted={() => setExpandedPartId(null)}
 							/>
+							<Button size="sm" variant="primary" disabled={saving} onClick={() => void savePart()}>
+								{saving ? 'Saving…' : 'Save'}
+							</Button>
 						</>
 					)}
 				</div>
