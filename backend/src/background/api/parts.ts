@@ -112,7 +112,8 @@ async function mutatePart(part: Part): Promise<MutatedPart> {
 			? true
 			: undefined
 
-	// Drop any stored/imported autoNext so manual / until-next-take cannot leak it.
+	// Drop any stored/imported autoNext so manual / until-next-take cannot leak it
+	// (AUTO off always means no autoNext, even when duration is set).
 	const payloadWithoutAutoNext = { ...(part.payload ?? {}) }
 	delete payloadWithoutAutoNext.autoNext
 

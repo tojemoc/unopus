@@ -8,6 +8,11 @@ export interface AuthUser {
 	active: boolean
 	/** Personal script CPS; null = use site default from ApplicationSettings. */
 	scriptCps?: number | null
+	/**
+	 * Personal story-row script excerpt preference.
+	 * null = use ApplicationSettings.showPartScriptExcerpt (built-in default ON).
+	 */
+	showPartScriptExcerpt?: boolean | null
 }
 
 export interface SessionUser extends AuthUser {}

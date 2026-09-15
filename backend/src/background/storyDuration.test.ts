@@ -171,6 +171,26 @@ describe('storyDuration', () => {
 		assert.deepEqual(plan.pieceUpdates, [{ id: 'il', duration: 45, force: true }])
 	})
 
+	it('SYN AUTO derives On air from script CPS like ILU', () => {
+		const script = 'a'.repeat(30) // 2s @ 15 CPS
+		assert.equal(
+			resolvePartOnAirDuration(
+				{ partType: 'syn', script, duration: 99, durationMode: 'auto' },
+				[{ pieceType: 'video', duration: 40 }],
+				{ scriptCps: 15 }
+			),
+			2
+		)
+		assert.equal(
+			resolvePartOnAirDuration(
+				{ partType: 'syn', script, duration: 99, durationMode: 'manual' },
+				[{ pieceType: 'video', duration: 40 }],
+				{ scriptCps: 15 }
+			),
+			99
+		)
+	})
+
 	it('excludes skipped pieces from duration and sync', () => {
 		assert.equal(
 			resolvePartOnAirDuration(

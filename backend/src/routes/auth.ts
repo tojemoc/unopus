@@ -25,7 +25,8 @@ function publicUser(user: SessionUser) {
 		username: user.username,
 		displayName: user.displayName,
 		role: user.role,
-		scriptCps: user.scriptCps ?? null
+		scriptCps: user.scriptCps ?? null,
+		showPartScriptExcerpt: user.showPartScriptExcerpt ?? null
 	}
 }
 
@@ -129,7 +130,10 @@ export function registerAuthRoutes(app: Application): void {
 			sendJson(res, 400, { error: 'Request body must be a JSON object' })
 			return
 		}
-		const body = req.body as { scriptCps?: number | null }
+		const body = req.body as {
+			scriptCps?: number | null
+			showPartScriptExcerpt?: boolean | null
+		}
 		if (body.scriptCps !== undefined && body.scriptCps !== null) {
 			if (typeof body.scriptCps !== 'number' || !Number.isFinite(body.scriptCps)) {
 				sendJson(res, 400, { error: 'scriptCps must be a number or null' })
@@ -141,9 +145,19 @@ export function registerAuthRoutes(app: Application): void {
 				return
 			}
 		}
+		if (
+			body.showPartScriptExcerpt !== undefined &&
+			body.showPartScriptExcerpt !== null &&
+			typeof body.showPartScriptExcerpt !== 'boolean'
+		) {
+			sendJson(res, 400, { error: 'showPartScriptExcerpt must be a boolean or null' })
+			return
+		}
 
 		const updated = updateUserProfile(user.id, {
-			scriptCps: body.scriptCps === undefined ? undefined : body.scriptCps
+			scriptCps: body.scriptCps === undefined ? undefined : body.scriptCps,
+			showPartScriptExcerpt:
+				body.showPartScriptExcerpt === undefined ? undefined : body.showPartScriptExcerpt
 		})
 		if (!updated) {
 			sendJson(res, 400, { error: 'Invalid profile update' })

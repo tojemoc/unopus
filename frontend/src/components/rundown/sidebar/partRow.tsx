@@ -1,21 +1,24 @@
 import { useMemo, useRef, useState } from 'react'
 import { Button, Modal } from 'react-bootstrap'
 import { BsLockFill } from 'react-icons/bs'
-import { useAppSelector } from '~/store/app'
+import { useAppDispatch, useAppSelector } from '~/store/app'
 import type { Part, PieceReadiness, RundownReadiness } from '~backend/background/interfaces'
 import { TypeManifestEntity } from '~backend/background/interfaces'
 import { findTypeManifest } from '~/util/typeManifest'
 import { ReadinessBadge, getPieceReadinessTooltip } from '../readinessBadge'
 import { EditorialStatusBadge } from '../editorialStatusBadge'
 import { formatPartOnAirDuration } from '~/util/pieceDuration'
-import { resolveEffectiveScriptCps } from '~/util/scriptReadingTime'
+import { partUsesScriptDuration, resolveEffectiveScriptCps } from '~/util/scriptReadingTime'
+import { resolveEffectiveIluDurationMode } from '~backend/background/storyDuration'
 import { firstScriptLine } from '~/util/scriptPreview'
+import { resolveShowPartScriptExcerpt } from '~/util/scriptExcerptPreference'
 import { resolveEditorialStatus } from '~/util/editorialStatus'
 import { requestPresenceFocus, useRowLocks } from '~/hooks/usePresence'
 import { useRundownReadinessContext } from '~/hooks/RundownReadinessContext'
 import { useScriptExpand } from '~/hooks/ScriptExpandContext'
 import { PartExpandedPanel } from '../partExpandedPanel'
 import { useToasts } from '~/components/toasts/useToasts'
+import { updatePart } from '~/store/parts'
 
 function getStoryReadiness(
 	partId: string,
@@ -67,58 +70,116 @@ function typeTint(hex: string | undefined): string {
 }
 
 export function SidebarPartRow({ part }: { part: Part }) {
+	const dispatch = useAppDispatch()
 	const toasts = useToasts()
 	const { readiness } = useRundownReadinessContext()
 	const { expandedPartId, setExpandedPartId } = useScriptExpand()
-	const expanded = expandedPartId === part.id
+	const livePart = useAppSelector((s) => s.parts.parts.find((p) => p.id === part.id) ?? part)
+	const expanded = expandedPartId === livePart.id
 	const [takeoverHolder, setTakeoverHolder] = useState<string | null>(null)
 	/** True when the modal is for a System (playout) lock — never key off displayName alone. */
 	const [takeoverIsSystem, setTakeoverIsSystem] = useState(false)
 	const [busy, setBusy] = useState(false)
+	const [autoBusy, setAutoBusy] = useState(false)
 	const pointerStart = useRef<{ x: number; y: number } | null>(null)
 
 	const partTypeManifest = useAppSelector((state) =>
-		findTypeManifest(state.typeManifests.manifests, part.partType, TypeManifestEntity.Part)
+		findTypeManifest(state.typeManifests.manifests, livePart.partType, TypeManifestEntity.Part)
 	)
 	const userScriptCps = useAppSelector((s) => s.auth.user?.scriptCps)
+	const userShowScriptExcerpt = useAppSelector((s) => s.auth.user?.showPartScriptExcerpt)
 	const settings = useAppSelector((s) => s.settings.settings)
 	const allPieces = useAppSelector((s) => s.pieces.pieces)
 	const partPieces = useMemo(
-		() => allPieces.filter((piece) => piece.partId === part.id),
-		[allPieces, part.id]
+		() => allPieces.filter((piece) => piece.partId === livePart.id),
+		[allPieces, livePart.id]
 	)
 	const scriptCps = resolveEffectiveScriptCps({ userScriptCps, settingsCps: settings?.scriptCps })
+	const siteDurationMode = settings?.iluDurationMode ?? 'auto'
 	const durationOpts = useMemo(
 		() => ({
 			scriptCps,
-			defaultDurationMode: settings?.iluDurationMode ?? 'auto'
+			defaultDurationMode: siteDurationMode
 		}),
-		[scriptCps, settings?.iluDurationMode]
+		[scriptCps, siteDurationMode]
 	)
 
-	const storyReadiness = getStoryReadiness(part.id, partPieces, readiness)
-	const locks = useRowLocks('part', part.id)
-	const playoutState = useAppSelector((state) => state.playout.byRundownId[part.rundownId])
-	const isOnAir = playoutState?.currentPartId === part.id
+	const storyReadiness = getStoryReadiness(livePart.id, partPieces, readiness)
+	const locks = useRowLocks('part', livePart.id)
+	const playoutState = useAppSelector((state) => state.playout.byRundownId[livePart.rundownId])
+	const isOnAir = playoutState?.currentPartId === livePart.id
 	const systemLocks = locks.filter((lock) => lock.userId === 'system')
 	const lockedBySystem = systemLocks.length > 0
 	const editorial = resolveEditorialStatus({
-		skip: part.skip,
-		editorChecked: part.editorChecked,
+		skip: livePart.skip,
+		editorChecked: livePart.editorChecked,
 		skipStatusUnlessEditorChecked: settings?.skipStatusUnlessEditorChecked !== false,
 		requireEditorCheckForAir: Boolean(settings?.requireEditorCheckForAir)
 	})
 
-	const scriptPreview = firstScriptLine(part.script)
+	const showScriptExcerpt = resolveShowPartScriptExcerpt(
+		userShowScriptExcerpt,
+		settings?.showPartScriptExcerpt
+	)
+	const scriptPreview = showScriptExcerpt ? firstScriptLine(livePart.script) : null
 	const typeColour = partTypeManifest?.colour ?? '#666'
 	const lockNames = locks.map((lock) => lock.displayName).join(', ')
+	const scriptDriven = partUsesScriptDuration(
+		livePart.partType,
+		partPieces.filter((piece) => !piece.skip).map((piece) => piece.pieceType)
+	)
+	const effectiveDurationMode = resolveEffectiveIluDurationMode(
+		livePart.durationMode,
+		siteDurationMode
+	)
+	const autoOn = effectiveDurationMode === 'auto'
+	const displayedDuration =
+		formatPartOnAirDuration(
+			livePart,
+			partPieces.map((piece) => ({
+				pieceType: piece.pieceType,
+				duration: piece.duration,
+				skip: piece.skip
+			})),
+			durationOpts
+		) || '--:--'
+
+	const toggleAuto = async (event: React.MouseEvent) => {
+		event.preventDefault()
+		event.stopPropagation()
+		// Same foreign-lock gate as handleActivate: do not overwrite another editor's
+		// durationMode (or race their later save) without takeover confirmation.
+		if (autoBusy || locks.length > 0 || !scriptDriven) {
+			return
+		}
+		setAutoBusy(true)
+		try {
+			await dispatch(
+				updatePart({
+					part: {
+						...livePart,
+						// Explicit override: AUTO on = script/CPS + autoNext; off = until next take.
+						durationMode: autoOn ? 'manual' : 'auto'
+					}
+				})
+			).unwrap()
+		} catch (error) {
+			console.error(error)
+			toasts.show({
+				headerContent: 'AUTO mode',
+				bodyContent: 'Could not update take-after-duration for this story.'
+			})
+		} finally {
+			setAutoBusy(false)
+		}
+	}
 
 	const rowClass = [
 		'story-row',
 		'story-row--typed',
 		expanded ? 'active story-row--expanded' : '',
-		part.skip ? 'story-row--skipped' : '',
-		part.float ? 'story-row--floated' : '',
+		livePart.skip ? 'story-row--skipped' : '',
+		livePart.float ? 'story-row--floated' : '',
 		storyReadiness?.state === 'ready' ? 'story-row--ready' : '',
 		storyReadiness?.state === 'not-ready' ? 'story-row--not-ready' : '',
 		locks.length ? 'story-row--locked' : '',
@@ -132,14 +193,14 @@ export function SidebarPartRow({ part }: { part: Part }) {
 		try {
 			const result = await requestPresenceFocus({
 				entityType: 'part',
-				entityId: part.id,
-				rundownId: part.rundownId,
+				entityId: livePart.id,
+				rundownId: livePart.rundownId,
 				force
 			})
 			if (result.ok) {
 				setTakeoverHolder(null)
 				setTakeoverIsSystem(false)
-				setExpandedPartId(part.id)
+				setExpandedPartId(livePart.id)
 				return
 			}
 			if (result.reason === 'unavailable') {
@@ -147,7 +208,7 @@ export function SidebarPartRow({ part }: { part: Part }) {
 				console.warn('Story lock unavailable; opening without exclusive lock')
 				setTakeoverHolder(null)
 				setTakeoverIsSystem(false)
-				setExpandedPartId(part.id)
+				setExpandedPartId(livePart.id)
 				return
 			}
 			setTakeoverHolder(result.holder.displayName || lockNames || 'Another user')
@@ -173,7 +234,7 @@ export function SidebarPartRow({ part }: { part: Part }) {
 		}
 		// On-air / lookahead stories stay readable so the prompter script is not hidden.
 		if (lockedBySystem) {
-			setExpandedPartId(part.id)
+			setExpandedPartId(livePart.id)
 			return
 		}
 		// Fast path: known foreign lock from presence snapshot → confirm before kicking.
@@ -237,13 +298,18 @@ export function SidebarPartRow({ part }: { part: Part }) {
 					<span
 						className="story-type-chip"
 						style={{ backgroundColor: typeColour }}
-						title={partTypeManifest?.name ?? part.partType}
+						title={partTypeManifest?.name ?? livePart.partType}
 					>
-						{partTypeManifest?.shortName ?? part.partType.slice(0, 4).toUpperCase()}
+						{partTypeManifest?.shortName ?? livePart.partType.slice(0, 4).toUpperCase()}
 					</span>
 				</div>
-				<div className="col-title" title={part.script?.trim() ? `${part.name}\n${part.script}` : part.name}>
-					<span className="story-row__title">{part.name}</span>
+				<div
+					className="col-title"
+					title={
+						livePart.script?.trim() ? `${livePart.name}\n${livePart.script}` : livePart.name
+					}
+				>
+					<span className="story-row__title">{livePart.name}</span>
 					{isOnAir ? (
 						<span className="story-row__on-air" title="On air in Sofie">
 							ON AIR
@@ -260,18 +326,45 @@ export function SidebarPartRow({ part }: { part: Part }) {
 					{scriptPreview ? <div className="story-row__script">{scriptPreview}</div> : null}
 				</div>
 				<div className="col-duration">
-					{formatPartOnAirDuration(
-						part,
-						partPieces.map((piece) => ({
-							pieceType: piece.pieceType,
-							duration: piece.duration,
-							skip: piece.skip
-						})),
-						durationOpts
-					) || '--:--'}
+					<span
+						className="story-row__time"
+						title={
+							scriptDriven
+								? autoOn
+									? 'On air (AUTO)'
+									: 'On air (until next take)'
+								: 'On air'
+						}
+					>
+						{displayedDuration}
+					</span>
+					{scriptDriven ? (
+						<button
+							type="button"
+							className={`story-row__auto${autoOn ? ' story-row__auto--on' : ''}`}
+							aria-pressed={autoOn}
+							disabled={autoBusy || locks.length > 0}
+							title={
+								locks.length > 0
+									? lockedBySystem
+										? 'AUTO unavailable while System holds this story'
+										: `AUTO unavailable while ${lockNames || 'another user'} is editing`
+									: autoOn
+										? 'AUTO on — script/CPS drives On air; Sofie may auto-take. Click for until next take.'
+										: 'AUTO off — until next take (no autoNext). Click to enable AUTO.'
+							}
+							onClick={(event) => {
+								void toggleAuto(event)
+							}}
+							onPointerDown={(event) => event.stopPropagation()}
+							onKeyDown={(event) => event.stopPropagation()}
+						>
+							AUTO
+						</button>
+					) : null}
 				</div>
 			</div>
-			{expanded ? <PartExpandedPanel part={part} readOnly={lockedBySystem} /> : null}
+			{expanded ? <PartExpandedPanel part={livePart} readOnly={lockedBySystem} /> : null}
 
 			<Modal
 				show={takeoverHolder !== null}
@@ -355,7 +448,7 @@ export function StoryTableHeader() {
 			<div className="col-status">Status</div>
 			<div className="col-type">Type</div>
 			<div className="col-title">Story</div>
-			<div className="col-duration">Dur</div>
+			<div className="col-duration">Dur / AUTO</div>
 		</div>
 	)
 }

@@ -10,16 +10,19 @@ import { ScriptReadingCounter } from './scriptReadingCounter'
 import { ScriptPieceFlow } from './scriptPieceFlow'
 import { PiecePropertiesForm } from './piecePropertiesForm'
 import { ClockDurationInput } from './clockDurationInput'
+import { DeletePartButton } from './deletePartButton'
 import { findTypeManifest, toolbarManifests } from '~/util/typeManifest'
 import { resolveEffectiveScriptCps } from '~/util/scriptReadingTime'
 import { usePresenceFocus } from '~/hooks/usePresence'
 import { useRundownReadinessContext } from '~/hooks/RundownReadinessContext'
+import { useScriptExpand } from '~/hooks/ScriptExpandContext'
 import { syncWeatherFromImeteo } from '~/lib/weatherApi'
 
 export function PartExpandedPanel({ part, readOnly = false }: { part: Part; readOnly?: boolean }) {
 	const dispatch = useAppDispatch()
 	const toasts = useToasts()
 	const { readiness } = useRundownReadinessContext()
+	const { setExpandedPartId } = useScriptExpand()
 
 	usePresenceFocus(part.rundownId, 'part', part.id)
 
@@ -245,6 +248,15 @@ export function PartExpandedPanel({ part, readOnly = false }: { part: Part; read
 							<Button size="sm" variant="primary" disabled={saving} onClick={() => void savePart()}>
 								{saving ? 'Saving…' : 'Save'}
 							</Button>
+							<DeletePartButton
+								rundownId={livePart.rundownId}
+								segmentId={livePart.segmentId}
+								partId={livePart.id}
+								partName={name || livePart.name}
+								disabled={saving}
+								size="sm"
+								onDeleted={() => setExpandedPartId(null)}
+							/>
 						</>
 					)}
 				</div>

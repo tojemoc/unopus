@@ -3,7 +3,7 @@ import { createSelector } from '@reduxjs/toolkit'
 import { useMemo, useState } from 'react'
 import { useAppDispatch, useAppSelector, type RootState } from '~/store/app'
 import { movePart, reorderParts } from '~/store/parts'
-import { copySegment } from '~/store/segments'
+import { copySegment, updateSegment } from '~/store/segments'
 import type { Part, Segment } from '~backend/background/interfaces'
 import { DragTypes } from '~/components/drag-and-drop/DragTypes'
 import { DraggableContainer } from '~/components/drag-and-drop/DraggableContainer'
@@ -119,6 +119,19 @@ export function SidebarSegment({ segment }: { segment: Segment }) {
 				})
 			)
 
+	const handleRenameSegment = async (name: string) => {
+		try {
+			await dispatch(updateSegment({ segment: { ...segment, name } })).unwrap()
+		} catch (e) {
+			console.error(e)
+			toasts.show({
+				headerContent: 'Renaming segment',
+				bodyContent: 'Encountered an unexpected error'
+			})
+			throw e
+		}
+	}
+
 	return (
 		<div className={`sidebar-segment ${isOpen ? 'open' : 'closed'}${isOnAirSegment ? ' sidebar-segment--on-air' : ''}`}>
 			<div className="copy-item segment-header-row">
@@ -137,9 +150,9 @@ export function SidebarSegment({ segment }: { segment: Segment }) {
 					<div style={{ flexGrow: 2 }}>
 						<SidebarElementHeader
 							label={segment.name}
+							renameValue={segment.name}
+							onRename={handleRenameSegment}
 							duration={segmentDuration}
-							linkTo="/rundown/$rundownId/segment/$segmentId"
-							linkParams={{ rundownId: segment.rundownId, segmentId: segment.id }}
 							buttonClassName="segment-button copy-item sidebar-item-header"
 							handleCopy={handleCopySegment}
 							deleteButton={

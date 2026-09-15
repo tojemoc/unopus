@@ -93,12 +93,14 @@ export interface Part extends IHasPayload {
 	script?: string
 	duration?: number | null
 	/**
-	 * Per-story override of site `iluDurationMode` for ILU-family parts.
+	 * Per-story override of site `iluDurationMode` for script-driven parts
+	 * (ILU / DoubleBox / SJV / ŠPORT / SYN).
 	 * `auto` → CPS drives On air and Sofie may `autoNext`.
-	 * `manual` → On air sticks when set; Sofie waits for take (until next take).
-	 * Undefined → use ApplicationSettings.iluDurationMode.
+	 * `manual` → until next take (no autoNext), even when On air duration is set.
+	 * Undefined/null → use ApplicationSettings.iluDurationMode
+	 * (`null` clears an override over IPC/json_patch; `undefined` is dropped on the wire).
 	 */
-	durationMode?: IluDurationMode
+	durationMode?: IluDurationMode | null
 	partType: string
 	/** True when the part was created from a part-type preset button */
 	fromPreset?: boolean
@@ -348,11 +350,17 @@ export interface ApplicationSettings {
 	 */
 	scriptCps?: number
 	/**
-	 * When `auto`, ILU parts export `autoNext: true` so Sofie can take after the reading time.
+	 * When `auto`, script-driven parts (ILU / DoubleBox / SJV / ŠPORT / SYN) export
+	 * `autoNext: true` so Sofie can take after the reading time.
 	 * When `manual`, duration is still sent but auto-take is not requested (until next take).
 	 * Individual parts can override this with `Part.durationMode`.
 	 */
 	iluDurationMode?: IluDurationMode
+	/**
+	 * Site default for the one-line script excerpt under story titles (built-in default ON).
+	 * Each account can override under Settings → Profile.
+	 */
+	showPartScriptExcerpt?: boolean
 	/**
 	 * When true, skipped parts/pieces show a Skipped status unless `editorChecked` is set.
 	 * When false, skip never invents a status badge from skip alone.

@@ -37,7 +37,10 @@ export const logout = createAsyncThunk('auth/logout', async () => {
 
 export const updateMyProfile = createAsyncThunk(
 	'auth/updateMyProfile',
-	async (payload: { scriptCps?: number | null }, { rejectWithValue }) => {
+	async (
+		payload: { scriptCps?: number | null; showPartScriptExcerpt?: boolean | null },
+		{ rejectWithValue }
+	) => {
 		try {
 			return await authApi.updateMyProfile(payload)
 		} catch (e) {
