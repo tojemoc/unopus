@@ -206,6 +206,16 @@ export interface TypeManifest {
 	ingestType?: string
 	/** Show this type on segment/part creation toolbars */
 	showInToolbar?: boolean
+	/**
+	 * When true, this piece type is tech-only: hidden from Viewer/Editor toolbars
+	 * and script cues unless the user is Tech Admin or Admin.
+	 */
+	techOnly?: boolean
+	/**
+	 * Group id for collapsing several piece types into one toolbar control
+	 * (e.g. `"l3d"` → a single + L3D dropdown).
+	 */
+	toolbarGroup?: string
 	/** Part types: pieces created automatically when adding this part type */
 	defaultPieces?: DefaultPieceTemplate[]
 	/** Segment types: parts created automatically when adding this segment type */

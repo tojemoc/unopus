@@ -19,6 +19,7 @@ import { useScriptExpand } from '~/hooks/ScriptExpandContext'
 import { PartExpandedPanel } from '../partExpandedPanel'
 import { useToasts } from '~/components/toasts/useToasts'
 import { updatePart } from '~/store/parts'
+import { canEditRundown } from '~/util/roles'
 
 function getStoryReadiness(
 	partId: string,
@@ -88,6 +89,7 @@ export function SidebarPartRow({ part }: { part: Part }) {
 	)
 	const userScriptCps = useAppSelector((s) => s.auth.user?.scriptCps)
 	const userShowScriptExcerpt = useAppSelector((s) => s.auth.user?.showPartScriptExcerpt)
+	const userRole = useAppSelector((s) => s.auth.user?.role)
 	const settings = useAppSelector((s) => s.settings.settings)
 	const allPieces = useAppSelector((s) => s.pieces.pieces)
 	const partPieces = useMemo(
@@ -364,7 +366,10 @@ export function SidebarPartRow({ part }: { part: Part }) {
 					) : null}
 				</div>
 			</div>
-			{expanded ? <PartExpandedPanel part={livePart} readOnly={lockedBySystem} /> : null}
+			{expanded ? (
+				<PartExpandedPanel part={livePart} readOnly={lockedBySystem || !canEditRundown(userRole)} />
+			) : null}
+
 
 			<Modal
 				show={takeoverHolder !== null}

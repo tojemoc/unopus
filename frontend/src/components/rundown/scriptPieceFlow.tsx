@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import type { Piece, RundownReadiness, TypeManifest } from '~backend/background/interfaces'
 import { TypeManifestEntity } from '~backend/background/interfaces'
 import { findTypeManifest } from '~/util/typeManifest'
@@ -11,6 +11,23 @@ import { useAppSelector } from '~/store/app'
 import { resolvePieceName } from '~/util/pieceName'
 import { getPieceReadinessState } from './sidebar/partRow'
 import { ReadinessBadge } from './readinessBadge'
+import { canSeeTechPieces } from '~/util/roles'
+
+const L3D_DRAG_TYPE = 'application/x-sofie-piece-id'
+
+/** Snap a raw character offset to the nearest word boundary (prefer earlier). */
+export function snapScriptOffsetToWordBoundary(script: string, offset: number): number {
+	const clamped = Math.max(0, Math.min(script.length, Math.floor(offset)))
+	if (clamped <= 0 || clamped >= script.length) return clamped
+	if (/\s/.test(script[clamped] ?? '') || /\s/.test(script[clamped - 1] ?? '')) {
+		return clamped
+	}
+	let left = clamped
+	while (left > 0 && !/\s/.test(script[left - 1] ?? '')) left--
+	let right = clamped
+	while (right < script.length && !/\s/.test(script[right] ?? '')) right++
+	return clamped - left <= right - clamped ? left : right
+}
 
 export function ScriptPieceFlow({
 	script,
@@ -18,29 +35,71 @@ export function ScriptPieceFlow({
 	cps,
 	expandedPieceId,
 	onSelectPiece,
-	readiness
+	onMovePiece,
+	readiness,
+	draggable = false
 }: {
 	script: string
 	pieces: Piece[]
 	cps: number
 	expandedPieceId: string | null
 	onSelectPiece: (pieceId: string | null) => void
+	onMovePiece?: (pieceId: string, scriptOffset: number) => void
 	readiness: RundownReadiness | null
+	draggable?: boolean
 }) {
 	const manifests = useAppSelector((s) => s.typeManifests.manifests)
-	const ordered = sortPiecesByScriptOffset(pieces, script.length)
+	const role = useAppSelector((s) => s.auth.user?.role)
+	const seeTech = canSeeTechPieces(role)
+	const visiblePieces = pieces.filter((piece) => {
+		const manifest = findTypeManifest(manifests, piece.pieceType, TypeManifestEntity.Piece)
+		return seeTech || !manifest?.techOnly
+	})
+	const ordered = sortPiecesByScriptOffset(visiblePieces, script.length)
+	const [dragOverOffset, setDragOverOffset] = useState<number | null>(null)
+	const dragPieceIdRef = useRef<string | null>(null)
+
+	const handleDropAt = (rawOffset: number) => {
+		const pieceId = dragPieceIdRef.current
+		if (!pieceId || !onMovePiece) return
+		onMovePiece(pieceId, snapScriptOffsetToWordBoundary(script, rawOffset))
+		setDragOverOffset(null)
+		dragPieceIdRef.current = null
+	}
 
 	const nodes: ReactNode[] = []
 	let cursor = 0
 
+	const pushTextSlice = (from: number, to: number) => {
+		if (to <= from) return
+		const slice = script.slice(from, to)
+		nodes.push(
+			<span
+				key={`t-${from}-${to}`}
+				className={`script-flow__text${dragOverOffset !== null && dragOverOffset >= from && dragOverOffset < to ? ' script-flow__text--drop' : ''}`}
+				onDragOver={(e) => {
+					if (!draggable || !onMovePiece) return
+					e.preventDefault()
+					const ratio = slice.length ? e.nativeEvent.offsetX / Math.max(1, (e.currentTarget as HTMLElement).offsetWidth) : 0
+					const approx = from + Math.round(ratio * slice.length)
+					setDragOverOffset(snapScriptOffsetToWordBoundary(script, approx))
+				}}
+				onDrop={(e) => {
+					if (!draggable || !onMovePiece) return
+					e.preventDefault()
+					const ratio = slice.length ? e.nativeEvent.offsetX / Math.max(1, (e.currentTarget as HTMLElement).offsetWidth) : 0
+					handleDropAt(from + Math.round(ratio * slice.length))
+				}}
+			>
+				{slice}
+			</span>
+		)
+	}
+
 	ordered.forEach((piece) => {
 		const offset = resolvePieceScriptOffset(piece, script.length)
 		if (offset > cursor) {
-			nodes.push(
-				<span key={`t-${cursor}-${offset}`} className="script-flow__text">
-					{script.slice(cursor, offset)}
-				</span>
-			)
+			pushTextSlice(cursor, offset)
 			cursor = offset
 		}
 
@@ -57,9 +116,30 @@ export function ScriptPieceFlow({
 			<button
 				key={piece.id}
 				type="button"
-				className={`script-flow__chip${selected ? ' script-flow__chip--open' : ''}${piece.skip ? ' script-flow__chip--skip' : ''}`}
+				draggable={draggable && Boolean(onMovePiece)}
+				className={`script-flow__chip${selected ? ' script-flow__chip--open' : ''}${piece.skip ? ' script-flow__chip--skip' : ''}${dragOverOffset === offset ? ' script-flow__chip--drop-before' : ''}`}
 				style={{ borderColor: colour, backgroundColor: colorMix(colour, 0.22) }}
-				title={`${displayName} · ${cue}`}
+				title={`${displayName} · ${cue}${draggable ? ' · drag to reposition' : ''}`}
+				onDragStart={(e) => {
+					if (!draggable || !onMovePiece) return
+					e.dataTransfer.setData(L3D_DRAG_TYPE, piece.id)
+					e.dataTransfer.effectAllowed = 'move'
+					dragPieceIdRef.current = piece.id
+				}}
+				onDragEnd={() => {
+					setDragOverOffset(null)
+					dragPieceIdRef.current = null
+				}}
+				onDragOver={(e) => {
+					if (!draggable || !onMovePiece) return
+					e.preventDefault()
+					setDragOverOffset(offset)
+				}}
+				onDrop={(e) => {
+					if (!draggable || !onMovePiece) return
+					e.preventDefault()
+					handleDropAt(offset)
+				}}
 				onClick={(e) => {
 					e.stopPropagation()
 					onSelectPiece(selected ? null : piece.id)
@@ -78,10 +158,24 @@ export function ScriptPieceFlow({
 	})
 
 	if (cursor < script.length) {
+		pushTextSlice(cursor, script.length)
+	}
+
+	// Drop zone after all text so chips can be moved to the end.
+	if (draggable && onMovePiece) {
 		nodes.push(
-			<span key={`t-end`} className="script-flow__text">
-				{script.slice(cursor)}
-			</span>
+			<span
+				key="t-end-drop"
+				className="script-flow__end-drop"
+				onDragOver={(e) => {
+					e.preventDefault()
+					setDragOverOffset(script.length)
+				}}
+				onDrop={(e) => {
+					e.preventDefault()
+					handleDropAt(script.length)
+				}}
+			/>
 		)
 	}
 

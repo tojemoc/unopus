@@ -18,6 +18,7 @@ import { DeleteSegmentButton } from '../deleteSegmentButton'
 import { useScriptExpand } from '~/hooks/ScriptExpandContext'
 import { resolvePartOnAirDuration } from '~/util/pieceDuration'
 import { resolveEffectiveScriptCps } from '~/util/scriptReadingTime'
+import { canEditRundown } from '~/util/roles'
 
 const selectAllParts = (state: RootState) => state.parts.parts
 const selectAllPieces = (state: RootState) => state.pieces.pieces
@@ -132,6 +133,9 @@ export function SidebarSegment({ segment }: { segment: Segment }) {
 		}
 	}
 
+	const userRole = useAppSelector((s) => s.auth.user?.role)
+	const canEdit = canEditRundown(userRole)
+
 	return (
 		<div className={`sidebar-segment ${isOpen ? 'open' : 'closed'}${isOnAirSegment ? ' sidebar-segment--on-air' : ''}`}>
 			<div className="copy-item segment-header-row">
@@ -151,7 +155,12 @@ export function SidebarSegment({ segment }: { segment: Segment }) {
 						<SidebarElementHeader
 							label={segment.name}
 							renameValue={segment.name}
-							onRename={handleRenameSegment}
+							onRename={canEdit ? handleRenameSegment : undefined}
+							onSelect={() => {
+								void navigate({
+									to: `/rundown/${segment.rundownId}/segment/${segment.id}`
+								})
+							}}
 							duration={segmentDuration}
 							buttonClassName="segment-button copy-item sidebar-item-header"
 							handleCopy={handleCopySegment}

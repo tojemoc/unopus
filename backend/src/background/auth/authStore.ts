@@ -51,6 +51,46 @@ function migrateUsersShowPartScriptExcerptColumn(): void {
 }
 
 /**
+ * Widen users.role CHECK to include viewer + tech_admin (SQLite cannot ALTER CHECK).
+ */
+function migrateUsersRoleConstraint(): void {
+	const tableSql = db
+		.prepare(`SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'users'`)
+		.get() as { sql?: string } | undefined
+	const createSql = tableSql?.sql ?? ''
+	if (createSql.includes("'viewer'") && createSql.includes("'tech_admin'")) {
+		return
+	}
+
+	const columns = db.prepare(`PRAGMA table_info(users)`).all() as Array<{ name: string }>
+	const hasScriptCps = columns.some((column) => column.name === 'script_cps')
+	const hasExcerpt = columns.some((column) => column.name === 'show_part_script_excerpt')
+
+	db.exec(`
+		BEGIN;
+		CREATE TABLE users_new (
+			id TEXT PRIMARY KEY,
+			username TEXT NOT NULL UNIQUE,
+			password_hash TEXT NOT NULL,
+			display_name TEXT NOT NULL,
+			role TEXT NOT NULL CHECK(role IN ('viewer', 'editor', 'tech_admin', 'admin')),
+			active INTEGER NOT NULL DEFAULT 1,
+			script_cps REAL,
+			show_part_script_excerpt INTEGER
+		);
+		INSERT INTO users_new (id, username, password_hash, display_name, role, active, script_cps, show_part_script_excerpt)
+		SELECT id, username, password_hash, display_name, role, active,
+			${hasScriptCps ? 'script_cps' : 'NULL'},
+			${hasExcerpt ? 'show_part_script_excerpt' : 'NULL'}
+		FROM users;
+		DROP TABLE users;
+		ALTER TABLE users_new RENAME TO users;
+		COMMIT;
+	`)
+}
+
+
+/**
  * Convert database user row to AuthUser object.
  */
 function rowToUser(row: UserRow): AuthUser {
@@ -76,7 +116,7 @@ export function initAuthTables(): void {
 			username TEXT NOT NULL UNIQUE,
 			password_hash TEXT NOT NULL,
 			display_name TEXT NOT NULL,
-			role TEXT NOT NULL CHECK(role IN ('editor', 'admin')),
+			role TEXT NOT NULL CHECK(role IN ('viewer', 'editor', 'tech_admin', 'admin')),
 			active INTEGER NOT NULL DEFAULT 1
 		);
 	`)
@@ -103,6 +143,7 @@ export function initAuthTables(): void {
 
 	migrateUsersScriptCpsColumn()
 	migrateUsersShowPartScriptExcerptColumn()
+	migrateUsersRoleConstraint()
 
 	const countRow = db.prepare(`SELECT COUNT(*) AS count FROM users`).get() as { count: number }
 	if (countRow.count === 0) {

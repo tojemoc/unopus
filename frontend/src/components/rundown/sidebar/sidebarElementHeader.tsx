@@ -15,9 +15,11 @@ type SidebarItemProps = {
 	handleCopy: () => void
 	deleteButton: ReactNode
 	buttonClassName?: string
-	/** When set, the title becomes click-to-edit and commits on blur/Enter. */
+	/** When set, the title becomes double-click-to-rename and commits on blur/Enter. */
 	onRename?: (name: string) => void | Promise<void>
 	renameValue?: string
+	/** Single-click selection (e.g. navigate to segment). Ignored while renaming. */
+	onSelect?: () => void
 } & Partial<LinkProps>
 
 export function SidebarElementHeader({
@@ -30,7 +32,8 @@ export function SidebarElementHeader({
 	deleteButton,
 	buttonClassName,
 	onRename,
-	renameValue
+	renameValue,
+	onSelect
 }: SidebarItemProps) {
 	const [editing, setEditing] = useState(false)
 	const [draft, setDraft] = useState(renameValue ?? '')
@@ -74,8 +77,8 @@ export function SidebarElementHeader({
 		}
 	}
 
-	const title = onRename ? (
-		editing ? (
+	const title =
+		onRename && editing ? (
 			<Form.Control
 				ref={inputRef}
 				size="sm"
@@ -100,12 +103,22 @@ export function SidebarElementHeader({
 					}
 				}}
 			/>
-		) : (
+		) : onSelect || onRename ? (
 			<button
 				type="button"
 				className="sidebar-item-header__rename-trigger item-title"
-				title="Click to rename"
+				title={
+					onRename
+						? 'Click to select · double-click to rename'
+						: 'Click to select segment'
+				}
 				onClick={(e) => {
+					e.preventDefault()
+					e.stopPropagation()
+					onSelect?.()
+				}}
+				onDoubleClick={(e) => {
+					if (!onRename) return
 					e.preventDefault()
 					e.stopPropagation()
 					setEditing(true)
@@ -113,10 +126,9 @@ export function SidebarElementHeader({
 			>
 				{label}
 			</button>
+		) : (
+			<span className="item-title">{label}</span>
 		)
-	) : (
-		<span className="item-title">{label}</span>
-	)
 
 	const body = (
 		<Stack

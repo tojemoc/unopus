@@ -105,9 +105,21 @@ export const mutations = {
 		try {
 			db.exec('BEGIN')
 
+			const pieceManifest = pieceTypeManifestList.find((m) => m.id === resolvedPieceType)
+			const payloadFromDefaults: Record<string, string | number | boolean> = {}
+			for (const field of pieceManifest?.payload ?? []) {
+				if (field.default === undefined) continue
+				payloadFromDefaults[field.id] = field.default
+			}
+			const mergedPayload = {
+				...payloadFromDefaults,
+				...(payload.payload ?? {})
+			}
+
 			const document: Partial<MutationPieceCreate> = {
 				...payload,
 				pieceType: payloadHasType ? resolvedPieceType : defaultPieceType,
+				payload: mergedPayload,
 				start: payload.start ?? 0,
 				// Rank materialization for legacy parts must share this transaction so a
 				// failed INSERT cannot leave rewritten ranks behind.
