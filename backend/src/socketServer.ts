@@ -178,7 +178,20 @@ export async function initSocketServer(port: number = 3010) {
 			})
 		})
 
-		server.listen(port, () => console.log(`Server running on http://localhost:${port}`))
+		server.listen(port, () => {
+			console.log(`Server running on http://localhost:${port}`)
+			void import('./background/media.js').then(async ({ isFfprobeAvailable }) => {
+				const available = await isFfprobeAvailable()
+				if (available) {
+					console.log('ffprobe: available (media Source length / On air seeding enabled)')
+				} else {
+					console.warn(
+						'ffprobe: NOT FOUND on PATH — media picker cannot probe clip length. ' +
+							'Install ffmpeg in the image/host (Docker: apt package ffmpeg).'
+					)
+				}
+			})
+		})
 	} else {
 		console.error("Couldn't initialize Socket Server because it's already initialized.")
 	}

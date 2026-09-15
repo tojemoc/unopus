@@ -365,6 +365,28 @@ function parseFfprobeFrameRate(rateStr: string | undefined): number | undefined 
 	return num / den
 }
 
+let ffprobeAvailability: Promise<boolean> | undefined
+
+/**
+ * True when `ffprobe` is on PATH (cached after first check).
+ * Docker images before the ffmpeg package had silent probe failures.
+ */
+export async function isFfprobeAvailable(): Promise<boolean> {
+	if (!ffprobeAvailability) {
+		ffprobeAvailability = new Promise((resolve) => {
+			const child = spawn('ffprobe', ['-version'], { stdio: ['ignore', 'ignore', 'ignore'] })
+			child.on('error', () => resolve(false))
+			child.on('close', (code) => resolve(code === 0))
+		})
+	}
+	return ffprobeAvailability
+}
+
+/** Reset cached ffprobe availability (tests). */
+export function resetFfprobeAvailabilityCacheForTests(): void {
+	ffprobeAvailability = undefined
+}
+
 /**
  * Probe clip duration in seconds via ffprobe. Returns undefined when unavailable.
  */
@@ -411,7 +433,11 @@ export async function probeMediaDurationSeconds(absolutePath: string): Promise<n
 			stdout += chunk.toString('utf8')
 		})
 
-		child.on('error', () => finish(undefined))
+		child.on('error', () => {
+			// ENOENT when ffprobe is missing from the image / host PATH.
+			ffprobeAvailability = Promise.resolve(false)
+			finish(undefined)
+		})
 		child.on('close', (code) => {
 			if (code !== 0) {
 				finish(undefined)

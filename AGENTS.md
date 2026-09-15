@@ -42,6 +42,13 @@ runs on pushes to `main`. Docker/GitHub releases stay in `release.yaml` (main + 
 
 No automated test suite exists in this repo.
 
+### ffprobe / clip duration (Docker)
+
+Media picker and `GET /api/media/duration` shell out to **`ffprobe`**. The production
+`Dockerfile` installs the Debian **`ffmpeg`** package so `ffprobe` is on PATH. Without it,
+probes fail silently (`durationSeconds: null`) and On air is never seeded from clip length.
+Startup logs `ffprobe: available` or a warning. Dev hosts usually already have ffmpeg via apt.
+
 ### Pre-commit hooks
 
 Husky runs `lint-staged` on commit, which applies Prettier to `*.{js,css,json,md,scss}` and runs `yarn lint-fix` on `*.{ts,tsx,cts}`.
