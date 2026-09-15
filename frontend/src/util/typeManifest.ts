@@ -37,8 +37,9 @@ export function toolbarManifests(
 	return (
 		manifests
 			?.filter((m) => m.entityType === entityType)
-			.filter((m) => m.showInToolbar !== false)
-			.filter((m) => includeTech || !m.techOnly)
+			// techOnly visibility is role-gated only — ignore stale showInToolbar:false
+			// left in the DB from older asset pins.
+			.filter((m) => (m.techOnly ? includeTech : m.showInToolbar !== false))
 			// Grouped types (e.g. L3D) get their own toolbar control.
 			.filter((m) => !m.toolbarGroup) ?? []
 	)
@@ -56,6 +57,6 @@ export function toolbarGroupedManifests(
 		manifests
 			?.filter((m) => m.entityType === entityType)
 			.filter((m) => m.toolbarGroup === groupId)
-			.filter((m) => includeTech || !m.techOnly) ?? []
+			.filter((m) => (m.techOnly ? includeTech : true)) ?? []
 	)
 }
