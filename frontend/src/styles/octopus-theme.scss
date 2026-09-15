@@ -522,10 +522,6 @@
 	max-width: 24rem;
 }
 
-.part-expanded-piece {
-	user-select: text;
-}
-
 .story-row--expanded {
 	cursor: default;
 }
@@ -555,6 +551,7 @@
 	padding: 0.55rem 0.65rem 0.75rem;
 	border-bottom: 1px solid var(--re-border);
 	background: var(--re-surface-2);
+	user-select: text;
 }
 
 .part-expanded-panel__meta {
@@ -594,6 +591,7 @@
 	border: 1px solid var(--re-border);
 	border-radius: 0.35rem;
 	background: var(--re-surface-1);
+	user-select: text;
 }
 
 .part-expanded-piece__actions {

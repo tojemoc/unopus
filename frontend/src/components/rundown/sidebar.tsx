@@ -13,6 +13,7 @@ import { StoryTableHeader } from './sidebar/partRow'
 import { useToasts } from '../toasts/useToasts'
 import { SegmentButtons } from './sidebar/segmentButtons'
 import { useRundownReadinessContext } from '~/hooks/RundownReadinessContext'
+import { useScriptExpand } from '~/hooks/ScriptExpandContext'
 
 /** Stable DnD row type — must not change identity when expand/readiness updates. */
 const SegmentComponent: DraggableWrappedComponent<Segment> = ({ data: segment }) => (
@@ -32,10 +33,16 @@ export function RundownSidebar({
 	const [showImportModal, setShowImportModal] = useState<number | undefined>(undefined)
 
 	const segments = useAppSelector((state) => state.segments.segments)
+	const parts = useAppSelector((state) => state.parts.parts)
+	const { expandedPartId } = useScriptExpand()
 	const sortedSegments = useMemo(
 		() => [...segments].sort((a, b) => a.rank - b.rank),
 		[segments]
 	)
+	const expandedPartSegmentId = useMemo(() => {
+		if (!expandedPartId) return null
+		return parts.find((part) => part.id === expandedPartId)?.segmentId ?? null
+	}, [expandedPartId, parts])
 
 	const { readiness, loading, error, refresh } = useRundownReadinessContext()
 
@@ -92,6 +99,10 @@ export function RundownSidebar({
 						Component={SegmentComponent}
 						id={rundownId}
 						reorder={handleReorderSegment}
+						// Expanded story UI (script / opened piece forms) lives inside the
+						// segment drag source; disable segment drag while a part is open so
+						// mouse drag selects text instead of starting a reorder.
+						canDragItem={(segment) => expandedPartSegmentId !== segment.id}
 					/>
 				</div>
 
