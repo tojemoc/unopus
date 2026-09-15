@@ -276,6 +276,8 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 												siteDurationMode
 											)
 											const checked = effective === 'auto'
+											const hasExplicitOverride =
+												field.state.value === 'auto' || field.state.value === 'manual'
 
 											return (
 												<>
@@ -297,11 +299,25 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 																	: 'Until next take — wait for take'
 															}
 														/>
+														{hasExplicitOverride ? (
+															<Button
+																type="button"
+																variant="link"
+																className="px-0"
+																onClick={() => field.handleChange(null)}
+															>
+																Use site default
+															</Button>
+														) : null}
 														<Form.Text className="text-muted">
 															Same as the AUTO toggle on the story row. Off always means
 															until next take (no autoNext), even when On air is set. Site
 															default is{' '}
-															{siteDurationMode === 'manual' ? 'until next take' : 'AUTO'}.
+															{siteDurationMode === 'manual' ? 'until next take' : 'AUTO'}
+															{hasExplicitOverride
+																? ''
+																: ' (this story currently inherits it)'}
+															.
 														</Form.Text>
 													</Form.Group>
 													<FieldInfo field={field} />

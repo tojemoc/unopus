@@ -97,9 +97,10 @@ export interface Part extends IHasPayload {
 	 * (ILU / DoubleBox / SJV / ŠPORT / SYN).
 	 * `auto` → CPS drives On air and Sofie may `autoNext`.
 	 * `manual` → until next take (no autoNext), even when On air duration is set.
-	 * Undefined → use ApplicationSettings.iluDurationMode.
+	 * Undefined/null → use ApplicationSettings.iluDurationMode
+	 * (`null` clears an override over IPC/json_patch; `undefined` is dropped on the wire).
 	 */
-	durationMode?: IluDurationMode
+	durationMode?: IluDurationMode | null
 	partType: string
 	/** True when the part was created from a part-type preset button */
 	fromPreset?: boolean

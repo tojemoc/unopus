@@ -147,7 +147,9 @@ export function SidebarPartRow({ part }: { part: Part }) {
 	const toggleAuto = async (event: React.MouseEvent) => {
 		event.preventDefault()
 		event.stopPropagation()
-		if (autoBusy || lockedBySystem || !scriptDriven) {
+		// Same foreign-lock gate as handleActivate: do not overwrite another editor's
+		// durationMode (or race their later save) without takeover confirmation.
+		if (autoBusy || locks.length > 0 || !scriptDriven) {
 			return
 		}
 		setAutoBusy(true)
@@ -341,11 +343,15 @@ export function SidebarPartRow({ part }: { part: Part }) {
 							type="button"
 							className={`story-row__auto${autoOn ? ' story-row__auto--on' : ''}`}
 							aria-pressed={autoOn}
-							disabled={autoBusy || lockedBySystem}
+							disabled={autoBusy || locks.length > 0}
 							title={
-								autoOn
-									? 'AUTO on — script/CPS drives On air; Sofie may auto-take. Click for until next take.'
-									: 'AUTO off — until next take (no autoNext). Click to enable AUTO.'
+								locks.length > 0
+									? lockedBySystem
+										? 'AUTO unavailable while System holds this story'
+										: `AUTO unavailable while ${lockNames || 'another user'} is editing`
+									: autoOn
+										? 'AUTO on — script/CPS drives On air; Sofie may auto-take. Click for until next take.'
+										: 'AUTO off — until next take (no autoNext). Click to enable AUTO.'
 							}
 							onClick={(event) => {
 								void toggleAuto(event)
