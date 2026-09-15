@@ -503,6 +503,8 @@ export interface MutatedPiece {
 	objectTime: number | undefined
 	duration: number | undefined
 	clipName: string | undefined
+	/** Skipped pieces are omitted from Sofie ingest but kept for local duration math. */
+	skip?: boolean
 	attributes: {
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		[key: string]: any

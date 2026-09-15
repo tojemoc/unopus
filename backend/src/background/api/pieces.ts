@@ -737,6 +737,7 @@ export function mutatePieceForExport(piece: Piece): MutatedPiece {
 		objectTime,
 		duration: piece.duration ?? undefined,
 		clipName: undefined,
+		skip: Boolean(piece.skip),
 		attributes: {
 			...normalizeGraphicAttributesForExport(piece.payload),
 			adlib: false,
@@ -751,7 +752,8 @@ export async function getMutatedPiecesFromPart(partId: string): Promise<MutatedP
 	const { result: pieces } = await mutations.read({ partId: partId })
 
 	if (pieces && Array.isArray(pieces)) {
-		return pieces.filter((piece) => !piece.skip).map((piece) => mutatePieceForExport(piece))
+		// Keep skipped pieces so duration / script-mode math can see `skip` (Sofie export filters later).
+		return pieces.map((piece) => mutatePieceForExport(piece))
 	}
 
 	return []

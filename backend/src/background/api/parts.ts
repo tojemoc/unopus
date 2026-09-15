@@ -87,14 +87,20 @@ async function mutatePart(part: Part): Promise<MutatedPart> {
 				{ scriptCps: settings?.scriptCps, defaultDurationMode: settings?.iluDurationMode }
 			)
 
-	const pieces = rawPieces.map((piece) => ({
-		...piece,
-		duration:
-			resolvePieceOnAirDuration(
-				{ duration: piece.duration ?? undefined, pieceType: piece.objectType },
-				effectivePartDuration
-			) ?? (piece.duration ?? undefined)
-	}))
+	const pieces = rawPieces
+		.filter((piece) => !piece.skip)
+		.map((piece) => ({
+			...piece,
+			duration:
+				resolvePieceOnAirDuration(
+					{
+						duration: piece.duration ?? undefined,
+						pieceType: piece.objectType,
+						skip: piece.skip
+					},
+					effectivePartDuration
+				) ?? (piece.duration ?? undefined)
+		}))
 
 	const autoNext =
 		!part.skip &&
