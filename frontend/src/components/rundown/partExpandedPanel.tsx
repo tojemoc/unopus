@@ -259,7 +259,6 @@ export function PartExpandedPanel({ part, readOnly = false }: { part: Part; read
 				rows={5}
 				value={script}
 				readOnly={readOnly}
-				disabled={readOnly}
 				onChange={(e) => setScript(e.target.value)}
 				onBlur={() => {
 					if (!readOnly) void savePart()
