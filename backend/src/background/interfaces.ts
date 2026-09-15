@@ -239,6 +239,11 @@ export interface PayloadManifest {
 	 * Optional; set per field under Settings → Piece Types, or in megarepo manifests.
 	 */
 	maxLength?: number
+	/**
+	 * Default value applied when materializing a piece from a part-type preset
+	 * (and when the payload key is still unset). Used for volume (0–1), etc.
+	 */
+	default?: string | number | boolean
 }
 
 /** Core/Package Manager confirmation for a scanned media file (not local fs existence). */
@@ -498,6 +503,8 @@ export interface MutatedPiece {
 	objectTime: number | undefined
 	duration: number | undefined
 	clipName: string | undefined
+	/** Skipped pieces are omitted from Sofie ingest but kept for local duration math. */
+	skip?: boolean
 	attributes: {
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		[key: string]: any

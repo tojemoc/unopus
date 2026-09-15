@@ -56,4 +56,17 @@ describe('mutatePieceForExport', () => {
 		assert.equal(exported.objectTime, 12)
 		assert.equal(exported.attributes.adlib, false)
 	})
+
+	it('exposes top-level skip for duration math while keeping attributes.skip', () => {
+		const exported = mutatePieceForExport(
+			makePiece({
+				pieceType: 'l3d-sjv',
+				skip: true,
+				payload: { headline: 'SJV' }
+			})
+		)
+
+		assert.equal(exported.skip, true)
+		assert.equal(exported.attributes.skip, true)
+	})
 })

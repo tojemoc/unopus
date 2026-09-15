@@ -271,7 +271,9 @@ export function CoreConnectionSettingsForm({ settings }: { settings: Application
 				<h3 className="h5">Script timing &amp; editorial</h3>
 				<p className="text-muted small">
 					Reading-time estimates drive ILU story length. SYN / VO / VT length still comes from
-					ffprobe on the linked clip. Each user can set their own CPS under Settings → Profile;
+					ffprobe on the linked clip — except SJV / ŠPORT stories (part type `sjv` /
+					`sport`, or a SYN with an `l3d-sjv` / `l3d-sport` bar), which use CPS like ILU.
+					Each user can set their own CPS under Settings → Profile;
 					when unset, this site default applies.
 				</p>
 
@@ -320,9 +322,10 @@ export function CoreConnectionSettingsForm({ settings }: { settings: Application
 									<option value="manual">Until next take — wait for take (duration still sent)</option>
 								</Form.Select>
 								<Form.Text className="text-muted">
-									Default for ILU / DoubleBox stories. Auto exports <code>autoNext: true</code> so
-									Sofie can take after the script duration. Until next take keeps the duration but
-									does not request auto-take. Each story can override this under Story properties.
+									Default for ILU, DoubleBox, SJV, ŠPORT, and marker-qualified SYN stories. Auto
+									exports <code>autoNext: true</code> so Sofie can take after the script duration.
+									Until next take keeps the duration but does not request auto-take. Each story can
+									override this under Story properties.
 								</Form.Text>
 							</Form.Group>
 							<FieldInfo field={field} />

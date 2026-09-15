@@ -62,7 +62,8 @@ async function mutatePart(part: Part): Promise<MutatedPart> {
 	const rawPieces = await getMutatedPiecesFromPart(part.id)
 	const durationPieces = rawPieces.map((piece) => ({
 		duration: piece.duration ?? undefined,
-		pieceType: piece.objectType
+		pieceType: piece.objectType,
+		skip: Boolean(piece.skip)
 	}))
 	const durationMode = resolveEffectiveIluDurationMode(
 		part.durationMode,
@@ -86,18 +87,27 @@ async function mutatePart(part: Part): Promise<MutatedPart> {
 				{ scriptCps: settings?.scriptCps, defaultDurationMode: settings?.iluDurationMode }
 			)
 
-	const pieces = rawPieces.map((piece) => ({
-		...piece,
-		duration:
-			resolvePieceOnAirDuration(
-				{ duration: piece.duration ?? undefined, pieceType: piece.objectType },
-				effectivePartDuration
-			) ?? (piece.duration ?? undefined)
-	}))
+	const pieces = rawPieces
+		.filter((piece) => !piece.skip)
+		.map((piece) => ({
+			...piece,
+			duration:
+				resolvePieceOnAirDuration(
+					{
+						duration: piece.duration ?? undefined,
+						pieceType: piece.objectType,
+						skip: piece.skip
+					},
+					effectivePartDuration
+				) ?? (piece.duration ?? undefined)
+		}))
 
 	const autoNext =
 		!part.skip &&
-		partUsesScriptDuration(part.partType) &&
+		partUsesScriptDuration(
+			part.partType,
+			durationPieces.filter((piece) => !piece.skip).map((piece) => piece.pieceType)
+		) &&
 		durationMode === 'auto'
 			? true
 			: undefined
@@ -255,6 +265,12 @@ export const mutations = {
 
 						const pieceManifest = findTypeManifest(pieceManifestList, template.pieceType)
 						const resolvedPieceType = pieceManifest?.id ?? template.pieceType
+						const payloadFromDefaults: Record<string, string | number | boolean> = {}
+						for (const field of pieceManifest?.payload ?? []) {
+							if (field.default !== undefined) {
+								payloadFromDefaults[field.id] = field.default
+							}
+						}
 
 						const { result: createdPiece, error: pieceError } = await piecesMutations.create({
 							playlistId: part.playlistId,
@@ -263,7 +279,7 @@ export const mutations = {
 							partId: part.id,
 							name: template.name ?? pieceNameFromManifest(pieceManifest, 'New piece'),
 							pieceType: resolvedPieceType,
-							payload: template.payload ?? {},
+							payload: { ...payloadFromDefaults, ...(template.payload ?? {}) },
 							start: 0
 						})
 						if (pieceError || !createdPiece) {
