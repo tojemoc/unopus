@@ -24,6 +24,8 @@ type SidebarItemProps = {
 	renameValue?: string
 	/** Single-click selection (e.g. navigate to segment). Ignored while renaming. */
 	onSelect?: () => void
+	/** Visual selected state for the insert-target / route segment. */
+	selected?: boolean
 } & Partial<LinkProps>
 
 export function SidebarElementHeader({
@@ -37,7 +39,8 @@ export function SidebarElementHeader({
 	buttonClassName,
 	onRename,
 	renameValue,
-	onSelect
+	onSelect,
+	selected = false
 }: SidebarItemProps) {
 	const [editing, setEditing] = useState(false)
 	const [draft, setDraft] = useState(renameValue ?? '')
@@ -117,10 +120,13 @@ export function SidebarElementHeader({
 					}
 				}}
 			/>
-		) : onSelect || onRename ? (
+		) 		: onSelect || onRename ? (
 			<button
 				type="button"
-				className="sidebar-item-header__rename-trigger item-title"
+				className={classNames('sidebar-item-header__rename-trigger', 'item-title', {
+					'sidebar-item-header__rename-trigger--selected': selected
+				})}
+				aria-current={selected ? 'true' : undefined}
 				title={
 					onRename
 						? 'Click to select · double-click to rename'
@@ -155,7 +161,8 @@ export function SidebarElementHeader({
 		<Stack
 			direction="horizontal"
 			className={classNames(buttonClassName, 'sidebar-item-header', {
-				floated
+				floated,
+				'sidebar-item-header--selected': selected
 			})}
 			gap={2}
 		>

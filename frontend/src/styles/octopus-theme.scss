@@ -765,3 +765,15 @@
 .sidebar-segment--on-air > .segment-header-row {
 	box-shadow: inset 3px 0 0 #c62828;
 }
+
+.sidebar-segment--selected > .segment-header-row {
+	box-shadow: inset 3px 0 0 var(--re-accent);
+	background: color-mix(in srgb, var(--re-row-active) 85%, var(--re-surface-1));
+	border-radius: 0.2rem;
+	outline: 1px solid color-mix(in srgb, var(--re-accent) 45%, transparent);
+}
+
+.sidebar-segment--selected.sidebar-segment--on-air > .segment-header-row {
+	/* Keep on-air stripe primary; selection uses header background instead. */
+	box-shadow: inset 3px 0 0 #c62828;
+}
