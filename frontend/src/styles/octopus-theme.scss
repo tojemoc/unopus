@@ -226,7 +226,7 @@
 	.story-table-header,
 	.story-row {
 		display: grid;
-		grid-template-columns: 5.5rem 3.5rem 1fr 3.5rem;
+		grid-template-columns: 5.5rem 4.25rem 1fr 6.75rem;
 		align-items: center;
 		gap: 0.25rem;
 	}
@@ -322,21 +322,63 @@
 	}
 
 	.col-duration {
+		display: flex;
+		align-items: center;
+		justify-content: flex-end;
+		gap: 0.35rem;
 		text-align: right;
 		font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-		font-size: 0.72rem;
+		font-size: 0.92rem;
+		font-weight: 600;
+		color: var(--re-text);
+		min-width: 0;
+	}
+
+	.story-row__time {
+		font-variant-numeric: tabular-nums;
+		letter-spacing: 0.02em;
+	}
+
+	.story-row__auto {
+		flex-shrink: 0;
+		border: 1px solid var(--re-border);
+		background: transparent;
 		color: var(--re-text-muted);
+		border-radius: 2px;
+		font-size: 0.58rem;
+		font-weight: 800;
+		letter-spacing: 0.04em;
+		line-height: 1;
+		padding: 0.22rem 0.28rem;
+		cursor: pointer;
+
+		&:hover {
+			border-color: var(--re-accent);
+			color: var(--re-accent);
+		}
+
+		&.story-row__auto--on {
+			border-color: var(--re-accent);
+			background: var(--re-accent-subtle);
+			color: var(--re-accent);
+		}
+
+		&:disabled {
+			opacity: 0.55;
+			cursor: not-allowed;
+		}
 	}
 
 	.story-type-chip {
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		min-width: 2.4rem;
-		padding: 0.1rem 0.35rem;
+		min-width: 3rem;
+		padding: 0.22rem 0.45rem;
 		border-radius: 2px;
-		font-size: 0.62rem;
-		font-weight: 700;
+		font-size: 0.78rem;
+		font-weight: 800;
+		letter-spacing: 0.03em;
 		color: var(--re-text-on-chip);
 	}
 }

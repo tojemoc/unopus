@@ -19,7 +19,6 @@ import {
 	resolveEffectiveScriptCps
 } from '~/util/scriptReadingTime'
 import { resolveEffectiveIluDurationMode } from '~backend/background/storyDuration'
-import type { IluDurationMode } from '~backend/background/interfaces'
 
 export function PartPropertiesForm({ part }: { part: Part }) {
 	const dispatch = useAppDispatch()
@@ -272,10 +271,11 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 									<form.Field
 										name="durationMode"
 										children={(field) => {
-											const selectValue: IluDurationMode | '' =
-												field.state.value === 'auto' || field.state.value === 'manual'
-													? field.state.value
-													: ''
+											const effective = resolveEffectiveIluDurationMode(
+												field.state.value,
+												siteDurationMode
+											)
+											const checked = effective === 'auto'
 
 											return (
 												<>
@@ -283,38 +283,25 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 														<Form.Label htmlFor={field.name}>
 															{friendlyLabel('durationMode')}
 														</Form.Label>
-														<Form.Select
+														<Form.Switch
 															id={field.name}
 															name={field.name}
-															value={selectValue}
+															checked={checked}
 															onBlur={field.handleBlur}
 															onChange={(e) => {
-																const next = e.target.value
-																field.handleChange(
-																	next === 'auto' || next === 'manual'
-																		? next
-																		: undefined
-																)
+																field.handleChange(e.target.checked ? 'auto' : 'manual')
 															}}
-														>
-															<option value="">
-																Site default (
-																{siteDurationMode === 'manual'
-																	? 'until next take'
-																	: 'auto'}
-																)
-															</option>
-															<option value="auto">
-																Auto — Sofie may take after On air
-															</option>
-															<option value="manual">
-																Until next take — wait for take
-															</option>
-														</Form.Select>
+															label={
+																checked
+																	? 'AUTO — Sofie may take after On air'
+																	: 'Until next take — wait for take'
+															}
+														/>
 														<Form.Text className="text-muted">
-															{draftEffectiveDurationMode === 'auto'
-																? 'On air follows script reading time (CPS). Sofie may auto-take.'
-																: 'On air sticks when you set it. Sofie waits for the next take.'}
+															Same as the AUTO toggle on the story row. Off always means
+															until next take (no autoNext), even when On air is set. Site
+															default is{' '}
+															{siteDurationMode === 'manual' ? 'until next take' : 'AUTO'}.
 														</Form.Text>
 													</Form.Group>
 													<FieldInfo field={field} />
@@ -365,15 +352,14 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 													/>
 													{scriptDriven && draftEffectiveDurationMode === 'auto' ? (
 														<Form.Text className="text-muted">
-															Auto mode: ILU duration follows the script reading time
-															(CPS). Switch to until next take to keep a manual On air
-															length.
+															AUTO: On air follows script reading time (CPS). Sofie may
+															auto-take.
 														</Form.Text>
 													) : null}
 													{scriptDriven && draftEffectiveDurationMode === 'manual' ? (
 														<Form.Text className="text-muted">
-															Until next take: your On air value is kept. Empty uses the
-															script estimate for planning only.
+															Until next take: On air is kept for planning; Sofie waits for
+															the next take (no autoNext).
 														</Form.Text>
 													) : null}
 													{effectiveHint ? (

@@ -5,8 +5,11 @@
 
 export const DEFAULT_SCRIPT_CPS = 15
 
-/** Part types whose on-air length is driven by the part script (ILU family + SJV / ŠPORT). */
-export const SCRIPT_DURATION_PART_TYPES = new Set(['ilu', 'doublebox', 'sjv', 'sport'])
+/**
+ * Part types whose on-air length can be driven by the part script (CPS) when AUTO is on:
+ * ILU family, SJV / ŠPORT, and SYN (script/CPS + autoNext path).
+ */
+export const SCRIPT_DURATION_PART_TYPES = new Set(['ilu', 'doublebox', 'sjv', 'sport', 'syn'])
 
 /** Piece types that receive the story script reading time as on-air duration. */
 export const SCRIPT_DURATION_PIECE_TYPES = new Set([
@@ -22,7 +25,10 @@ export const SCRIPT_DURATION_PIECE_TYPES = new Set([
  */
 export const SCRIPT_DURATION_MARKER_PIECE_TYPES = new Set(['l3d-sjv', 'l3d-sport'])
 
-/** Part types whose on-air length is driven by the linked video clip (ffprobe). */
+/**
+ * Part types whose on-air length is driven by the linked video clip (ffprobe)
+ * when they are not on the script/CPS AUTO path (VO / VT; SYN uses script when AUTO).
+ */
 export const MEDIA_DURATION_PART_TYPES = new Set(['syn', 'vo', 'vt'])
 
 /**

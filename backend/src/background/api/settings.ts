@@ -42,6 +42,7 @@ function normalizeEditorSettings(settings: ApplicationSettings): ApplicationSett
 	normalized.skipStatusUnlessEditorChecked = normalized.skipStatusUnlessEditorChecked !== false
 	normalized.requireEditorCheckForAir = Boolean(normalized.requireEditorCheckForAir)
 	normalized.ignoreCoreContentStatus = Boolean(normalized.ignoreCoreContentStatus)
+	normalized.showPartScriptExcerpt = normalized.showPartScriptExcerpt !== false
 
 	return normalized
 }
@@ -204,6 +205,7 @@ export const mutations = {
 			...payload,
 			scriptCps: normalized.scriptCps,
 			iluDurationMode: normalized.iluDurationMode,
+			showPartScriptExcerpt: normalized.showPartScriptExcerpt,
 			skipStatusUnlessEditorChecked: normalized.skipStatusUnlessEditorChecked,
 			requireEditorCheckForAir: normalized.requireEditorCheckForAir,
 			ignoreCoreContentStatus: normalized.ignoreCoreContentStatus,
@@ -354,6 +356,7 @@ const DEFAULT_SETTINGS: ApplicationSettings = {
 	dailyCloneTimezone: DEFAULT_DAILY_CLONE_TIMEZONE,
 	scriptCps: DEFAULT_SCRIPT_CPS,
 	iluDurationMode: 'auto',
+	showPartScriptExcerpt: true,
 	skipStatusUnlessEditorChecked: true,
 	requireEditorCheckForAir: false,
 	ignoreCoreContentStatus: false

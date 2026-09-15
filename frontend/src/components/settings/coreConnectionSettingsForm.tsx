@@ -270,11 +270,11 @@ export function CoreConnectionSettingsForm({ settings }: { settings: Application
 				<hr className="my-4" />
 				<h3 className="h5">Script timing &amp; editorial</h3>
 				<p className="text-muted small">
-					Reading-time estimates drive ILU story length. SYN / VO / VT length still comes from
-					ffprobe on the linked clip — except SJV / ŠPORT stories (part type `sjv` /
-					`sport`, or a SYN with an `l3d-sjv` / `l3d-sport` bar), which use CPS like ILU.
-					Each user can set their own CPS under Settings → Profile;
-					when unset, this site default applies.
+					Reading-time estimates drive story length when AUTO is on for ILU, DoubleBox, SJV,
+					ŠPORT, and SYN. VO / VT length still comes from ffprobe on the linked clip. AUTO off
+					means until next take (duration is kept for planning; Sofie does not auto-take). Each
+					user can set their own CPS under Settings → Profile; when unset, this site default
+					applies.
 				</p>
 
 				<form.Field
@@ -322,10 +322,35 @@ export function CoreConnectionSettingsForm({ settings }: { settings: Application
 									<option value="manual">Until next take — wait for take (duration still sent)</option>
 								</Form.Select>
 								<Form.Text className="text-muted">
-									Default for ILU, DoubleBox, SJV, ŠPORT, and marker-qualified SYN stories. Auto
-									exports <code>autoNext: true</code> so Sofie can take after the script duration.
-									Until next take keeps the duration but does not request auto-take. Each story can
-									override this under Story properties.
+									Site default for ILU, DoubleBox, SJV, ŠPORT, and SYN. Auto exports{' '}
+									<code>autoNext: true</code> so Sofie can take after the script duration. Until
+									next take keeps the duration but does not request auto-take. Each story can
+									override this with the AUTO toggle on the story row.
+								</Form.Text>
+							</Form.Group>
+							<FieldInfo field={field} />
+						</>
+					)}
+				/>
+
+				<form.Field
+					name="showPartScriptExcerpt"
+					children={(field) => (
+						<>
+							<Form.Group className="mb-3">
+								<Form.Label htmlFor={field.name}>
+									{friendlyLabel('showPartScriptExcerpt')}
+								</Form.Label>
+								<Form.Switch
+									id={field.name}
+									name={field.name}
+									checked={field.state.value !== false}
+									onBlur={field.handleBlur}
+									onChange={(e) => field.handleChange(e.target.checked)}
+								/>
+								<Form.Text className="text-muted">
+									When on, each story row shows a muted one-line preview of the script under the
+									title. Turn off for a denser rundown list.
 								</Form.Text>
 							</Form.Group>
 							<FieldInfo field={field} />

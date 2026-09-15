@@ -4,9 +4,10 @@
  * Single source of truth for what Rundown Editor displays and exports to Sofie ingest.
  *
  * Duration sources:
- * - ILU / DoubleBox parts in `auto` mode → part script reading time (CPS) → script-receiving pieces (force)
- * - ILU / DoubleBox parts in `manual` (until next take) → explicit On air sticks; CPS is estimate only
- * - SYN / VO / VT: media picker seeds On air + sourceDuration from ffprobe; editorial On air
+ * - ILU / DoubleBox / SJV / ŠPORT / SYN parts in `auto` mode → part script reading time (CPS)
+ *   → script-receiving pieces (force); Sofie may `autoNext`
+ * - Same types in `manual` (until next take) → explicit On air sticks; no autoNext
+ * - VO / VT: media picker seeds On air + sourceDuration from ffprobe; editorial On air
  *   is never force-overwritten by source length (operators may trim timing or clear it)
  * - L3D / inheriting graphics: empty On air is intentional → Sofie enable without duration
  *   (hold until Take). Do not auto-fill from part duration on save.
