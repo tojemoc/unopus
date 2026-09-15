@@ -220,7 +220,16 @@ function PayloadField({
 										onBlur={field.handleBlur}
 										onChange={(e) => {
 											const val = e.target.value
-											field.handleChange(val === '' ? undefined : Number(val))
+											if (val === '') {
+												field.handleChange(undefined)
+												return
+											}
+											const parsed = Number(val)
+											if (!Number.isFinite(parsed)) {
+												field.handleChange(undefined)
+												return
+											}
+											field.handleChange(Math.min(1, Math.max(0, parsed)))
 										}}
 									/>
 									<Form.Text className="text-muted mb-0">

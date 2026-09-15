@@ -322,9 +322,10 @@ export function CoreConnectionSettingsForm({ settings }: { settings: Application
 									<option value="manual">Until next take — wait for take (duration still sent)</option>
 								</Form.Select>
 								<Form.Text className="text-muted">
-									Default for ILU / DoubleBox stories. Auto exports <code>autoNext: true</code> so
-									Sofie can take after the script duration. Until next take keeps the duration but
-									does not request auto-take. Each story can override this under Story properties.
+									Default for ILU, DoubleBox, SJV, ŠPORT, and marker-qualified SYN stories. Auto
+									exports <code>autoNext: true</code> so Sofie can take after the script duration.
+									Until next take keeps the duration but does not request auto-take. Each story can
+									override this under Story properties.
 								</Form.Text>
 							</Form.Group>
 							<FieldInfo field={field} />

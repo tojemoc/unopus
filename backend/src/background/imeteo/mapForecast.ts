@@ -18,7 +18,7 @@ export const CITY_NAME_TO_REGION: ReadonlyArray<{
 	{ match: /^žilina$|^zilina$/i, region: 'ZA', displayName: 'ŽILINA', delay: 1000 },
 	{
 		match: /^banská\s+bystrica$|^banska\s+bystrica$|^b\.\s*bystrica$/i,
-		region: 'MM',
+		region: 'BB',
 		displayName: 'B. BYSTRICA',
 		delay: 1200
 	},

@@ -62,7 +62,8 @@ async function mutatePart(part: Part): Promise<MutatedPart> {
 	const rawPieces = await getMutatedPiecesFromPart(part.id)
 	const durationPieces = rawPieces.map((piece) => ({
 		duration: piece.duration ?? undefined,
-		pieceType: piece.objectType
+		pieceType: piece.objectType,
+		skip: Boolean(piece.skip)
 	}))
 	const durationMode = resolveEffectiveIluDurationMode(
 		part.durationMode,
@@ -99,7 +100,7 @@ async function mutatePart(part: Part): Promise<MutatedPart> {
 		!part.skip &&
 		partUsesScriptDuration(
 			part.partType,
-			durationPieces.map((piece) => piece.pieceType)
+			durationPieces.filter((piece) => !piece.skip).map((piece) => piece.pieceType)
 		) &&
 		durationMode === 'auto'
 			? true

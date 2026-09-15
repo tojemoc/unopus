@@ -101,7 +101,7 @@ describe('mapForecastToWeatherCities', () => {
 		assert.equal(cities.length, 8)
 		assert.deepEqual(
 			cities.map((c) => c.region),
-			['BA', 'TT', 'NR', 'TN', 'ZA', 'MM', 'KE', 'PO']
+			['BA', 'TT', 'NR', 'TN', 'ZA', 'BB', 'KE', 'PO']
 		)
 		assert.equal(cities[0]?.name, 'BRATISLAVA')
 		assert.equal(cities[0]?.temp, '27')
