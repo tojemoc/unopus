@@ -26,6 +26,8 @@ import { mutations as partMutations } from './parts'
 import { mutations as pieceMutations } from './pieces'
 import { spliceReorder } from '../util'
 import { Server, Socket } from 'socket.io'
+import type { AuthenticatedSocket } from '../auth/socketAuth'
+import { forbidRundownMutation } from '../auth/roles'
 import { mutations as typeManifestMutations, resolveManifestId } from './typeManifests'
 import {
 	findTypeManifest,
@@ -577,6 +579,13 @@ export const mutations = {
 
 export function registerSegmentsHandlers(socket: Socket, io: Server) {
 	socket.on('segments', async (action, payload, callback) => {
+		if (action !== IpcOperationType.Read) {
+			const denied = forbidRundownMutation((socket as AuthenticatedSocket).data.user?.role)
+			if (denied) {
+				callback(denied)
+				return
+			}
+		}
 		switch (action) {
 			case IpcOperationType.Create:
 				{

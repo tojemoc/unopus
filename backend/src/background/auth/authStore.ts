@@ -83,13 +83,28 @@ function migrateUsersRoleConstraint(): void {
 			${hasScriptCps ? 'script_cps' : 'NULL'},
 			${hasExcerpt ? 'show_part_script_excerpt' : 'NULL'}
 		FROM users;
+		CREATE TABLE sessions_new (
+			id TEXT PRIMARY KEY,
+			user_id TEXT NOT NULL,
+			expires_at INTEGER NOT NULL
+		);
+		INSERT INTO sessions_new (id, user_id, expires_at)
+		SELECT id, user_id, expires_at FROM sessions;
+		DROP TABLE sessions;
 		DROP TABLE users;
 		ALTER TABLE users_new RENAME TO users;
+		CREATE TABLE sessions (
+			id TEXT PRIMARY KEY,
+			user_id TEXT NOT NULL,
+			expires_at INTEGER NOT NULL,
+			FOREIGN KEY (user_id) REFERENCES users(id)
+		);
+		INSERT INTO sessions (id, user_id, expires_at)
+		SELECT id, user_id, expires_at FROM sessions_new;
+		DROP TABLE sessions_new;
 		COMMIT;
 	`)
 }
-
-
 /**
  * Convert database user row to AuthUser object.
  */

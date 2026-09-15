@@ -7,6 +7,12 @@ export function canEditRundown(role: UserRole | undefined | null): boolean {
 	return role === 'editor' || role === 'tech_admin' || role === 'admin'
 }
 
+/** Socket.IO mutation guard — returns an Error when the role cannot edit. */
+export function forbidRundownMutation(role: UserRole | undefined | null): Error | undefined {
+	if (canEditRundown(role)) return undefined
+	return new Error('Forbidden: viewers cannot mutate rundowns')
+}
+
 /** Tech-only piece types (Cam, WIPE, …) — visible to tech admins and admins. */
 export function canSeeTechPieces(role: UserRole | undefined | null): boolean {
 	return role === 'tech_admin' || role === 'admin'

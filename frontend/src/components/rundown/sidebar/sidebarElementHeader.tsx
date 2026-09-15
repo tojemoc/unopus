@@ -6,13 +6,17 @@ import { Form, Stack } from 'react-bootstrap'
 import { BsCopy } from 'react-icons/bs'
 import { HoverIconButton } from '~/components/rundownList/hoverIconButton'
 
+/** Delay before treating a click as select (so double-click rename can cancel it). */
+const SELECT_CLICK_DELAY_MS = 280
+
 type SidebarItemProps = {
 	label: ReactNode
 	duration?: number | null
 	floated?: boolean
 	linkTo?: string
 	linkParams?: Record<string, string>
-	handleCopy: () => void
+	/** Omit to hide the copy control (e.g. viewers). */
+	handleCopy?: () => void
 	deleteButton: ReactNode
 	buttonClassName?: string
 	/** When set, the title becomes double-click-to-rename and commits on blur/Enter. */
@@ -39,6 +43,14 @@ export function SidebarElementHeader({
 	const [draft, setDraft] = useState(renameValue ?? '')
 	const [saving, setSaving] = useState(false)
 	const inputRef = useRef<HTMLInputElement>(null)
+	const selectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+	const clearPendingSelect = () => {
+		if (selectTimerRef.current !== null) {
+			clearTimeout(selectTimerRef.current)
+			selectTimerRef.current = null
+		}
+	}
 
 	useEffect(() => {
 		if (!editing) {
@@ -52,6 +64,8 @@ export function SidebarElementHeader({
 			inputRef.current?.select()
 		}
 	}, [editing])
+
+	useEffect(() => () => clearPendingSelect(), [])
 
 	const commitRename = async () => {
 		if (!onRename) {
@@ -115,12 +129,19 @@ export function SidebarElementHeader({
 				onClick={(e) => {
 					e.preventDefault()
 					e.stopPropagation()
-					onSelect?.()
+					if (!onSelect) return
+					// Defer select so a double-click rename can cancel navigation.
+					clearPendingSelect()
+					selectTimerRef.current = setTimeout(() => {
+						selectTimerRef.current = null
+						onSelect()
+					}, SELECT_CLICK_DELAY_MS)
 				}}
 				onDoubleClick={(e) => {
 					if (!onRename) return
 					e.preventDefault()
 					e.stopPropagation()
+					clearPendingSelect()
 					setEditing(true)
 				}}
 			>
@@ -143,21 +164,23 @@ export function SidebarElementHeader({
 			<Stack className="ms-auto" direction="horizontal" gap={1}>
 				{deleteButton}
 
-				<HoverIconButton
-					className="sync-plus-wrapper"
-					defaultIcon={
-						<BsCopy
-							className="icon-md text-primary"
-							style={{ fontSize: '1em', opacity: '75%' }}
-						/>
-					}
-					hoverIcon={<BsCopy className="icon-md text-primary" style={{ fontSize: '1em' }} />}
-					onClick={(e) => {
-						e.preventDefault()
-						e.stopPropagation()
-						handleCopy()
-					}}
-				/>
+				{handleCopy ? (
+					<HoverIconButton
+						className="sync-plus-wrapper"
+						defaultIcon={
+							<BsCopy
+								className="icon-md text-primary"
+								style={{ fontSize: '1em', opacity: '75%' }}
+							/>
+						}
+						hoverIcon={<BsCopy className="icon-md text-primary" style={{ fontSize: '1em' }} />}
+						onClick={(e) => {
+							e.preventDefault()
+							e.stopPropagation()
+							handleCopy()
+						}}
+					/>
+				) : null}
 			</Stack>
 		</Stack>
 	)

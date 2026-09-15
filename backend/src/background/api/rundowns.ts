@@ -18,6 +18,8 @@ import { mutations as partMutations } from './parts'
 import { mutations as piecesMutations } from './pieces'
 import { mutations as segmentsMutations } from './segments'
 import { Server, Socket } from 'socket.io'
+import type { AuthenticatedSocket } from '../auth/socketAuth'
+import { forbidRundownMutation } from '../auth/roles'
 
 export async function mutateRundown(rundown: Rundown): Promise<MutatedRundown> {
 	return {
@@ -258,6 +260,13 @@ export const mutations = {
 
 export function registerRundownsHandlers(socket: Socket, io: Server) {
 	socket.on('rundowns', async (action, payload, callback) => {
+		if (action !== IpcOperationType.Read) {
+			const denied = forbidRundownMutation((socket as AuthenticatedSocket).data.user?.role)
+			if (denied) {
+				callback(denied)
+				return
+			}
+		}
 		switch (action) {
 			case IpcOperationType.Create:
 				{

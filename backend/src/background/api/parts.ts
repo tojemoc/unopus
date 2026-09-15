@@ -33,6 +33,7 @@ import { mutations as piecesMutations } from './pieces'
 import { Server, Socket } from 'socket.io'
 import { recordEntityEdit } from '../auth/authStore'
 import type { AuthenticatedSocket } from '../auth/socketAuth'
+import { forbidRundownMutation } from '../auth/roles'
 import type { SessionUser } from '../auth/types'
 import {
 	resolveEffectiveIluDurationMode,
@@ -705,6 +706,13 @@ export const mutations = {
 
 export function registerPartsHandlers(socket: Socket, io: Server) {
 	socket.on('parts', async (action, payload, callback) => {
+		if (action !== IpcOperationType.Read) {
+			const denied = forbidRundownMutation((socket as AuthenticatedSocket).data.user?.role)
+			if (denied) {
+				callback(denied)
+				return
+			}
+		}
 		switch (action) {
 			case IpcOperationType.Create:
 				{

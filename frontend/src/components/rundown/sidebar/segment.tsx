@@ -163,24 +163,26 @@ export function SidebarSegment({ segment }: { segment: Segment }) {
 							}}
 							duration={segmentDuration}
 							buttonClassName="segment-button copy-item sidebar-item-header"
-							handleCopy={handleCopySegment}
+							handleCopy={canEdit ? handleCopySegment : undefined}
 							deleteButton={
-								<DeleteSegmentButton
-									rundownId={segment.rundownId}
-									segmentId={segment.id}
-									segmentName={segment.name}
-									disabled={false}
-									style={{ zIndex: 4 }}
-									renderButton={({ onClick, disabled }: ButtonProps) => (
-										<HoverIconButton
-											onClick={onClick}
-											disabled={disabled}
-											className="sync-plus-wrapper ms-auto"
-											defaultIcon={<BsTrash className="icon-md" color="var(--bs-danger)" />}
-											hoverIcon={<BsFillTrashFill className="icon-md" color="var(--bs-danger)" />}
-										/>
-									)}
-								/>
+								canEdit ? (
+									<DeleteSegmentButton
+										rundownId={segment.rundownId}
+										segmentId={segment.id}
+										segmentName={segment.name}
+										disabled={false}
+										style={{ zIndex: 4 }}
+										renderButton={({ onClick, disabled }: ButtonProps) => (
+											<HoverIconButton
+												onClick={onClick}
+												disabled={disabled}
+												className="sync-plus-wrapper ms-auto"
+												defaultIcon={<BsTrash className="icon-md" color="var(--bs-danger)" />}
+												hoverIcon={<BsFillTrashFill className="icon-md" color="var(--bs-danger)" />}
+											/>
+										)}
+									/>
+								) : null
 							}
 						/>
 					</div>
@@ -196,7 +198,7 @@ export function SidebarSegment({ segment }: { segment: Segment }) {
 							id={segment.id}
 							reorder={handleReorderPart}
 							Component={PartRowComponent}
-							canDragItem={(part) => expandedPartId !== part.id}
+							canDragItem={(part) => canEdit && expandedPartId !== part.id}
 						/>
 					) : (
 						<div className="story-table-empty px-2 py-2 text-muted">

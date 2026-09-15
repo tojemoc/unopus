@@ -20,6 +20,7 @@ import { syncStoryDurationsForPart, broadcastStoryDurationSync } from '../storyD
 import { Server, Socket } from 'socket.io'
 import type { AuthenticatedSocket } from '../auth/socketAuth'
 import type { SessionUser } from '../auth/types'
+import { forbidRundownMutation } from '../auth/roles'
 import { mutations as typeManifestMutations, resolveManifestId } from './typeManifests'
 import { resolveSourceEnabled, trimSourceText } from '../sourcePayload'
 import { spliceReorder, resolveReorderTargetIndex } from '../util'
@@ -111,9 +112,16 @@ export const mutations = {
 				if (field.default === undefined) continue
 				payloadFromDefaults[field.id] = field.default
 			}
+			const callerPayload = payload.payload ?? {}
+			const definedCallerPayload: Record<string, string | number | boolean> = {}
+			for (const [key, value] of Object.entries(callerPayload)) {
+				if (value !== undefined) {
+					definedCallerPayload[key] = value as string | number | boolean
+				}
+			}
 			const mergedPayload = {
 				...payloadFromDefaults,
-				...(payload.payload ?? {})
+				...definedCallerPayload
 			}
 
 			const document: Partial<MutationPieceCreate> = {
@@ -519,6 +527,13 @@ export const mutations = {
 
 export function registerPiecesHandlers(socket: Socket, io: Server) {
 	socket.on('pieces', async (action, payload, callback) => {
+		if (action !== IpcOperationType.Read) {
+			const denied = forbidRundownMutation((socket as AuthenticatedSocket).data.user?.role)
+			if (denied) {
+				callback(denied)
+				return
+			}
+		}
 		switch (action) {
 			case IpcOperationType.Create:
 				{
