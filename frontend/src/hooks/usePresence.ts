@@ -6,6 +6,7 @@ import {
 	type PresenceEntityType,
 	type PresenceFocus
 } from '~/store/presence'
+import { canEditRundown } from '~/util/roles'
 
 export interface PresenceLockHolder {
 	socketId: string
@@ -149,14 +150,18 @@ export function usePresenceSync(): void {
 /**
  * Emit presence focus for the current component and clear on unmount.
  * Renews the lock while the editor is mounted; does not force-takeover.
+ * No-op for viewers (read-only expansion must not acquire or steal locks).
  */
 export function usePresenceFocus(
 	rundownId: string | undefined,
 	entityType: PresenceEntityType,
 	entityId: string | undefined
 ): void {
+	const userRole = useAppSelector((state) => state.auth.user?.role)
+	const canEdit = canEditRundown(userRole)
+
 	useEffect(() => {
-		if (!rundownId || !entityId) {
+		if (!canEdit || !rundownId || !entityId) {
 			return
 		}
 		const leaseId = createLeaseId()
@@ -175,7 +180,7 @@ export function usePresenceFocus(
 			cancelled = true
 			releasePresenceFocus(leaseId)
 		}
-	}, [rundownId, entityType, entityId])
+	}, [canEdit, rundownId, entityType, entityId])
 }
 
 /**

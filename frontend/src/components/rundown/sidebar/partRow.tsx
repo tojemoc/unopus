@@ -190,7 +190,16 @@ export function SidebarPartRow({ part }: { part: Part }) {
 		.filter(Boolean)
 		.join(' ')
 
+	const canEdit = canEditRundown(userRole)
+
 	const openStory = async (force: boolean) => {
+		// Viewers expand read-only without acquiring (or force-taking) an edit lock.
+		if (!canEdit) {
+			setTakeoverHolder(null)
+			setTakeoverIsSystem(false)
+			setExpandedPartId(livePart.id)
+			return
+		}
 		setBusy(true)
 		try {
 			const result = await requestPresenceFocus({
@@ -236,6 +245,11 @@ export function SidebarPartRow({ part }: { part: Part }) {
 		}
 		// On-air / lookahead stories stay readable so the prompter script is not hidden.
 		if (lockedBySystem) {
+			setExpandedPartId(livePart.id)
+			return
+		}
+		// Viewers: expand without lock / takeover UI.
+		if (!canEdit) {
 			setExpandedPartId(livePart.id)
 			return
 		}
