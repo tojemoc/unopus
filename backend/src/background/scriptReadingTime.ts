@@ -22,6 +22,7 @@ export const SCRIPT_DURATION_PIECE_TYPES = new Set([
 /**
  * When these graphics sit on a SYN (or other media) part, On air still follows CPS —
  * SPRÁVY SJV / ŠPORT smoke stories are `partType: syn` with an `l3d-sjv` / `l3d-sport` bar.
+ * Kept for marker-qualified detection when part type is not already in SCRIPT_DURATION_PART_TYPES.
  */
 export const SCRIPT_DURATION_MARKER_PIECE_TYPES = new Set(['l3d-sjv', 'l3d-sport'])
 
