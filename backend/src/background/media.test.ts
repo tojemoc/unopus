@@ -167,3 +167,16 @@ describe('pickDurationSecondsFromFfprobeJson', () => {
 		)
 	})
 })
+
+describe('isFfprobeAvailable', () => {
+	it('reports whether ffprobe is on PATH', async () => {
+		const { isFfprobeAvailable, resetFfprobeAvailabilityCacheForTests } = await import('./media.js')
+		resetFfprobeAvailabilityCacheForTests()
+		const available = await isFfprobeAvailable()
+		assert.equal(typeof available, 'boolean')
+		// CI / Docker / this VM ship ffmpeg; local slim checkouts may not.
+		if (available) {
+			assert.equal(await isFfprobeAvailable(), true)
+		}
+	})
+})

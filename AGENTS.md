@@ -39,8 +39,18 @@ yarn build       # TypeScript emit + Vite production build
 
 CI (`.github/workflows/node.yaml`): PRs run `typecheck` + `lint` only; `yarn build`
 runs on pushes to `main`. Docker/GitHub releases stay in `release.yaml` (main + `v*` tags).
+**`yarn test` is not run in CI.**
 
-No automated test suite exists in this repo.
+Backend/frontend unit tests exist (Node test runner via `yarn test`, including
+`backend/src/background/media.test.ts` for ffprobe duration heuristics). Run them
+locally when touching those areas.
+
+### ffprobe / clip duration (Docker)
+
+Media picker and `GET /api/media/duration` shell out to **`ffprobe`**. The production
+`Dockerfile` installs the Debian **`ffmpeg`** package so `ffprobe` is on PATH. Without it,
+probes fail silently (`durationSeconds: null`) and On air is never seeded from clip length.
+Startup logs `ffprobe: available` or a warning. Dev hosts usually already have ffmpeg via apt.
 
 ### Pre-commit hooks
 
