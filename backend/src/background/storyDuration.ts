@@ -140,15 +140,19 @@ function activePieces<T extends { skip?: boolean }>(pieces: T[]): T[] {
 	return pieces.filter((piece) => !piece.skip)
 }
 
-/** Script-derived duration for ILU-family stories (seconds). */
+/** Script-derived duration for ILU-family / SJV / ŠPORT stories (seconds). */
 export function resolveScriptDerivedPartDuration(
 	part: StoryDurationPart,
-	options?: StoryDurationOptions
+	options?: StoryDurationOptions,
+	pieces?: Array<Pick<StoryDurationPiece, 'pieceType' | 'skip'>>
 ): number | undefined {
 	if (part.skip) {
 		return undefined
 	}
-	if (!partUsesScriptDuration(part.partType)) {
+	const pieceTypes = (pieces ?? [])
+		.filter((piece) => !piece.skip)
+		.map((piece) => piece.pieceType)
+	if (!partUsesScriptDuration(part.partType, pieceTypes)) {
 		return undefined
 	}
 	return estimateScriptReadingSeconds(part.script, options?.scriptCps)
@@ -196,10 +200,11 @@ export function resolvePartOnAirDuration(
 		return undefined
 	}
 
-	const scriptDuration = resolveScriptDerivedPartDuration(part, options)
+	const scriptDuration = resolveScriptDerivedPartDuration(part, options, pieces)
 	const mode = resolveEffectiveIluDurationMode(part.durationMode, options?.defaultDurationMode)
+	const pieceTypes = activePieces(pieces).map((piece) => piece.pieceType)
 	const preferStored =
-		partUsesScriptDuration(part.partType) && mode === 'manual'
+		partUsesScriptDuration(part.partType, pieceTypes) && mode === 'manual'
 
 	if (preferStored) {
 		if (isPositiveDurationSeconds(part.duration)) {
@@ -274,7 +279,7 @@ export function planStoryDurationSync(
 		return { pieceUpdates }
 	}
 
-	const scriptDuration = resolveScriptDerivedPartDuration(part, options)
+	const scriptDuration = resolveScriptDerivedPartDuration(part, options, pieces)
 	if (isPositiveDurationSeconds(scriptDuration)) {
 		const mode = resolveEffectiveIluDurationMode(part.durationMode, options?.defaultDurationMode)
 

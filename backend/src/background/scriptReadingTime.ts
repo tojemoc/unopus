@@ -5,11 +5,22 @@
 
 export const DEFAULT_SCRIPT_CPS = 15
 
-/** Part types whose on-air length is driven by the part script (ILU family). */
-export const SCRIPT_DURATION_PART_TYPES = new Set(['ilu', 'doublebox'])
+/** Part types whose on-air length is driven by the part script (ILU family + SJV / ŠPORT). */
+export const SCRIPT_DURATION_PART_TYPES = new Set(['ilu', 'doublebox', 'sjv', 'sport'])
 
 /** Piece types that receive the story script reading time as on-air duration. */
-export const SCRIPT_DURATION_PIECE_TYPES = new Set(['headline', 'doublebox-ilu'])
+export const SCRIPT_DURATION_PIECE_TYPES = new Set([
+	'headline',
+	'doublebox-ilu',
+	'l3d-sjv',
+	'l3d-sport'
+])
+
+/**
+ * When these graphics sit on a SYN (or other media) part, On air still follows CPS —
+ * SPRÁVY SJV / ŠPORT smoke stories are `partType: syn` with an `l3d-sjv` / `l3d-sport` bar.
+ */
+export const SCRIPT_DURATION_MARKER_PIECE_TYPES = new Set(['l3d-sjv', 'l3d-sport'])
 
 /** Part types whose on-air length is driven by the linked video clip (ffprobe). */
 export const MEDIA_DURATION_PART_TYPES = new Set(['syn', 'vo', 'vt'])
@@ -65,10 +76,25 @@ export function formatReadingClock(seconds: number | undefined): string {
 }
 
 /**
- * Check if a part type uses script-derived duration (ILU, DoubleBox, etc.).
+ * Check if a part type (or its child graphics) uses script-derived duration.
+ * Pass piece types so SJV/ŠPORT SYN stories with `l3d-sjv` / `l3d-sport` count.
  */
-export function partUsesScriptDuration(partType: string | undefined | null): boolean {
-	return SCRIPT_DURATION_PART_TYPES.has((partType ?? '').trim().toLowerCase())
+export function partUsesScriptDuration(
+	partType: string | undefined | null,
+	pieceTypes?: Iterable<string> | null
+): boolean {
+	if (SCRIPT_DURATION_PART_TYPES.has((partType ?? '').trim().toLowerCase())) {
+		return true
+	}
+	if (!pieceTypes) {
+		return false
+	}
+	for (const pieceType of pieceTypes) {
+		if (SCRIPT_DURATION_MARKER_PIECE_TYPES.has((pieceType ?? '').trim().toLowerCase())) {
+			return true
+		}
+	}
+	return false
 }
 
 /**
@@ -79,9 +105,15 @@ export function pieceReceivesScriptDuration(pieceType: string | undefined | null
 }
 
 /**
- * Check if a part type uses media clip duration (SYN, VO, VT).
+ * Check if a part type uses media clip duration (SYN, VO, VT) — unless script markers apply.
  */
-export function partUsesMediaDuration(partType: string | undefined | null): boolean {
+export function partUsesMediaDuration(
+	partType: string | undefined | null,
+	pieceTypes?: Iterable<string> | null
+): boolean {
+	if (partUsesScriptDuration(partType, pieceTypes)) {
+		return false
+	}
 	return MEDIA_DURATION_PART_TYPES.has((partType ?? '').trim().toLowerCase())
 }
 

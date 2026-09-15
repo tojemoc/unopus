@@ -245,7 +245,10 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 					}
 				>
 					{([draftPartType, draftDurationMode, draftDuration]) => {
-						const scriptDriven = partUsesScriptDuration(draftPartType)
+						const scriptDriven = partUsesScriptDuration(
+							draftPartType,
+							durationChildPieces.map((piece) => piece.pieceType)
+						)
 						const draftEffectiveDurationMode = resolveEffectiveIluDurationMode(
 							draftDurationMode,
 							siteDurationMode

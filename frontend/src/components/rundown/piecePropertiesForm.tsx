@@ -187,7 +187,50 @@ function PayloadField({
 								</>
 							)}
 
-						{fieldInfo.type === ManifestFieldType.Number && (
+						{fieldInfo.type === ManifestFieldType.Number && fieldInfo.id === 'volume' && (
+							<>
+								<Form.Range
+									id={field.name}
+									name={field.name}
+									min={0}
+									max={1}
+									step={0.05}
+									value={
+										typeof field.state.value === 'number' && Number.isFinite(field.state.value)
+											? Math.min(1, Math.max(0, field.state.value))
+											: 0.5
+									}
+									onBlur={field.handleBlur}
+									onChange={(e) => field.handleChange(Number(e.target.value))}
+								/>
+								<div className="d-flex justify-content-between align-items-center gap-2">
+									<Form.Control
+										type="number"
+										min={0}
+										max={1}
+										step={0.05}
+										style={{ maxWidth: '6rem' }}
+										value={
+											field.state.value === undefined ||
+											field.state.value === null ||
+											field.state.value === ''
+												? ''
+												: Number(field.state.value)
+										}
+										onBlur={field.handleBlur}
+										onChange={(e) => {
+											const val = e.target.value
+											field.handleChange(val === '' ? undefined : Number(val))
+										}}
+									/>
+									<Form.Text className="text-muted mb-0">
+										Caspar mixer volume (0 = mute, 1 = full)
+									</Form.Text>
+								</div>
+							</>
+						)}
+
+						{fieldInfo.type === ManifestFieldType.Number && fieldInfo.id !== 'volume' && (
 							<Form.Control
 								id={field.name}
 								name={field.name}

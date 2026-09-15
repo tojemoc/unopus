@@ -29,10 +29,14 @@ describe('scriptReadingTime', () => {
 		assert.equal(formatReadingClock(0), '00:00')
 	})
 
-	it('identifies ILU family part types', () => {
+	it('identifies ILU family and SJV/ŠPORT part types', () => {
 		assert.equal(partUsesScriptDuration('ilu'), true)
 		assert.equal(partUsesScriptDuration('doublebox'), true)
+		assert.equal(partUsesScriptDuration('sjv'), true)
+		assert.equal(partUsesScriptDuration('sport'), true)
 		assert.equal(partUsesScriptDuration('syn'), false)
+		assert.equal(partUsesScriptDuration('syn', ['l3d-sjv']), true)
+		assert.equal(partUsesScriptDuration('syn', ['video']), false)
 	})
 
 	it('resolves effective CPS from user profile then site default', () => {

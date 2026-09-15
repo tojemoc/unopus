@@ -97,7 +97,10 @@ async function mutatePart(part: Part): Promise<MutatedPart> {
 
 	const autoNext =
 		!part.skip &&
-		partUsesScriptDuration(part.partType) &&
+		partUsesScriptDuration(
+			part.partType,
+			durationPieces.map((piece) => piece.pieceType)
+		) &&
 		durationMode === 'auto'
 			? true
 			: undefined
@@ -255,6 +258,12 @@ export const mutations = {
 
 						const pieceManifest = findTypeManifest(pieceManifestList, template.pieceType)
 						const resolvedPieceType = pieceManifest?.id ?? template.pieceType
+						const payloadFromDefaults: Record<string, string | number | boolean> = {}
+						for (const field of pieceManifest?.payload ?? []) {
+							if (field.default !== undefined) {
+								payloadFromDefaults[field.id] = field.default
+							}
+						}
 
 						const { result: createdPiece, error: pieceError } = await piecesMutations.create({
 							playlistId: part.playlistId,
@@ -263,7 +272,7 @@ export const mutations = {
 							partId: part.id,
 							name: template.name ?? pieceNameFromManifest(pieceManifest, 'New piece'),
 							pieceType: resolvedPieceType,
-							payload: template.payload ?? {},
+							payload: { ...payloadFromDefaults, ...(template.payload ?? {}) },
 							start: 0
 						})
 						if (pieceError || !createdPiece) {
