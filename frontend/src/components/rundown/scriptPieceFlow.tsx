@@ -34,6 +34,86 @@ export function snapScriptOffsetToWordBoundary(script: string, offset: number): 
 	return clamped - left <= right - clamped ? left : right
 }
 
+/**
+ * Map a caret position inside a `.script-flow__text` node to an index within its
+ * full text content (ignoring the caret marker element).
+ */
+export function offsetWithinScriptTextElement(
+	textEl: HTMLElement,
+	node: Node,
+	nodeOffset: number
+): number {
+	if (node === textEl) {
+		let total = 0
+		for (let i = 0; i < nodeOffset && i < textEl.childNodes.length; i++) {
+			const child = textEl.childNodes[i]
+			if (child.nodeType === Node.TEXT_NODE) {
+				total += child.textContent?.length ?? 0
+			}
+		}
+		return total
+	}
+
+	if (node instanceof Element && node.classList.contains('script-flow__caret')) {
+		let total = 0
+		for (const child of textEl.childNodes) {
+			if (child === node) return total
+			if (child.nodeType === Node.TEXT_NODE) {
+				total += child.textContent?.length ?? 0
+			}
+		}
+		return total
+	}
+
+	let total = 0
+	const walker = document.createTreeWalker(textEl, NodeFilter.SHOW_TEXT)
+	let current: Node | null
+	while ((current = walker.nextNode())) {
+		if (current === node) {
+			return total + Math.max(0, Math.min(current.textContent?.length ?? 0, nodeOffset))
+		}
+		total += current.textContent?.length ?? 0
+	}
+	return total
+}
+
+/** Character offset within a text slice from pointer coords; null if caret APIs fail. */
+export function localOffsetFromClientPoint(
+	textEl: HTMLElement,
+	clientX: number,
+	clientY: number,
+	sliceLength: number
+): number | null {
+	const doc = document as Document & {
+		caretRangeFromPoint?: (x: number, y: number) => Range | null
+		caretPositionFromPoint?: (
+			x: number,
+			y: number
+		) => { offsetNode: Node; offset: number } | null
+	}
+
+	let caret: { node: Node; offset: number } | null = null
+	if (typeof doc.caretRangeFromPoint === 'function') {
+		const range = doc.caretRangeFromPoint(clientX, clientY)
+		if (range) caret = { node: range.startContainer, offset: range.startOffset }
+	} else if (typeof doc.caretPositionFromPoint === 'function') {
+		const pos = doc.caretPositionFromPoint(clientX, clientY)
+		if (pos) caret = { node: pos.offsetNode, offset: pos.offset }
+	}
+	if (!caret) return null
+	if (!textEl.contains(caret.node) && caret.node !== textEl) return null
+	return Math.max(
+		0,
+		Math.min(sliceLength, offsetWithinScriptTextElement(textEl, caret.node, caret.offset))
+	)
+}
+
+function approxLocalOffsetFromRatio(el: HTMLElement, offsetX: number, sliceLength: number): number {
+	if (!sliceLength) return 0
+	const ratio = offsetX / Math.max(1, el.offsetWidth)
+	return Math.max(0, Math.min(sliceLength, Math.round(ratio * sliceLength)))
+}
+
 export function ScriptPieceFlow({
 	script,
 	pieces,
@@ -64,12 +144,23 @@ export function ScriptPieceFlow({
 	const [dragOverOffset, setDragOverOffset] = useState<number | null>(null)
 	const dragPieceIdRef = useRef<string | null>(null)
 
+	const clampScriptOffset = (rawOffset: number) =>
+		Math.max(0, Math.min(script.length, Math.floor(rawOffset)))
+
 	const handleDropAt = (rawOffset: number) => {
 		const pieceId = dragPieceIdRef.current
 		if (!pieceId || !onMovePiece) return
-		onMovePiece(pieceId, snapScriptOffsetToWordBoundary(script, rawOffset))
+		onMovePiece(pieceId, clampScriptOffset(rawOffset))
 		setDragOverOffset(null)
 		dragPieceIdRef.current = null
+	}
+
+	const offsetFromTextDragEvent = (e: DragEvent, from: number, sliceLength: number) => {
+		const el = e.currentTarget as HTMLElement
+		const local =
+			localOffsetFromClientPoint(el, e.clientX, e.clientY, sliceLength) ??
+			approxLocalOffsetFromRatio(el, e.nativeEvent.offsetX, sliceLength)
+		return from + local
 	}
 
 	const nodes: ReactNode[] = []
@@ -78,27 +169,35 @@ export function ScriptPieceFlow({
 	const pushTextSlice = (from: number, to: number) => {
 		if (to <= from) return
 		const slice = script.slice(from, to)
+		const showDrop =
+			dragOverOffset !== null && dragOverOffset >= from && dragOverOffset <= to
+		const caretLocal = showDrop && dragOverOffset !== null ? dragOverOffset - from : null
 		nodes.push(
 			<span
 				key={`t-${from}-${to}`}
-				className={`script-flow__text${dragOverOffset !== null && dragOverOffset >= from && dragOverOffset < to ? ' script-flow__text--drop' : ''}`}
+				className={`script-flow__text${showDrop ? ' script-flow__text--drop' : ''}`}
 				onDragOver={(e) => {
 					if (!draggable || !onMovePiece) return
 					e.preventDefault()
 					isolatePieceDragEvent(e)
-					const ratio = slice.length ? e.nativeEvent.offsetX / Math.max(1, (e.currentTarget as HTMLElement).offsetWidth) : 0
-					const approx = from + Math.round(ratio * slice.length)
-					setDragOverOffset(snapScriptOffsetToWordBoundary(script, approx))
+					setDragOverOffset(offsetFromTextDragEvent(e, from, slice.length))
 				}}
 				onDrop={(e) => {
 					if (!draggable || !onMovePiece) return
 					e.preventDefault()
 					isolatePieceDragEvent(e)
-					const ratio = slice.length ? e.nativeEvent.offsetX / Math.max(1, (e.currentTarget as HTMLElement).offsetWidth) : 0
-					handleDropAt(from + Math.round(ratio * slice.length))
+					handleDropAt(offsetFromTextDragEvent(e, from, slice.length))
 				}}
 			>
-				{slice}
+				{caretLocal === null ? (
+					slice
+				) : (
+					<>
+						{slice.slice(0, caretLocal)}
+						<span className="script-flow__caret" aria-hidden />
+						{slice.slice(caretLocal)}
+					</>
+				)}
 			</span>
 		)
 	}

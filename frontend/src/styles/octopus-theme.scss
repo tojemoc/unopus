@@ -692,6 +692,18 @@
 	background: color-mix(in srgb, var(--bs-primary) 12%, transparent);
 }
 
+/** Precise insert caret while dragging a cue over script text. */
+.script-flow__caret {
+	display: inline-block;
+	width: 2px;
+	height: 1.05em;
+	margin: 0 -1px;
+	vertical-align: text-bottom;
+	background: var(--bs-primary);
+	border-radius: 1px;
+	pointer-events: none;
+}
+
 .script-flow__end-drop {
 	flex: 1 0 1.5rem;
 	min-height: 1.25rem;
