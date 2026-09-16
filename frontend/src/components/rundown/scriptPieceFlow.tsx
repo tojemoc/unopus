@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from 'react'
+import { useRef, useState, type DragEvent, type ReactNode } from 'react'
 import type { Piece, RundownReadiness, TypeManifest } from '~backend/background/interfaces'
 import { TypeManifestEntity } from '~backend/background/interfaces'
 import { findTypeManifest } from '~/util/typeManifest'
@@ -14,6 +14,11 @@ import { ReadinessBadge } from './readinessBadge'
 import { canSeeTechPieces } from '~/util/roles'
 
 const L3D_DRAG_TYPE = 'application/x-sofie-piece-id'
+
+/** Custom piece drags must not bubble — react-dnd HTML5Backend cancels unknown drag types. */
+function isolatePieceDragEvent(e: DragEvent) {
+	e.stopPropagation()
+}
 
 /** Snap a raw character offset to the nearest word boundary (prefer earlier). */
 export function snapScriptOffsetToWordBoundary(script: string, offset: number): number {
@@ -80,6 +85,7 @@ export function ScriptPieceFlow({
 				onDragOver={(e) => {
 					if (!draggable || !onMovePiece) return
 					e.preventDefault()
+					isolatePieceDragEvent(e)
 					const ratio = slice.length ? e.nativeEvent.offsetX / Math.max(1, (e.currentTarget as HTMLElement).offsetWidth) : 0
 					const approx = from + Math.round(ratio * slice.length)
 					setDragOverOffset(snapScriptOffsetToWordBoundary(script, approx))
@@ -87,6 +93,7 @@ export function ScriptPieceFlow({
 				onDrop={(e) => {
 					if (!draggable || !onMovePiece) return
 					e.preventDefault()
+					isolatePieceDragEvent(e)
 					const ratio = slice.length ? e.nativeEvent.offsetX / Math.max(1, (e.currentTarget as HTMLElement).offsetWidth) : 0
 					handleDropAt(from + Math.round(ratio * slice.length))
 				}}
@@ -110,39 +117,51 @@ export function ScriptPieceFlow({
 		const cue = formatPieceCueOffset(script, piece, cps)
 		const pieceReady = getPieceReadinessState(piece.id, readiness)
 		const selected = expandedPieceId === piece.id
+		const chipDraggable = draggable && !selected && Boolean(onMovePiece)
 		const displayName = resolvePieceName(manifest, piece.payload, piece.name)
 
 		nodes.push(
-			<button
+			<span
 				key={piece.id}
-				type="button"
-				draggable={draggable && Boolean(onMovePiece)}
+				role="button"
+				tabIndex={0}
+				draggable={chipDraggable}
 				className={`script-flow__chip${selected ? ' script-flow__chip--open' : ''}${piece.skip ? ' script-flow__chip--skip' : ''}${dragOverOffset === offset ? ' script-flow__chip--drop-before' : ''}`}
 				style={{ borderColor: colour, backgroundColor: colorMix(colour, 0.22) }}
-				title={`${displayName} · ${cue}${draggable ? ' · drag to reposition' : ''}`}
+				title={`${displayName} · ${cue}${chipDraggable ? ' · drag to reposition' : ''}`}
 				onDragStart={(e) => {
-					if (!draggable || !onMovePiece) return
+					if (!chipDraggable) return
 					e.dataTransfer.setData(L3D_DRAG_TYPE, piece.id)
 					e.dataTransfer.effectAllowed = 'move'
 					dragPieceIdRef.current = piece.id
+					isolatePieceDragEvent(e)
 				}}
-				onDragEnd={() => {
+				onDragEnd={(e) => {
+					isolatePieceDragEvent(e)
 					setDragOverOffset(null)
 					dragPieceIdRef.current = null
 				}}
 				onDragOver={(e) => {
 					if (!draggable || !onMovePiece) return
 					e.preventDefault()
+					isolatePieceDragEvent(e)
 					setDragOverOffset(offset)
 				}}
 				onDrop={(e) => {
 					if (!draggable || !onMovePiece) return
 					e.preventDefault()
+					isolatePieceDragEvent(e)
 					handleDropAt(offset)
 				}}
 				onClick={(e) => {
 					e.stopPropagation()
 					onSelectPiece(selected ? null : piece.id)
+				}}
+				onKeyDown={(e) => {
+					if (e.key === 'Enter' || e.key === ' ') {
+						e.preventDefault()
+						onSelectPiece(selected ? null : piece.id)
+					}
 				}}
 			>
 				<span className="script-flow__chip-type" style={{ backgroundColor: colour }}>
@@ -153,7 +172,7 @@ export function ScriptPieceFlow({
 				{pieceReady && pieceReady.state !== 'na' ? (
 					<ReadinessBadge state={pieceReady.state} tooltip={pieceReady.tooltip} compact />
 				) : null}
-			</button>
+			</span>
 		)
 	})
 
@@ -169,10 +188,12 @@ export function ScriptPieceFlow({
 				className="script-flow__end-drop"
 				onDragOver={(e) => {
 					e.preventDefault()
+					isolatePieceDragEvent(e)
 					setDragOverOffset(script.length)
 				}}
 				onDrop={(e) => {
 					e.preventDefault()
+					isolatePieceDragEvent(e)
 					handleDropAt(script.length)
 				}}
 			/>
