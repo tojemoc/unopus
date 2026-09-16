@@ -17,11 +17,11 @@ DEST="${1:-${GITHUB_WORKSPACE:-.}/.sofie-assets}"
 mkdir -p "$DEST"
 DEST="$(cd "$DEST" && pwd)"
 
-# Immutable pin: tojemoc/sofie@09bb91d9408b426910424a5754273a01d63b5c51
-# (volume 0.5 SJV/SPORT + SRC Zdroj + ILU name-from-file + wipe cutPoint).
+# Immutable pin: tojemoc/sofie@b273f842460b408c398ae5e3886ee5d1fb67e67c
+# (volume/SRC/ILU FRs + wipe cutPoint 380ms (frame 19)).
 # Bump SHA + checksums together.
 # Reject mutable overrides (main, tags, short SHAs). Only a full 40-char commit SHA is allowed.
-PINNED_SOFIE_ASSETS_REF="09bb91d9408b426910424a5754273a01d63b5c51"
+PINNED_SOFIE_ASSETS_REF="b273f842460b408c398ae5e3886ee5d1fb67e67c"
 SOFIE_ASSETS_REF="${SOFIE_ASSETS_REF:-$PINNED_SOFIE_ASSETS_REF}"
 if [[ ! "$SOFIE_ASSETS_REF" =~ ^[0-9a-f]{40}$ ]]; then
 	echo "SOFIE_ASSETS_REF must be a full 40-char lowercase commit SHA (got: ${SOFIE_ASSETS_REF})" >&2
@@ -32,7 +32,7 @@ BASE="https://raw.githubusercontent.com/tojemoc/sofie/${SOFIE_ASSETS_REF}/assets
 # filename → expected sha256 (of the pinned commit's assets/)
 declare -A EXPECTED_SHA256=(
 	[spravy-v3-smoke-rundown.json]=2c12c030740c143fcb45bd9887de0c9671b973bedbf6e7dfad90ff970899c0a7
-	[sofie-rundown-editor-piece-types.json]=23c9e4aac5ac9e45d724a23651398b8f5b473e9746fd1fb6c94d67cf82d652af
+	[sofie-rundown-editor-piece-types.json]=7fc7ab2eb56ab55781540d08cf20750c168d5bae6a375707f1140d01531bcad3
 	[sofie-rundown-editor-part-types.json]=82ce7da799c7a2011fe1c53b3a7a24e366ad2ff79c8e7efba9e6ecc6c9fadfc9
 	[sofie-rundown-editor-segment-types.json]=56f68da340a1029f4c31a1f69b6594e5d440f1e7223528cd2ce9dbaa8c1aaf7b
 )

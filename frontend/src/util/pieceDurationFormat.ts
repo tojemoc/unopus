@@ -1,5 +1,5 @@
-/** Cut point within the wipe stinger when screen is fully covered (frame 38 @ 50fps). */
-export const WIPE_CUT_POINT_SECONDS = 760 / 1000
+/** Cut point within the wipe stinger when screen is fully covered (frame 19 @ 50fps). */
+export const WIPE_CUT_POINT_SECONDS = 380 / 1000
 
 /** Default cover-frame cut point in ms (matches blueprints `WIPE_CUT_POINT_MS`). */
 export const DEFAULT_WIPE_CUT_POINT_MS = Math.round(WIPE_CUT_POINT_SECONDS * 1000)
