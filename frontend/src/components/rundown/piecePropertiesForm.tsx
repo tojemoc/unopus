@@ -1,6 +1,11 @@
 import { useForm } from '@tanstack/react-form'
 import { Button, ButtonGroup, Col, Form, Modal, Row } from 'react-bootstrap'
-import type { Piece, PayloadManifest, TypeManifest } from '~backend/background/interfaces'
+import type {
+	Piece,
+	PayloadManifest,
+	PayloadValue,
+	TypeManifest
+} from '~backend/background/interfaces'
 import { ManifestFieldType, TypeManifestEntity } from '~backend/background/interfaces'
 import { FieldInfo } from '../form'
 import { useRef, useState } from 'react'
@@ -17,11 +22,12 @@ import { ClockDurationInput } from './clockDurationInput'
 import { resolveSourceEnabled } from '~/util/sourcePayload'
 import {
 	DEFAULT_WIPE_DURATION_SECONDS,
-	WIPE_CUT_POINT_SECONDS,
+	DEFAULT_WIPE_CUT_POINT_MS,
 	formatSecondsClock,
 	formatSecondsPrecise,
 	getPieceSourceDurationSeconds,
-	pieceInheritsPartDuration
+	pieceInheritsPartDuration,
+	resolveWipeCutPointMs
 } from '~/util/pieceDuration'
 import {
 	isBypassClipField,
@@ -55,6 +61,10 @@ function categorizePayloadFields(manifest: TypeManifest | undefined) {
 
 	for (const field of manifest?.payload ?? []) {
 		if (field.id === 'sourceDuration') {
+			continue
+		}
+		// Dedicated wipe timing control binds `payload.cutPoint` next to On air.
+		if (field.id === 'cutPoint') {
 			continue
 		}
 		if (field.id === 'source' && manifest?.payload?.some((f) => f.id === 'sourceEnabled')) {
@@ -400,13 +410,38 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 	const durationFromMediaRef = useRef<'none' | 'set' | 'clear'>('none')
 
 	const { clip, headline, content, bypass, source, other } = categorizePayloadFields(manifest)
+	/** SRC piece: `source` is the primary editorial field — show it before timing/other. */
+	const sourceAtTop = piece.pieceType === 'source'
+
+	const payloadFieldDefaults: Record<string, string | number | boolean> = {}
+	for (const field of manifest?.payload ?? []) {
+		if (field.default !== undefined) {
+			payloadFieldDefaults[field.id] = field.default
+		}
+	}
 
 	const form = useForm({
-		defaultValues: piece,
-		onSubmit: async (values) => {
-			const mergedPayload = {
+		defaultValues: {
+			...piece,
+			payload: {
+				...payloadFieldDefaults,
 				...(piece.payload ?? {}),
-				...(values.value.payload ?? {})
+				...(piece.pieceType === 'wipe'
+					? {
+							cutPoint: resolveWipeCutPointMs({
+								payload: { ...payloadFieldDefaults, ...(piece.payload ?? {}) }
+							})
+						}
+					: {})
+			}
+		},
+		onSubmit: async (values) => {
+			const mergedPayload: Record<string, PayloadValue> = {
+				...(piece.payload ?? {}),
+				...((values.value.payload ?? {}) as Record<string, PayloadValue>)
+			}
+			if (piece.pieceType === 'wipe') {
+				mergedPayload.cutPoint = resolveWipeCutPointMs({ payload: mergedPayload })
 			}
 			const maxLengthViolation = findPayloadMaxLengthViolation(manifest?.payload, mergedPayload)
 			if (maxLengthViolation) {
@@ -504,6 +539,22 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 						)
 					}}
 				/>
+
+				{sourceAtTop
+					? source.map((fieldInfo) =>
+							fieldInfo.id === 'sourceEnabled' ? (
+								<SourceToggleField key={fieldInfo.id} form={form} fieldInfo={fieldInfo} />
+							) : (
+								<PayloadField
+									key={fieldInfo.id}
+									form={form}
+									fieldInfo={fieldInfo}
+									piece={piece}
+									durationFromMediaRef={durationFromMediaRef}
+								/>
+							)
+						)
+					: null}
 
 				{clip.map((fieldInfo) => (
 					<PayloadField
@@ -619,8 +670,7 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 											/>
 											{isWipeDefault ? (
 												<Form.Text muted className="small">
-													Default {wipePlaceholder} · cut at{' '}
-													{formatSecondsPrecise(WIPE_CUT_POINT_SECONDS)}
+													Default {wipePlaceholder} (full stinger overlay)
 												</Form.Text>
 											) : null}
 											{holdUntilTake ? (
@@ -637,8 +687,58 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 					</Col>
 				</Row>
 
+				{piece.pieceType === 'wipe' ? (
+					<form.Field
+						name="payload.cutPoint"
+						children={(field) => {
+							const cutMs = resolveWipeCutPointMs({
+								payload: { cutPoint: field.state.value as PayloadValue }
+							})
+							const cutSeconds = cutMs / 1000
+							return (
+								<Form.Group className="mb-3">
+									<Form.Label htmlFor={field.name} className="small mb-1">
+										Cut point (ms)
+									</Form.Label>
+									<Form.Control
+										size="sm"
+										style={{ maxWidth: '8rem' }}
+										id={field.name}
+										name={field.name}
+										type="number"
+										min={0}
+										step={1}
+										value={cutMs}
+										onBlur={field.handleBlur}
+										onChange={(e) => {
+											const val = e.target.value
+											if (val === '') {
+												field.handleChange(DEFAULT_WIPE_CUT_POINT_MS)
+												return
+											}
+											const parsed = Number(val)
+											if (!Number.isFinite(parsed) || parsed < 0) {
+												return
+											}
+											field.handleChange(Math.floor(parsed))
+										}}
+									/>
+									<Form.Text muted className="small">
+										Content switches under cover at {formatSecondsPrecise(cutSeconds)}{' '}
+										(default {DEFAULT_WIPE_CUT_POINT_MS} ms). Blueprints use this for the
+										route hard-cut and keepalive — not the On air overlay length.
+									</Form.Text>
+									<FieldInfo field={field} />
+								</Form.Group>
+							)
+						}}
+					/>
+				) : null}
+
 				<form.Subscribe
-					selector={(state) => state.values.payload?.sourceDuration}
+					selector={(state) =>
+						(state.values.payload as Record<string, PayloadValue> | undefined)?.sourceDuration
+					}
 					children={(sourceDurationMs) => {
 						const sourceDurationSeconds = getPieceSourceDurationSeconds({
 							payload: { sourceDuration: sourceDurationMs }
@@ -711,25 +811,27 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 									</Col>
 								</Row>
 
-								{(source.length > 0 || bypass.length > 0) && (
+								{((!sourceAtTop && source.length > 0) || bypass.length > 0) && (
 									<div className="piece-properties-form__source-bypass mb-2">
-										{source.map((fieldInfo) =>
-											fieldInfo.id === 'sourceEnabled' ? (
-												<SourceToggleField
-													key={fieldInfo.id}
-													form={form}
-													fieldInfo={fieldInfo}
-												/>
-											) : (
-												<PayloadField
-													key={fieldInfo.id}
-													form={form}
-													fieldInfo={fieldInfo}
-													piece={piece}
-													durationFromMediaRef={durationFromMediaRef}
-												/>
-											)
-										)}
+										{!sourceAtTop
+											? source.map((fieldInfo) =>
+													fieldInfo.id === 'sourceEnabled' ? (
+														<SourceToggleField
+															key={fieldInfo.id}
+															form={form}
+															fieldInfo={fieldInfo}
+														/>
+													) : (
+														<PayloadField
+															key={fieldInfo.id}
+															form={form}
+															fieldInfo={fieldInfo}
+															piece={piece}
+															durationFromMediaRef={durationFromMediaRef}
+														/>
+													)
+												)
+											: null}
 										{bypass.map((fieldInfo) => (
 											<PayloadField
 												key={fieldInfo.id}

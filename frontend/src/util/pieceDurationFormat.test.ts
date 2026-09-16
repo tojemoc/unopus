@@ -2,21 +2,35 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
 	WIPE_CUT_POINT_SECONDS,
+	DEFAULT_WIPE_CUT_POINT_MS,
 	findNearDuplicateMediaNames,
 	formatSecondsClock,
 	formatSecondsPrecise,
-	parseDurationClockInput
+	parseDurationClockInput,
+	resolveWipeCutPointMs,
+	resolveWipeCutPointSeconds
 } from './pieceDurationFormat.js'
 
 describe('formatSecondsPrecise', () => {
-	it('preserves wipe cut point hundredths (760ms → 0.76s, not 0.8s)', () => {
-		assert.equal(formatSecondsPrecise(WIPE_CUT_POINT_SECONDS), '0.76s')
+	it('preserves wipe cut point hundredths (380ms → 0.38s, not 0.4s)', () => {
+		assert.equal(formatSecondsPrecise(WIPE_CUT_POINT_SECONDS), '0.38s')
+		assert.equal(formatSecondsPrecise(380 / 1000), '0.38s')
 		assert.equal(formatSecondsPrecise(760 / 1000), '0.76s')
 	})
 
 	it('trims trailing zeros for whole or single-decimal values', () => {
 		assert.equal(formatSecondsPrecise(2.5), '2.5s')
 		assert.equal(formatSecondsPrecise(3), '3s')
+	})
+})
+
+describe('resolveWipeCutPointMs', () => {
+	it('defaults to 380ms and reads editorial payload cutPoint', () => {
+		assert.equal(DEFAULT_WIPE_CUT_POINT_MS, 380)
+		assert.equal(resolveWipeCutPointMs({}), DEFAULT_WIPE_CUT_POINT_MS)
+		assert.equal(resolveWipeCutPointMs({ payload: { cutPoint: 1100 } }), 1100)
+		assert.equal(resolveWipeCutPointMs({ payload: { cutPoint: '900' } }), 900)
+		assert.equal(resolveWipeCutPointSeconds({ payload: { cutPoint: 1100 } }), 1.1)
 	})
 })
 

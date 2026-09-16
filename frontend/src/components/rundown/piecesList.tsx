@@ -22,7 +22,7 @@ import {
 	formatSourceDurationSeconds,
 	getPieceSourceDurationSeconds,
 	resolvePartOnAirDuration,
-	WIPE_CUT_POINT_SECONDS,
+	resolveWipeCutPointSeconds,
 	formatSecondsPrecise
 } from '~/util/pieceDuration'
 import { resolveEffectiveScriptCps } from '~/util/scriptReadingTime'
@@ -309,8 +309,11 @@ function PieceRow({
 			<td className="piece-duration" title="On-air duration">
 				{formatPieceOnAirDuration(piece, effectivePartDuration)}
 				{piece.pieceType === 'wipe' ? (
-					<span className="wipe-cut-point" title={`Cut point at ${formatSecondsPrecise(WIPE_CUT_POINT_SECONDS)} — content switches when screen is fully covered. Other audio muted during full wipe.`}>
-						✂ {formatSecondsPrecise(WIPE_CUT_POINT_SECONDS)}
+					<span
+						className="wipe-cut-point"
+						title={`Cut point at ${formatSecondsPrecise(resolveWipeCutPointSeconds(piece))} — content switches when screen is fully covered. Other audio muted during full wipe.`}
+					>
+						✂ {formatSecondsPrecise(resolveWipeCutPointSeconds(piece))}
 					</span>
 				) : null}
 			</td>

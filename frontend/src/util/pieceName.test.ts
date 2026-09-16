@@ -3,7 +3,8 @@ import { describe, it } from 'node:test'
 import {
 	isClipPreviewPathField,
 	isPrimaryClipField,
-	resolveClipPreviewPath
+	resolveClipPreviewPath,
+	resolvePieceName
 } from './pieceName.js'
 
 const volumeField = {
@@ -16,7 +17,8 @@ const iluFileField = {
 	id: 'iluFile',
 	label: 'ILU clip',
 	type: 'mediaPick' as const,
-	subdir: 'clips'
+	subdir: 'clips',
+	includeInName: true
 }
 
 describe('isPrimaryClipField vs isClipPreviewPathField', () => {
@@ -46,5 +48,66 @@ describe('resolveClipPreviewPath', () => {
 			}),
 			'clips/HEADLINE1.mov'
 		)
+	})
+})
+
+describe('resolvePieceName — ILU from filename', () => {
+	const iluManifest = {
+		id: 'doublebox-ilu',
+		entityType: 'piece',
+		name: 'ILU (DoubleBox)',
+		shortName: 'ILU',
+		includeTypeInName: false,
+		payload: [
+			{ ...iluFileField },
+			{ id: 'text', label: 'Label', type: 'string' as const },
+			{ ...volumeField, default: 0.5 }
+		]
+	}
+
+	it('uses the media basename as the whole piece name', () => {
+		assert.equal(
+			resolvePieceName(iluManifest as never, {
+				iluFile: 'clips/ILU_TARABA.mp4',
+				text: 'ignored label',
+				volume: 0.5
+			}),
+			'ILU_TARABA.mp4'
+		)
+	})
+
+	it('falls back to the type name when no clip is selected', () => {
+		assert.equal(resolvePieceName(iluManifest as never, { text: 'label only' }), 'ILU (DoubleBox)')
+	})
+})
+
+describe('resolvePieceName — SRC default prefix', () => {
+	const srcManifest = {
+		id: 'source',
+		entityType: 'piece',
+		name: 'Source pill',
+		shortName: 'SRC',
+		includeTypeInName: true,
+		payload: [
+			{
+				id: 'source',
+				label: 'Source',
+				type: 'string' as const,
+				includeInName: true,
+				default: 'Zdroj: '
+			}
+		]
+	}
+
+	it('includes the Zdroj prefix in the derived name', () => {
+		assert.equal(
+			resolvePieceName(srcManifest as never, { source: 'Zdroj: TASR' }),
+			'SRC: Zdroj: TASR'
+		)
+	})
+
+	it('falls back to the type short name when source text is empty or missing', () => {
+		assert.equal(resolvePieceName(srcManifest as never, { source: '' }), 'SRC')
+		assert.equal(resolvePieceName(srcManifest as never, {}), 'SRC')
 	})
 })
