@@ -105,4 +105,9 @@ describe('resolvePieceName — SRC default prefix', () => {
 			'SRC: Zdroj: TASR'
 		)
 	})
+
+	it('falls back to the type short name when source text is empty or missing', () => {
+		assert.equal(resolvePieceName(srcManifest as never, { source: '' }), 'SRC')
+		assert.equal(resolvePieceName(srcManifest as never, {}), 'SRC')
+	})
 })

@@ -425,8 +425,14 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 			...piece,
 			payload: {
 				...payloadFieldDefaults,
-				...(piece.pieceType === 'wipe' ? { cutPoint: DEFAULT_WIPE_CUT_POINT_MS } : {}),
-				...(piece.payload ?? {})
+				...(piece.payload ?? {}),
+				...(piece.pieceType === 'wipe'
+					? {
+							cutPoint: resolveWipeCutPointMs({
+								payload: { ...payloadFieldDefaults, ...(piece.payload ?? {}) }
+							})
+						}
+					: {})
 			}
 		},
 		onSubmit: async (values) => {
@@ -435,12 +441,7 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 				...((values.value.payload ?? {}) as Record<string, PayloadValue>)
 			}
 			if (piece.pieceType === 'wipe') {
-				const cut = mergedPayload.cutPoint
-				if (typeof cut !== 'number' || !Number.isFinite(cut) || cut < 0) {
-					mergedPayload.cutPoint = DEFAULT_WIPE_CUT_POINT_MS
-				} else {
-					mergedPayload.cutPoint = Math.floor(cut)
-				}
+				mergedPayload.cutPoint = resolveWipeCutPointMs({ payload: mergedPayload })
 			}
 			const maxLengthViolation = findPayloadMaxLengthViolation(manifest?.payload, mergedPayload)
 			if (maxLengthViolation) {
@@ -690,10 +691,9 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 					<form.Field
 						name="payload.cutPoint"
 						children={(field) => {
-							const cutMs =
-								typeof field.state.value === 'number' && Number.isFinite(field.state.value)
-									? Math.floor(field.state.value)
-									: resolveWipeCutPointMs(piece)
+							const cutMs = resolveWipeCutPointMs({
+								payload: { cutPoint: field.state.value as PayloadValue }
+							})
 							const cutSeconds = cutMs / 1000
 							return (
 								<Form.Group className="mb-3">
@@ -708,12 +708,7 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 										type="number"
 										min={0}
 										step={1}
-										value={
-											typeof field.state.value === 'number' &&
-											Number.isFinite(field.state.value)
-												? Math.floor(field.state.value)
-												: DEFAULT_WIPE_CUT_POINT_MS
-										}
+										value={cutMs}
 										onBlur={field.handleBlur}
 										onChange={(e) => {
 											const val = e.target.value
