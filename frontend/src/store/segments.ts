@@ -161,7 +161,13 @@ const segmentsSlice = createSlice({
 				state.error = action.error.message ?? 'Unknown Error'
 			})
 			.addCase(addNewSegment.fulfilled, (state, action) => {
-				state.segments.push(action.payload)
+				// Upsert: backend may already have pushed this segment via `segments:update`.
+				const index = state.segments.findIndex((segment) => segment.id === action.payload.id)
+				if (index !== -1) {
+					state.segments[index] = { ...state.segments[index], ...action.payload }
+				} else {
+					state.segments.push(action.payload)
+				}
 			})
 			.addCase(updateSegment.fulfilled, (state, action) => {
 				const index = state.segments.findIndex((segment) => segment.id === action.payload.id)

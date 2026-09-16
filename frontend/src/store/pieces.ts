@@ -138,7 +138,13 @@ const piecesSlice = createSlice({
 				state.error = action.error.message ?? 'Unknown Error'
 			})
 			.addCase(addNewPiece.fulfilled, (state, action) => {
-				state.pieces.push(action.payload)
+				// Upsert: backend may already have pushed this piece via `pieces:update`.
+				const index = state.pieces.findIndex((piece) => piece.id === action.payload.id)
+				if (index !== -1) {
+					state.pieces[index] = { ...state.pieces[index], ...action.payload }
+				} else {
+					state.pieces.push(action.payload)
+				}
 			})
 			.addCase(updatePiece.fulfilled, (state, action) => {
 				const index = state.pieces.findIndex((piece) => piece.id === action.payload.id)

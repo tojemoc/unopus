@@ -156,7 +156,14 @@ const partsSlice = createSlice({
 				state.error = action.error.message ?? 'Unknown Error'
 			})
 			.addCase(addNewPart.fulfilled, (state, action) => {
-				state.parts.push(action.payload)
+				// Upsert: create also broadcasts `parts:update` (story-duration sync),
+				// so pushPart may already have inserted this id before the thunk settles.
+				const index = state.parts.findIndex((part) => part.id === action.payload.id)
+				if (index !== -1) {
+					state.parts[index] = { ...state.parts[index], ...action.payload }
+				} else {
+					state.parts.push(action.payload)
+				}
 			})
 			.addCase(updatePart.fulfilled, (state, action) => {
 				const index = state.parts.findIndex((part) => part.id === action.payload.id)
