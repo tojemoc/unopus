@@ -169,8 +169,13 @@ export function ScriptPieceFlow({
 	const pushTextSlice = (from: number, to: number) => {
 		if (to <= from) return
 		const slice = script.slice(from, to)
+		// Half-open [from, to): a shared boundary belongs to the following slice only.
+		// Exception: caret at script.length still lights the final slice (and end-drop).
+		const atFinalEndpoint = to === script.length && dragOverOffset === script.length
 		const showDrop =
-			dragOverOffset !== null && dragOverOffset >= from && dragOverOffset <= to
+			dragOverOffset !== null &&
+			dragOverOffset >= from &&
+			(dragOverOffset < to || atFinalEndpoint)
 		const caretLocal = showDrop && dragOverOffset !== null ? dragOverOffset - from : null
 		nodes.push(
 			<span
