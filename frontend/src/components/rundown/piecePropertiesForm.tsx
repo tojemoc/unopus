@@ -405,11 +405,21 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 	const durationFromMediaRef = useRef<'none' | 'set' | 'clear'>('none')
 
 	const { clip, headline, content, bypass, source, other } = categorizePayloadFields(manifest)
+	/** SRC piece: `source` is the primary editorial field — show it before timing/other. */
+	const sourceAtTop = piece.pieceType === 'source'
+
+	const payloadFieldDefaults: Record<string, string | number | boolean> = {}
+	for (const field of manifest?.payload ?? []) {
+		if (field.default !== undefined) {
+			payloadFieldDefaults[field.id] = field.default
+		}
+	}
 
 	const form = useForm({
 		defaultValues: {
 			...piece,
 			payload: {
+				...payloadFieldDefaults,
 				...(piece.pieceType === 'wipe' ? { cutPoint: DEFAULT_WIPE_CUT_POINT_MS } : {}),
 				...(piece.payload ?? {})
 			}
@@ -523,6 +533,22 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 						)
 					}}
 				/>
+
+				{sourceAtTop
+					? source.map((fieldInfo) =>
+							fieldInfo.id === 'sourceEnabled' ? (
+								<SourceToggleField key={fieldInfo.id} form={form} fieldInfo={fieldInfo} />
+							) : (
+								<PayloadField
+									key={fieldInfo.id}
+									form={form}
+									fieldInfo={fieldInfo}
+									piece={piece}
+									durationFromMediaRef={durationFromMediaRef}
+								/>
+							)
+						)
+					: null}
 
 				{clip.map((fieldInfo) => (
 					<PayloadField
@@ -784,25 +810,27 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 									</Col>
 								</Row>
 
-								{(source.length > 0 || bypass.length > 0) && (
+								{((!sourceAtTop && source.length > 0) || bypass.length > 0) && (
 									<div className="piece-properties-form__source-bypass mb-2">
-										{source.map((fieldInfo) =>
-											fieldInfo.id === 'sourceEnabled' ? (
-												<SourceToggleField
-													key={fieldInfo.id}
-													form={form}
-													fieldInfo={fieldInfo}
-												/>
-											) : (
-												<PayloadField
-													key={fieldInfo.id}
-													form={form}
-													fieldInfo={fieldInfo}
-													piece={piece}
-													durationFromMediaRef={durationFromMediaRef}
-												/>
-											)
-										)}
+										{!sourceAtTop
+											? source.map((fieldInfo) =>
+													fieldInfo.id === 'sourceEnabled' ? (
+														<SourceToggleField
+															key={fieldInfo.id}
+															form={form}
+															fieldInfo={fieldInfo}
+														/>
+													) : (
+														<PayloadField
+															key={fieldInfo.id}
+															form={form}
+															fieldInfo={fieldInfo}
+															piece={piece}
+															durationFromMediaRef={durationFromMediaRef}
+														/>
+													)
+												)
+											: null}
 										{bypass.map((fieldInfo) => (
 											<PayloadField
 												key={fieldInfo.id}
