@@ -2,7 +2,8 @@
  * Display helpers for piece on-air vs source (ffprobe) duration.
  *
  * Blueprints `DEFAULT_WIPE_DURATION_MS` = 2500 — full stinger overlay on PGM.
- * The cut point (content switch under the wipe) is at 760ms / 38 frames @ 50fps.
+ * The cut point (content switch under the wipe) defaults to 760ms / 38 frames @ 50fps
+ * and is editable per wipe via payload `cutPoint` (milliseconds).
  * During the full wipe window, other audio sources are force-muted so the wipe SFX
  * plays in isolation.
  */
@@ -26,6 +27,9 @@ export const DEFAULT_WIPE_DURATION_SECONDS = 2.5
 
 export {
 	WIPE_CUT_POINT_SECONDS,
+	DEFAULT_WIPE_CUT_POINT_MS,
+	resolveWipeCutPointMs,
+	resolveWipeCutPointSeconds,
 	formatSecondsPrecise,
 	formatSecondsClock,
 	parseDurationClockInput,

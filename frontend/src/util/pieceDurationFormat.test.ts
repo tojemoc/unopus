@@ -2,10 +2,13 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
 	WIPE_CUT_POINT_SECONDS,
+	DEFAULT_WIPE_CUT_POINT_MS,
 	findNearDuplicateMediaNames,
 	formatSecondsClock,
 	formatSecondsPrecise,
-	parseDurationClockInput
+	parseDurationClockInput,
+	resolveWipeCutPointMs,
+	resolveWipeCutPointSeconds
 } from './pieceDurationFormat.js'
 
 describe('formatSecondsPrecise', () => {
@@ -17,6 +20,15 @@ describe('formatSecondsPrecise', () => {
 	it('trims trailing zeros for whole or single-decimal values', () => {
 		assert.equal(formatSecondsPrecise(2.5), '2.5s')
 		assert.equal(formatSecondsPrecise(3), '3s')
+	})
+})
+
+describe('resolveWipeCutPointMs', () => {
+	it('defaults to 760ms and reads editorial payload cutPoint', () => {
+		assert.equal(resolveWipeCutPointMs({}), DEFAULT_WIPE_CUT_POINT_MS)
+		assert.equal(resolveWipeCutPointMs({ payload: { cutPoint: 1100 } }), 1100)
+		assert.equal(resolveWipeCutPointMs({ payload: { cutPoint: '900' } }), 900)
+		assert.equal(resolveWipeCutPointSeconds({ payload: { cutPoint: 1100 } }), 1.1)
 	})
 })
 

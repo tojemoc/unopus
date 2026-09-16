@@ -1,6 +1,34 @@
 /** Cut point within the wipe stinger when screen is fully covered (frame 38 @ 50fps). */
 export const WIPE_CUT_POINT_SECONDS = 760 / 1000
 
+/** Default cover-frame cut point in ms (matches blueprints `WIPE_CUT_POINT_MS`). */
+export const DEFAULT_WIPE_CUT_POINT_MS = Math.round(WIPE_CUT_POINT_SECONDS * 1000)
+
+/**
+ * Editorial wipe cut point from RE payload `cutPoint` (ms), else the blueprints default.
+ */
+export function resolveWipeCutPointMs(piece: {
+	payload?: Record<string, unknown> | null
+}): number {
+	const raw = piece.payload?.cutPoint
+	if (typeof raw === 'number' && Number.isFinite(raw) && raw >= 0) {
+		return Math.floor(raw)
+	}
+	if (typeof raw === 'string' && raw.trim() !== '') {
+		const parsed = Number(raw)
+		if (Number.isFinite(parsed) && parsed >= 0) {
+			return Math.floor(parsed)
+		}
+	}
+	return DEFAULT_WIPE_CUT_POINT_MS
+}
+
+export function resolveWipeCutPointSeconds(piece: {
+	payload?: Record<string, unknown> | null
+}): number {
+	return resolveWipeCutPointMs(piece) / 1000
+}
+
 /** Sub-minute durations without rounding hundredths away (e.g. 0.76s, not 0.8s). */
 export function formatSecondsPrecise(seconds: number, maxDecimals = 2): string {
 	const text = seconds.toFixed(maxDecimals).replace(/\.?0+$/, '')
