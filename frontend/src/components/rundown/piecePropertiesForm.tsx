@@ -1,6 +1,11 @@
 import { useForm } from '@tanstack/react-form'
 import { Button, ButtonGroup, Col, Form, Modal, Row } from 'react-bootstrap'
-import type { Piece, PayloadManifest, TypeManifest } from '~backend/background/interfaces'
+import type {
+	Piece,
+	PayloadManifest,
+	PayloadValue,
+	TypeManifest
+} from '~backend/background/interfaces'
 import { ManifestFieldType, TypeManifestEntity } from '~backend/background/interfaces'
 import { FieldInfo } from '../form'
 import { useRef, useState } from 'react'
@@ -425,9 +430,9 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 			}
 		},
 		onSubmit: async (values) => {
-			const mergedPayload: Record<string, unknown> = {
+			const mergedPayload: Record<string, PayloadValue> = {
 				...(piece.payload ?? {}),
-				...(values.value.payload ?? {})
+				...((values.value.payload ?? {}) as Record<string, PayloadValue>)
 			}
 			if (piece.pieceType === 'wipe') {
 				const cut = mergedPayload.cutPoint
@@ -704,11 +709,10 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 										min={0}
 										step={1}
 										value={
-											field.state.value === undefined ||
-											field.state.value === null ||
-											field.state.value === ''
-												? DEFAULT_WIPE_CUT_POINT_MS
-												: Number(field.state.value)
+											typeof field.state.value === 'number' &&
+											Number.isFinite(field.state.value)
+												? Math.floor(field.state.value)
+												: DEFAULT_WIPE_CUT_POINT_MS
 										}
 										onBlur={field.handleBlur}
 										onChange={(e) => {
@@ -737,7 +741,9 @@ export function PiecePropertiesForm({ piece }: { piece: Piece }) {
 				) : null}
 
 				<form.Subscribe
-					selector={(state) => state.values.payload?.sourceDuration}
+					selector={(state) =>
+						(state.values.payload as Record<string, PayloadValue> | undefined)?.sourceDuration
+					}
 					children={(sourceDurationMs) => {
 						const sourceDurationSeconds = getPieceSourceDurationSeconds({
 							payload: { sourceDuration: sourceDurationMs }
