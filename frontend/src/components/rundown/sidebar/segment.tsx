@@ -44,7 +44,10 @@ export function SidebarSegment({ segment }: { segment: Segment }) {
 	const isSelectedSegment = useRouterState({
 		select: (s) => {
 			const match = s.matches.find((m) => m.fullPath.includes('/segment/$segmentId'))
-			return (match?.params as Record<string, string | undefined>)?.segmentId === segment.id
+			const params = match?.params as Record<string, string | undefined> | undefined
+			return (
+				params?.rundownId === segment.rundownId && params?.segmentId === segment.id
+			)
 		}
 	})
 
