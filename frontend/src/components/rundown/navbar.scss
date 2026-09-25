@@ -38,12 +38,12 @@
 			align-items: center;
 			cursor: pointer;
 			font-size: 0.72rem;
-			font-weight: 600;
+			font-weight: 700;
 			color: var(--re-rundown-bar-fg);
-			padding: 0.2rem 0.55rem;
-			border-radius: 2em;
+			padding: 0.2rem 0.5rem;
+			border-radius: var(--re-radius-sm);
 			background: rgba(255, 255, 255, 0.08);
-			border: 2px solid currentColor;
+			border: 1px solid currentColor;
 
 			&:hover:not(:disabled) {
 				background: rgba(255, 255, 255, 0.16);

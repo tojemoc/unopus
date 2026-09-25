@@ -233,15 +233,17 @@
 	display: inline-flex;
 	align-items: center;
 	cursor: pointer;
-	font-size: 0.68rem;
-	font-weight: 700;
-	letter-spacing: 0.02em;
+	font-size: 0.66rem;
+	font-weight: 800;
+	letter-spacing: 0.03em;
+	text-transform: uppercase;
 	color: var(--re-text-on-chip);
-	padding: 0.28rem 0.55rem;
+	padding: 0.22rem 0.45rem;
 	border-radius: var(--re-radius-sm);
 	background: color-mix(in srgb, currentColor 18%, var(--re-surface-2));
 	border: 1px solid;
 	white-space: nowrap;
+	line-height: 1.15;
 
 	&:hover:not(:disabled) {
 		filter: brightness(1.12);
@@ -446,13 +448,15 @@
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		min-width: 2.6rem;
-		padding: 0.18rem 0.4rem;
+		min-width: 2.4rem;
+		padding: 0.14rem 0.32rem;
 		border-radius: var(--re-radius-sm);
-		font-size: 0.68rem;
+		font-size: 0.64rem;
 		font-weight: 800;
-		letter-spacing: 0.03em;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
 		color: var(--re-text-on-chip);
+		line-height: 1.15;
 	}
 }
 
@@ -466,8 +470,8 @@
 	letter-spacing: 0.02em;
 	color: var(--re-accent);
 	background: var(--re-accent-subtle);
-	border-radius: 999px;
-	padding: 0.05rem 0.4rem;
+	border-radius: var(--re-radius-sm);
+	padding: 0.05rem 0.35rem;
 
 	svg {
 		width: 0.7em;
@@ -664,7 +668,7 @@
 
 /* —— Expanded story editor —— */
 .part-expanded-panel {
-	padding: 0.65rem 0.75rem 0.85rem;
+	padding: 0.55rem 0.7rem 0.75rem;
 	border-bottom: 1px solid var(--re-border);
 	background: var(--re-surface-2);
 	user-select: text;
@@ -674,19 +678,36 @@
 .part-expanded-panel__meta {
 	display: flex;
 	flex-direction: column;
-	gap: 0.45rem;
-	margin-bottom: 0.45rem;
+	gap: 0.4rem;
+	margin-bottom: 0.35rem;
 }
 
 .part-expanded-panel__toggles {
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: 0.55rem 0.85rem;
-	font-size: 0.78rem;
+	gap: 0.45rem 0.75rem;
+	font-size: 0.75rem;
+
+	.form-check {
+		min-height: 0;
+		margin-bottom: 0;
+		padding-left: 1.4rem;
+	}
+
+	.form-check-input {
+		margin-top: 0.15rem;
+	}
 
 	.form-check-label {
 		color: var(--re-text-muted);
+		font-size: 0.74rem;
+	}
+
+	.btn {
+		font-size: 0.72rem;
+		padding: 0.2rem 0.55rem;
+		border-radius: var(--re-radius-sm);
 	}
 
 	.btn-danger,
@@ -707,12 +728,36 @@
 
 .part-expanded-panel__label {
 	display: block;
-	font-size: 0.65rem;
+	font-size: 0.62rem;
 	font-weight: 700;
-	letter-spacing: 0.05em;
+	letter-spacing: 0.06em;
 	text-transform: uppercase;
 	color: var(--re-text-subtle);
-	margin: 0.4rem 0 0.25rem;
+	margin: 0.35rem 0 0.2rem;
+}
+
+.part-expanded-panel .form-control,
+.part-expanded-panel textarea.form-control {
+	background: var(--re-surface-1);
+	color: var(--re-text);
+	border-color: var(--re-border);
+	border-radius: var(--re-radius-sm);
+	font-size: 0.82rem;
+
+	&:focus {
+		background: var(--re-surface-1);
+		color: var(--re-text);
+		border-color: var(--re-accent);
+		box-shadow: 0 0 0 2px color-mix(in srgb, var(--re-accent) 25%, transparent);
+	}
+}
+
+.part-expanded-panel textarea.form-control {
+	min-height: 7.5rem;
+	font-family: var(--re-font-mono);
+	font-size: 0.8rem;
+	line-height: 1.4;
+	resize: vertical;
 }
 
 .part-expanded-piece {

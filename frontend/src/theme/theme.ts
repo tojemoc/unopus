@@ -15,12 +15,9 @@ export function getStoredTheme(): ThemeMode | null {
 	}
 }
 
+/** Product default is dark (broadcast/newsroom). System preference is ignored until the user toggles. */
 export function getPreferredTheme(): ThemeMode {
-	if (typeof window === 'undefined') {
-		return 'dark'
-	}
-
-	return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+	return 'dark'
 }
 
 export function resolveTheme(stored: ThemeMode | null = getStoredTheme()): ThemeMode {
@@ -33,6 +30,7 @@ export function applyThemeToDocument(theme: ThemeMode): void {
 	}
 
 	document.documentElement.setAttribute('data-theme', theme)
+	document.documentElement.setAttribute('data-bs-theme', theme)
 }
 
 export function persistThemePreference(theme: ThemeMode): void {

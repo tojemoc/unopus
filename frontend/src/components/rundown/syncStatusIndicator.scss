@@ -2,9 +2,9 @@
 	display: inline-flex;
 	align-items: center;
 	gap: 0.35rem;
-	padding: 0.18rem 0.5rem;
-	border-radius: 999px;
-	font-size: 0.68rem;
+	padding: 0.15rem 0.4rem;
+	border-radius: var(--re-radius-sm);
+	font-size: 0.66rem;
 	cursor: default;
 	color: var(--re-text);
 	font-weight: 600;

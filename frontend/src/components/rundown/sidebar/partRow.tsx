@@ -61,14 +61,7 @@ function getStoryReadiness(
 
 function typeTint(hex: string | undefined): string {
 	if (!hex) return 'transparent'
-	const cleaned = hex.replace('#', '')
-	if (cleaned.length !== 6) {
-		return `color-mix(in srgb, ${hex} 22%, transparent)`
-	}
-	const r = parseInt(cleaned.slice(0, 2), 16)
-	const g = parseInt(cleaned.slice(2, 4), 16)
-	const b = parseInt(cleaned.slice(4, 6), 16)
-	return `rgba(${r}, ${g}, ${b}, 0.12)`
+	return `color-mix(in srgb, ${hex} var(--re-type-tint-mix, 14%), transparent)`
 }
 
 export function SidebarPartRow({ part }: { part: Part }) {
