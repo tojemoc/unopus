@@ -2,14 +2,14 @@
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	min-width: 4.5rem;
-	padding: 0.12rem 0.45rem;
-	border-radius: 2px;
-	font-size: 0.62rem;
-	font-weight: 700;
-	letter-spacing: 0.04em;
+	min-width: 1.15rem;
+	padding: 0.1rem 0.28rem;
+	border-radius: var(--re-radius-sm, 3px);
+	font-size: 0.58rem;
+	font-weight: 800;
+	letter-spacing: 0.02em;
 	text-transform: uppercase;
-	line-height: 1.2;
+	line-height: 1.15;
 	white-space: nowrap;
 }
 
@@ -32,12 +32,14 @@
 }
 
 .story-table .readiness-badge {
-	min-width: 4.25rem;
-	font-size: 0.58rem;
+	min-width: 1.1rem;
+	font-size: 0.55rem;
 }
 
 .pieces-table .readiness-badge {
-	min-width: 4rem;
+	min-width: 3.5rem;
+	font-size: 0.58rem;
+	padding: 0.12rem 0.4rem;
 }
 
 .readiness-badge-tooltip__content {

@@ -1,7 +1,6 @@
 import { createFileRoute, Outlet, useMatchRoute } from '@tanstack/react-router'
-import { useEffect, type CSSProperties } from 'react'
-import { DuopusNavbar } from '~/components/navbar/duopusNavbar'
-import { RundownNavbar } from '~/components/rundown/navbar'
+import { useEffect } from 'react'
+import { AppShell } from '~/components/layout/AppShell'
 import { RundownSidebar } from '~/components/rundown/sidebar'
 import { useAppDispatch, useAppSelector } from '~/store/app'
 import { loadParts } from '~/store/parts'
@@ -57,22 +56,16 @@ function RouteComponent() {
 	const rundown = useAppSelector((state) => state.rundowns.find((r) => r.id === rundownId))
 	if (!rundown) {
 		return (
-			<>
-				<DuopusNavbar />
-				<div>Rundown not found</div>
-			</>
+			<AppShell>
+				<div className="app-page p-3">Rundown not found</div>
+			</AppShell>
 		)
 	}
 
 	return (
 		<RundownReadinessProvider rundownId={rundown.id}>
 			<ScriptExpandProvider>
-				<div style={rootStyle}>
-					<div style={headerStyle}>
-						<DuopusNavbar rundownName={rundown.name} />
-						<RundownNavbar rundown={rundown} />
-					</div>
-
+				<AppShell rundown={rundown}>
 					{isRewriteView ? (
 						<div className="rundown-rewrite-column">
 							<MyErrorBoundary>
@@ -93,24 +86,8 @@ function RouteComponent() {
 							</div>
 						</>
 					)}
-				</div>
+				</AppShell>
 			</ScriptExpandProvider>
 		</RundownReadinessProvider>
 	)
-}
-
-const rootStyle: CSSProperties = {
-	display: 'grid',
-	height: '100%',
-	gridTemplateRows: 'auto 1fr',
-	gridTemplateColumns: '1fr',
-	overflowX: 'hidden',
-	position: 'relative'
-}
-
-const headerStyle: CSSProperties = {
-	display: 'flex',
-	flexDirection: 'column',
-	flexShrink: 0,
-	gridColumn: '1 / -1'
 }

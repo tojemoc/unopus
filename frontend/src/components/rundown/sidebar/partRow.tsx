@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import { Button, Modal } from 'react-bootstrap'
-import { BsLockFill } from 'react-icons/bs'
+import { BsGripVertical, BsLockFill } from 'react-icons/bs'
 import { useAppDispatch, useAppSelector } from '~/store/app'
 import type { Part, PieceReadiness, RundownReadiness } from '~backend/background/interfaces'
 import { TypeManifestEntity } from '~backend/background/interfaces'
@@ -16,6 +16,7 @@ import { resolveEditorialStatus } from '~/util/editorialStatus'
 import { requestPresenceFocus, useRowLocks } from '~/hooks/usePresence'
 import { useRundownReadinessContext } from '~/hooks/RundownReadinessContext'
 import { useScriptExpand } from '~/hooks/ScriptExpandContext'
+import { matchesStoryFilter, useStoryFilter } from '~/hooks/StoryFilterContext'
 import { PartExpandedPanel } from '../partExpandedPanel'
 import { useToasts } from '~/components/toasts/useToasts'
 import { updatePart } from '~/store/parts'
@@ -67,7 +68,7 @@ function typeTint(hex: string | undefined): string {
 	const r = parseInt(cleaned.slice(0, 2), 16)
 	const g = parseInt(cleaned.slice(2, 4), 16)
 	const b = parseInt(cleaned.slice(4, 6), 16)
-	return `rgba(${r}, ${g}, ${b}, 0.22)`
+	return `rgba(${r}, ${g}, ${b}, 0.12)`
 }
 
 export function SidebarPartRow({ part }: { part: Part }) {
@@ -76,6 +77,16 @@ export function SidebarPartRow({ part }: { part: Part }) {
 	const { readiness } = useRundownReadinessContext()
 	const { expandedPartId, setExpandedPartId } = useScriptExpand()
 	const livePart = useAppSelector((s) => s.parts.parts.find((p) => p.id === part.id) ?? part)
+	const storyFilter = useStoryFilter()
+	const allParts = useAppSelector((s) => s.parts.parts)
+	const storyNumber = useMemo(() => {
+		const sorted = allParts
+			.filter((p) => p.segmentId === livePart.segmentId)
+			.sort((a, b) => a.rank - b.rank)
+		const idx = sorted.findIndex((p) => p.id === livePart.id)
+		return idx >= 0 ? idx + 1 : livePart.rank + 1
+	}, [allParts, livePart.segmentId, livePart.id, livePart.rank])
+	const hiddenByFilter = !matchesStoryFilter(storyFilter, livePart.name, livePart.script)
 	const expanded = expandedPartId === livePart.id
 	const [takeoverHolder, setTakeoverHolder] = useState<string | null>(null)
 	/** True when the modal is for a System (playout) lock — never key off displayName alone. */
@@ -263,13 +274,14 @@ export function SidebarPartRow({ part }: { part: Part }) {
 	}
 
 	return (
-		<div className="story-row-block">
+		<div className={`story-row-block${hiddenByFilter ? ' story-row-block--filtered' : ''}`}>
 			<div
 				className={rowClass}
-				tabIndex={0}
+				tabIndex={hiddenByFilter ? -1 : 0}
 				role="button"
 				aria-expanded={expanded}
 				aria-busy={busy || undefined}
+				aria-hidden={hiddenByFilter || undefined}
 				onPointerDown={(event) => {
 					pointerStart.current = { x: event.clientX, y: event.clientY }
 				}}
@@ -296,8 +308,12 @@ export function SidebarPartRow({ part }: { part: Part }) {
 					backgroundColor: typeTint(typeColour)
 				}}
 			>
-				<div className="col-status">
-					<span className="d-inline-flex gap-1 align-items-center">
+				<div className="col-lead">
+					<span className="story-row__grip" aria-hidden title="Drag to reorder">
+						<BsGripVertical />
+					</span>
+					<span className="story-row__num">{storyNumber}</span>
+					<span className="d-inline-flex gap-1 align-items-center story-row__badges">
 						{storyReadiness ? (
 							<ReadinessBadge state={storyReadiness.state} tooltip={storyReadiness.tooltip} compact />
 						) : null}
@@ -466,10 +482,10 @@ export function getPieceReadinessState(
 export function StoryTableHeader() {
 	return (
 		<div className="story-table-header">
-			<div className="col-status">Status</div>
+			<div className="col-lead"># / Status</div>
 			<div className="col-type">Type</div>
 			<div className="col-title">Story</div>
-			<div className="col-duration">Dur / AUTO</div>
+			<div className="col-duration">DUR / AUTO</div>
 		</div>
 	)
 }

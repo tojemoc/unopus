@@ -12,8 +12,12 @@ import { SidebarSegment } from './sidebar/segment'
 import { StoryTableHeader } from './sidebar/partRow'
 import { useToasts } from '../toasts/useToasts'
 import { SegmentButtons } from './sidebar/segmentButtons'
+import { PartTypeButtons } from './sidebar/partTypeButtons'
 import { useRundownReadinessContext } from '~/hooks/RundownReadinessContext'
 import { useScriptExpand } from '~/hooks/ScriptExpandContext'
+import { usePartInsertTarget } from '~/hooks/usePartInsertTarget'
+import { StoryFilterProvider } from '~/hooks/StoryFilterContext'
+import { canEditRundown } from '~/util/roles'
 
 /** Stable DnD row type — must not change identity when expand/readiness updates. */
 const SegmentComponent: DraggableWrappedComponent<Segment> = ({ data: segment }) => (
@@ -31,10 +35,13 @@ export function RundownSidebar({
 	const navigate = useNavigate()
 	const toasts = useToasts()
 	const [showImportModal, setShowImportModal] = useState<number | undefined>(undefined)
+	const [storyFilter, setStoryFilter] = useState('')
 
 	const segments = useAppSelector((state) => state.segments.segments)
 	const parts = useAppSelector((state) => state.parts.parts)
+	const userRole = useAppSelector((s) => s.auth.user?.role)
 	const { expandedPartId } = useScriptExpand()
+	const insertTarget = usePartInsertTarget(rundownId)
 	const sortedSegments = useMemo(
 		() => [...segments].sort((a, b) => a.rank - b.rank),
 		[segments]
@@ -76,35 +83,60 @@ export function RundownSidebar({
 
 	return (
 		<div className="rundown-sidebar">
-			<div className="rundown-sidebar-toolbar">
-				<span className="rundown-sidebar-toolbar__title">Script</span>
-				<span className="rundown-sidebar-toolbar__summary" title={error ?? undefined}>
-					{summaryText}
-				</span>
-				<button
-					type="button"
-					className="rundown-sidebar-toolbar__refresh"
-					onClick={() => void refresh()}
-				>
-					Refresh
-				</button>
+			<div className="rundown-media-toolbar">
+				<div className="rundown-media-toolbar__types">
+					{!canEditRundown(userRole) ? (
+						<PartTypeButtons disabled disabledReason="Viewer role — read-only" />
+					) : insertTarget ? (
+						<PartTypeButtons
+							segment={insertTarget.segment}
+							rank={insertTarget.rank}
+							insertHint={insertTarget.hint}
+						/>
+					) : (
+						<PartTypeButtons disabled disabledReason="Open a story to add a part" />
+					)}
+				</div>
+				<div className="rundown-media-toolbar__meta">
+					<span className="rundown-sidebar-toolbar__summary" title={error ?? undefined}>
+						{summaryText}
+					</span>
+					<label className="rundown-media-toolbar__search">
+						<span className="visually-hidden">Search rundown</span>
+						<input
+							type="search"
+							placeholder="Hľadať v rundowne…"
+							value={storyFilter}
+							onChange={(e) => setStoryFilter(e.target.value)}
+						/>
+					</label>
+					<button
+						type="button"
+						className="rundown-sidebar-toolbar__refresh"
+						onClick={() => void refresh()}
+					>
+						Refresh
+					</button>
+				</div>
 			</div>
 
 			<div className="rundown-sidebar-scroll">
-				<div className="story-table story-table--sidebar">
-					<StoryTableHeader />
-					<DraggableContainer
-						items={sortedSegments}
-						itemType={DragTypes.SEGMENT}
-						Component={SegmentComponent}
-						id={rundownId}
-						reorder={handleReorderSegment}
-						// Expanded story UI (script / opened piece forms) lives inside the
-						// segment drag source; disable segment drag while a part is open so
-						// mouse drag selects text instead of starting a reorder.
-						canDragItem={(segment) => expandedPartSegmentId !== segment.id}
-					/>
-				</div>
+				<StoryFilterProvider filter={storyFilter}>
+					<div className="story-table story-table--sidebar">
+						<StoryTableHeader />
+						<DraggableContainer
+							items={sortedSegments}
+							itemType={DragTypes.SEGMENT}
+							Component={SegmentComponent}
+							id={rundownId}
+							reorder={handleReorderSegment}
+							// Expanded story UI (script / opened piece forms) lives inside the
+							// segment drag source; disable segment drag while a part is open so
+							// mouse drag selects text instead of starting a reorder.
+							canDragItem={(segment) => expandedPartSegmentId !== segment.id}
+						/>
+					</div>
+				</StoryFilterProvider>
 
 				<SegmentButtons
 					rundownId={rundownId}

@@ -1,0 +1,46 @@
+.app-shell {
+	display: grid;
+	grid-template-columns: var(--re-sidebar-width) 1fr;
+	grid-template-rows: var(--re-header-height) 1fr;
+	grid-template-areas:
+		'header header'
+		'sidebar main';
+	height: 100%;
+	min-height: 0;
+	overflow: hidden;
+	background: var(--re-bg);
+	color: var(--re-text);
+
+	&--sidebar-collapsed {
+		grid-template-columns: var(--re-sidebar-collapsed-width) 1fr;
+	}
+
+	&--no-sidebar {
+		grid-template-columns: 1fr;
+		grid-template-areas:
+			'header'
+			'main';
+	}
+
+	&__header {
+		grid-area: header;
+		min-height: var(--re-header-height);
+		z-index: 20;
+		border-bottom: 1px solid var(--re-border);
+		background: var(--re-surface-1);
+	}
+
+	> .app-sidebar {
+		grid-area: sidebar;
+	}
+
+	&__main {
+		grid-area: main;
+		min-width: 0;
+		min-height: 0;
+		overflow: hidden;
+		display: flex;
+		flex-direction: column;
+		background: var(--re-bg);
+	}
+}

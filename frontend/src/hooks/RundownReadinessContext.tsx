@@ -25,3 +25,8 @@ export function useRundownReadinessContext(): RundownReadinessContextValue {
 	}
 	return context
 }
+
+/** Safe outside the provider (e.g. global header on non-rundown pages). */
+export function useRundownReadinessContextOptional(): RundownReadinessContextValue | null {
+	return useContext(RundownReadinessContext)
+}

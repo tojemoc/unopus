@@ -88,7 +88,11 @@ export function PartTypeButtons(props: PartTypeButtonsProps) {
 					key={manifest.id}
 					className="part-button preset-button"
 					type="button"
-					style={{ borderColor: manifest.colour }}
+					style={{
+						borderColor: manifest.colour,
+						backgroundColor: manifest.colour,
+						color: 'var(--re-text-on-chip)'
+					}}
 					disabled={disabled}
 					title={
 						disabled
