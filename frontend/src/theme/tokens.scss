@@ -1,69 +1,86 @@
 /**
  * Semantic theme tokens — always use paired surface + text tokens.
  * Never set `color` without a matching surface token on the same element.
+ *
+ * Material-inspired broadcast / newsroom palette: dense, dark navy base,
+ * saturated accents only on chips, badges, and status.
  */
 
 [data-theme='dark'] {
 	color-scheme: dark;
 
-	--re-bg: #121722;
-	--re-surface-1: #1a2130;
-	--re-surface-2: #222b3d;
-	--re-surface-inset: #171d2a;
-	--re-border: #2f3a4f;
-	--re-border-subtle: rgb(47 58 79 / 65%);
+	--re-bg: #12151c;
+	--re-surface-0: #0e1117;
+	--re-surface-1: #1a1d26;
+	--re-surface-2: #222633;
+	--re-surface-inset: #161922;
+	--re-border: #2c3344;
+	--re-border-subtle: rgb(44 51 68 / 55%);
 
-	--re-text: #e6edf7;
-	--re-text-muted: #9aa7bd;
-	--re-text-subtle: #6b7a94;
+	--re-text: #e8edf5;
+	--re-text-muted: #8b95a8;
+	--re-text-subtle: #5c667a;
 	--re-text-on-accent: #ffffff;
 	--re-text-on-chip: #ffffff;
-	--re-text-on-preview: #e6edf7;
+	--re-text-on-preview: #e8edf5;
 
-	--re-link: #79a8ff;
-	--re-link-hover: #a8c7ff;
-	--re-accent: #4c8dff;
-	--re-accent-subtle: #2a4166;
-	--re-focus: #4c8dff;
+	--re-link: #6aa3ff;
+	--re-link-hover: #9bc0ff;
+	--re-accent: #3d8bfd;
+	--re-accent-subtle: #1e3a5f;
+	--re-focus: #3d8bfd;
 
-	--re-row-hover: #263149;
-	--re-row-active: #2f3f5c;
+	--re-row-hover: #252a38;
+	--re-row-active: #1e3558;
 	--re-preview-bg: #0a0c10;
 
-	--re-btn-subtle-bg: #141619;
-	--re-btn-subtle-fg: #cccccc;
-	--re-btn-subtle-border: #666666;
+	--re-btn-subtle-bg: #1a1d26;
+	--re-btn-subtle-fg: #c5cddb;
+	--re-btn-subtle-border: #3a4255;
 	--re-btn-subtle-hover-fg: #ffffff;
 
-	--re-status-ready-bg: #1f6f43;
-	--re-status-ready-fg: #d8ffe8;
+	--re-status-ready-bg: #1a5c38;
+	--re-status-ready-fg: #b8f0d0;
 	--re-status-ready-border: #2ea05a;
 
-	--re-status-notready-bg: #6b1d1d;
-	--re-status-notready-fg: #ffd8d8;
+	--re-status-notready-bg: #5c1e1e;
+	--re-status-notready-fg: #ffc9c9;
 	--re-status-notready-border: #c93c3c;
 
-	--re-status-na-bg: #2a3140;
-	--re-status-na-fg: #9aa7bd;
+	--re-status-na-bg: #2a2f3c;
+	--re-status-na-fg: #8b95a8;
 	--re-status-na-border: #3d4657;
 
-	--re-sync-ok: #198754;
-	--re-sync-pending: #ffc107;
+	--re-sync-ok: #2ea05a;
+	--re-sync-pending: #e6a817;
 	--re-sync-error: #dc3545;
 
-	--re-rundown-bar-bg: #2689ba;
-	--re-rundown-bar-fg: #ffffff;
+	--re-danger: #e53935;
+	--re-danger-hover: #ef5350;
+	--re-warning: #e6a817;
+	--re-success: #2ea05a;
 
-	--re-card-bg: #161b22;
-	--re-card-border: #30363d;
-	--re-modal-bg: #1a1d20;
-	--re-modal-fg: #e6edf7;
+	--re-rundown-bar-bg: #1a1d26;
+	--re-rundown-bar-fg: #e8edf5;
+
+	--re-card-bg: #1a1d26;
+	--re-card-border: #2c3344;
+	--re-modal-bg: #1a1d26;
+	--re-modal-fg: #e8edf5;
+
+	--re-sidebar-width: 14.5rem;
+	--re-sidebar-collapsed-width: 3.25rem;
+	--re-header-height: 2.65rem;
+	--re-radius-sm: 3px;
+	--re-radius-md: 4px;
+	--re-font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', 'Segoe UI Mono', Menlo, Consolas, monospace;
 }
 
 [data-theme='light'] {
 	color-scheme: light;
 
-	--re-bg: #e9edf3;
+	--re-bg: #e8ecf2;
+	--re-surface-0: #dfe4ec;
 	--re-surface-1: #ffffff;
 	--re-surface-2: #f3f6fa;
 	--re-surface-inset: #e3e9f2;
@@ -75,7 +92,7 @@
 	--re-text-subtle: #7b8798;
 	--re-text-on-accent: #ffffff;
 	--re-text-on-chip: #ffffff;
-	--re-text-on-preview: #e6edf7;
+	--re-text-on-preview: #e8edf5;
 
 	--re-link: #1856c9;
 	--re-link-hover: #0f46ad;
@@ -108,17 +125,40 @@
 	--re-sync-pending: #cc9a06;
 	--re-sync-error: #dc3545;
 
-	--re-rundown-bar-bg: #1f7ab5;
-	--re-rundown-bar-fg: #ffffff;
+	--re-danger: #dc3545;
+	--re-danger-hover: #bb2d3b;
+	--re-warning: #cc9a06;
+	--re-success: #198754;
+
+	--re-rundown-bar-bg: #ffffff;
+	--re-rundown-bar-fg: #1a2333;
 
 	--re-card-bg: #ffffff;
 	--re-card-border: #c5ced9;
 	--re-modal-bg: #ffffff;
 	--re-modal-fg: #1a2333;
+
+	--re-sidebar-width: 14.5rem;
+	--re-sidebar-collapsed-width: 3.25rem;
+	--re-header-height: 2.65rem;
+	--re-radius-sm: 3px;
+	--re-radius-md: 4px;
+	--re-font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', 'Segoe UI Mono', Menlo, Consolas, monospace;
 }
 
 html,
 body {
 	background: var(--re-bg);
 	color: var(--re-text);
+	font-family:
+		'Segoe UI',
+		system-ui,
+		-apple-system,
+		BlinkMacSystemFont,
+		'Roboto',
+		'Helvetica Neue',
+		sans-serif;
+	font-size: 14px;
+	line-height: 1.35;
+	-webkit-font-smoothing: antialiased;
 }

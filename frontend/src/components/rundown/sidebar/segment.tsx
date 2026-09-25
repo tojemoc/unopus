@@ -16,6 +16,7 @@ import { Stack, type ButtonProps } from 'react-bootstrap'
 import { HoverIconButton } from '~/components/rundownList/hoverIconButton'
 import { DeleteSegmentButton } from '../deleteSegmentButton'
 import { useScriptExpand } from '~/hooks/ScriptExpandContext'
+import { matchesStoryFilter, useStoryFilter } from '~/hooks/StoryFilterContext'
 import { resolvePartOnAirDuration } from '~/util/pieceDuration'
 import { resolveEffectiveScriptCps } from '~/util/scriptReadingTime'
 import { canEditRundown } from '~/util/roles'
@@ -67,6 +68,13 @@ export function SidebarSegment({ segment }: { segment: Segment }) {
 		defaultDurationMode: settings?.iluDurationMode ?? ('auto' as const)
 	}
 	const sortedParts = useMemo(() => [...parts].sort((a, b) => a.rank - b.rank), [parts])
+	const storyFilter = useStoryFilter()
+	const visibleParts = useMemo(
+		() =>
+			sortedParts.filter((part) => matchesStoryFilter(storyFilter, part.name, part.script)),
+		[sortedParts, storyFilter]
+	)
+	const hideForFilter = Boolean(storyFilter.trim()) && visibleParts.length === 0
 
 	const segmentDuration = sortedParts.reduce((acc, part) => {
 		const partPieces = allPieces
@@ -149,13 +157,19 @@ export function SidebarSegment({ segment }: { segment: Segment }) {
 	const userRole = useAppSelector((s) => s.auth.user?.role)
 	const canEdit = canEditRundown(userRole)
 
+	if (hideForFilter) {
+		return null
+	}
+
+	const storyCount = storyFilter.trim() ? visibleParts.length : sortedParts.length
+
 	return (
 		<div
 			className={`sidebar-segment ${isOpen ? 'open' : 'closed'}${isOnAirSegment ? ' sidebar-segment--on-air' : ''}${isSelectedSegment ? ' sidebar-segment--selected' : ''}`}
 			aria-current={isSelectedSegment ? 'true' : undefined}
 		>
 			<div className="copy-item segment-header-row">
-				<Stack direction="horizontal">
+				<Stack direction="horizontal" className="segment-header-row__inner">
 					<span
 						className="segment-toggle"
 						onClick={(e) => {
@@ -167,9 +181,14 @@ export function SidebarSegment({ segment }: { segment: Segment }) {
 					>
 						<BsCaretDownFill />
 					</span>
-					<div style={{ flexGrow: 2 }}>
+					<div style={{ flexGrow: 2, minWidth: 0 }}>
 						<SidebarElementHeader
-							label={segment.name}
+							label={
+								<span className="segment-header__label">
+									<span className="segment-header__name">{segment.name}</span>
+									<span className="segment-header__count">{storyCount}</span>
+								</span>
+							}
 							renameValue={segment.name}
 							onRename={canEdit ? handleRenameSegment : undefined}
 							onSelect={() => {

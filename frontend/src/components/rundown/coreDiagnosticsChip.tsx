@@ -20,7 +20,7 @@ function trafficLabel(diagnostics: ReturnType<typeof useCoreDiagnostics>['diagno
 		light: probe.trafficLight,
 		short:
 			probe.trafficLight === 'green'
-				? 'Core OK'
+				? 'Core ON'
 				: probe.trafficLight === 'yellow'
 					? 'Core local-scan'
 					: 'Core down',
