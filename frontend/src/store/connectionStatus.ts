@@ -12,6 +12,7 @@ const connectionStatusSlice = createSlice({
 			state.status = action.payload.status
 			state.url = action.payload.url
 			state.port = action.payload.port
+			state.simulated = action.payload.simulated
 		}
 	}
 })

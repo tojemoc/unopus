@@ -20,12 +20,19 @@ function getSyncState(rundown: Rundown, coreStatus: CoreConnectionStatus): SyncV
 
 export function SyncStatusIndicator({ rundown }: { rundown: Rundown }) {
 	const coreStatus = useAppSelector((s) => s.coreConnectionStatus.status)
+	const simulated = useAppSelector((s) => Boolean(s.coreConnectionStatus.simulated))
 	const state = getSyncState(rundown, coreStatus)
 
 	const labels: Record<SyncVisualState, string> = {
-		synced: 'Synced to Sofie',
-		pending: rundown.sync ? 'Waiting for Sofie connection' : 'Sync off — changes stay local',
-		error: 'Could not reach Sofie Core — check connection settings'
+		synced: simulated ? 'Synced (simulated Core)' : 'Synced to Sofie',
+		pending: rundown.sync
+			? simulated
+				? 'Waiting for simulated Core'
+				: 'Waiting for Sofie connection'
+			: 'Sync off — changes stay local',
+		error: simulated
+			? 'Simulated Core not connected'
+			: 'Could not reach Sofie Core — check connection settings'
 	}
 
 	return (
