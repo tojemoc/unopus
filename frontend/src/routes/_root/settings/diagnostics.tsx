@@ -29,7 +29,9 @@ function RouteComponent() {
 				offline while this call still succeeds (pieces would simply show not-ready). If
 				Settings → Connection has &quot;Ignore Sofie media status&quot; enabled, rundown
 				readiness badges skip this API entirely and use local file checks only (sync still
-				pushes the rundown).
+				pushes the rundown). With <code>SIMULATE_SOFIE_CORE=true</code>, the backend uses an
+				in-process simulator (chip shows Core SIM) and media readiness uses local filesystem
+				checks.
 			</p>
 
 			{loading && !diagnostics && <p>Loading…</p>}
@@ -43,9 +45,18 @@ function RouteComponent() {
 							<td>
 								{diagnostics.connection.status}
 								{diagnostics.connection.url
-									? ` (${diagnostics.connection.url}:${diagnostics.connection.port ?? ''})`
+									? ` (${diagnostics.connection.url}${
+											diagnostics.connection.port
+												? `:${diagnostics.connection.port}`
+												: ''
+										})`
 									: ''}
+								{diagnostics.simulated ? ' — simulated' : ''}
 							</td>
+						</tr>
+						<tr>
+							<th scope="row">Simulation</th>
+							<td>{diagnostics.simulated ? 'Yes (SIMULATE_SOFIE_CORE)' : 'No (real Core)'}</td>
 						</tr>
 						<tr>
 							<th scope="row">Device ID configured</th>

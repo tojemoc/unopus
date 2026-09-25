@@ -126,6 +126,7 @@ export type CoreDiagnosticsResponse = {
 		url?: string
 		port?: number
 		status: string
+		simulated?: boolean
 	}
 	deviceAuth: {
 		deviceIdConfigured: boolean
@@ -138,6 +139,8 @@ export type CoreDiagnosticsResponse = {
 		summary: string
 		checkedAt: string
 	}
+	/** True when backend SIMULATE_SOFIE_CORE is active. */
+	simulated?: boolean
 }
 
 export async function fetchCoreDiagnostics() {

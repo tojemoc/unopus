@@ -37,7 +37,11 @@ function formatDateLabel(timestamp: number | undefined): string {
 	})
 }
 
-function syncLabel(rundown: Rundown, coreStatus: CoreConnectionStatus): string {
+function syncLabel(
+	rundown: Rundown,
+	coreStatus: CoreConnectionStatus,
+	simulated?: boolean
+): string {
 	if (!rundown.sync) {
 		return 'Unsynced'
 	}
@@ -45,14 +49,19 @@ function syncLabel(rundown: Rundown, coreStatus: CoreConnectionStatus): string {
 		return 'Error'
 	}
 	if (coreStatus === CoreConnectionStatus.CONNECTED) {
-		return 'Synced'
+		return simulated ? 'Synced (sim)' : 'Synced'
 	}
 	return 'Pending'
 }
 
-function syncClass(rundown: Rundown, coreStatus: CoreConnectionStatus): string {
-	const label = syncLabel(rundown, coreStatus)
-	return `rundown-card__sync rundown-card__sync--${label.toLowerCase()}`
+function syncClass(
+	rundown: Rundown,
+	coreStatus: CoreConnectionStatus,
+	simulated?: boolean
+): string {
+	const label = syncLabel(rundown, coreStatus, simulated)
+	const key = label.startsWith('Synced') ? 'synced' : label.toLowerCase()
+	return `rundown-card__sync rundown-card__sync--${key}`
 }
 
 interface RundownListGroupedProps {
@@ -62,6 +71,7 @@ interface RundownListGroupedProps {
 export function RundownListGrouped({ rundowns }: RundownListGroupedProps) {
 	const parts = useAppSelector((s) => s.parts.parts)
 	const coreStatus = useAppSelector((s) => s.coreConnectionStatus.status)
+	const simulated = useAppSelector((s) => Boolean(s.coreConnectionStatus.simulated))
 	const [statuses, setStatuses] = useState<Record<string, TemplateDailyStatus>>({})
 	const [settingsRundown, setSettingsRundown] = useState<Rundown | null>(null)
 	const hasTemplates = rundowns.some((r) => r.isTemplate)
@@ -170,8 +180,8 @@ export function RundownListGrouped({ rundowns }: RundownListGroupedProps) {
 											<div className="d-flex gap-2 flex-wrap mb-3 small">
 												<span className="badge bg-secondary">{storyCount} stories</span>
 												{!rundown.isTemplate && (
-													<span className={syncClass(rundown, coreStatus)}>
-														{syncLabel(rundown, coreStatus)}
+													<span className={syncClass(rundown, coreStatus, simulated)}>
+														{syncLabel(rundown, coreStatus, simulated)}
 													</span>
 												)}
 											</div>

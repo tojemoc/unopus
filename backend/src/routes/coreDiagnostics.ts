@@ -38,12 +38,16 @@ export interface CoreDiagnosticsResponse {
 		url?: string
 		port?: number
 		status: CoreConnectionStatus
+		/** True when SIMULATE_SOFIE_CORE is active. */
+		simulated?: boolean
 	}
 	deviceAuth: {
 		deviceIdConfigured: boolean
 		usingUnsecureToken: boolean
 	}
 	contentStatusProbe: CoreContentStatusProbeResult
+	/** True when the backend is using the in-process Sofie Core simulator. */
+	simulated?: boolean
 }
 
 type CachedProbe = {
@@ -75,7 +79,7 @@ async function runContentStatusProbe(): Promise<CoreContentStatusProbeResult> {
 		return {
 			ok: false,
 			trafficLight: 'red',
-			summary: 'Core disconnected',
+			summary: coreHandler.simulatingCore ? 'Simulated Core disconnected' : 'Core disconnected',
 			checkedAt
 		}
 	}
@@ -89,7 +93,9 @@ async function runContentStatusProbe(): Promise<CoreContentStatusProbeResult> {
 		return {
 			ok: true,
 			trafficLight: 'green',
-			summary: 'Core reachable, device configured',
+			summary: coreHandler.simulatingCore
+				? 'Simulated Core reachable — ingest sync accepted locally; media readiness uses local FS'
+				: 'Core reachable, device configured',
 			checkedAt
 		}
 	} catch (error) {
@@ -158,17 +164,20 @@ export function registerCoreDiagnosticsRoutes(app: Application): void {
 
 		try {
 			const contentStatusProbe = await getCoalescedContentStatusProbe()
+			const simulated = coreHandler.simulatingCore
 			const response: CoreDiagnosticsResponse = {
 				connection: {
 					url: coreHandler.connectionInfo.url,
 					port: coreHandler.connectionInfo.port,
-					status: coreHandler.connectionInfo.status
+					status: coreHandler.connectionInfo.status,
+					simulated
 				},
 				deviceAuth: {
 					deviceIdConfigured: coreHandler.deviceAuthInfo.deviceIdConfigured,
 					usingUnsecureToken: coreHandler.deviceAuthInfo.usingUnsecureToken
 				},
-				contentStatusProbe
+				contentStatusProbe,
+				simulated
 			}
 			res.json(response)
 		} catch (error) {
