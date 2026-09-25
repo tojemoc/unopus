@@ -1,7 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
 	applyThemeToDocument,
-	getStoredTheme,
 	getToggledTheme,
 	persistThemePreference,
 	resolveTheme,
@@ -22,20 +21,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 	useEffect(() => {
 		applyThemeToDocument(theme)
 	}, [theme])
-
-	useEffect(() => {
-		const media = window.matchMedia('(prefers-color-scheme: dark)')
-
-		const onChange = () => {
-			if (getStoredTheme()) {
-				return
-			}
-			setThemeState(media.matches ? 'dark' : 'light')
-		}
-
-		media.addEventListener('change', onChange)
-		return () => media.removeEventListener('change', onChange)
-	}, [])
 
 	const value = useMemo(
 		() => ({

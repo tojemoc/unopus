@@ -171,11 +171,12 @@
 			align-items: center;
 			cursor: pointer;
 			font-size: 0.75em;
+			font-weight: 700;
 			color: var(--re-btn-subtle-fg);
-			padding: 0.25em 0.65em;
-			border-radius: 2em;
+			padding: 0.22em 0.55em;
+			border-radius: var(--re-radius-sm);
 			background: var(--re-btn-subtle-bg);
-			border: 2px solid var(--re-btn-subtle-border);
+			border: 1px solid var(--re-btn-subtle-border);
 
 			&:hover {
 				color: var(--re-btn-subtle-hover-fg);
@@ -247,8 +248,8 @@
 			align-self: center;
 			cursor: pointer;
 			font-size: 0.8em;
-			padding: 0.2em 0.7em;
-			border-radius: 2em;
+			padding: 0.2em 0.55em;
+			border-radius: var(--re-radius-sm);
 		}
 		.segment-buttons {
 			position: static;
@@ -262,9 +263,9 @@
 
 			.segment-button {
 				font-size: 0.8em;
-				border: 0.2em solid var(--re-btn-subtle-bg);
-				border-radius: 2em;
-				padding: 0.25em 0.65em;
+				border: 1px solid var(--re-btn-subtle-border);
+				border-radius: var(--re-radius-sm);
+				padding: 0.22em 0.55em;
 				transition: opacity 0.2s ease-out;
 				cursor: pointer;
 				opacity: 1;
