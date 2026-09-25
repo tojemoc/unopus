@@ -16,10 +16,14 @@
 		color: var(--re-text);
 	}
 
-	.badge {
-		border-radius: var(--re-radius-sm);
+	.badge,
+	.badge.rounded-pill,
+	.badge.bg-secondary {
+		--bs-badge-border-radius: var(--re-radius-sm);
+		border-radius: var(--re-radius-sm) !important;
 		font-weight: 700;
 		letter-spacing: 0.02em;
+		padding: 0.28em 0.5em;
 	}
 
 	&__sync {
