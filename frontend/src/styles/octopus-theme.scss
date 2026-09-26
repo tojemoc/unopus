@@ -148,9 +148,9 @@
 .rundown-media-toolbar {
 	display: flex;
 	align-items: center;
-	justify-content: space-between;
+	justify-content: flex-end;
 	gap: 0.75rem;
-	padding: 0.4rem 0.65rem;
+	padding: 0.35rem 0.65rem;
 	background: var(--re-surface-inset);
 	border-bottom: 1px solid var(--re-border);
 	position: sticky;
@@ -158,17 +158,12 @@
 	z-index: 3;
 	flex-wrap: wrap;
 
-	&__types {
-		flex: 1 1 auto;
-		min-width: 0;
-		overflow-x: auto;
-	}
-
 	&__meta {
 		display: flex;
 		align-items: center;
 		gap: 0.55rem;
 		flex-shrink: 0;
+		margin-left: auto;
 	}
 
 	&__search {
@@ -249,17 +244,28 @@
 	}
 }
 
-/* Part type chips in media toolbar */
-.rundown-media-toolbar .part-type-buttons,
-.rundown-media-toolbar .preset-buttons {
-	flex-wrap: nowrap;
-	gap: 0.3rem !important;
+/* Part type chips next to the selected segment */
+.segment-part-type-bar {
+	display: flex;
+	align-items: center;
+	gap: 0.35rem;
+	padding: 0.3rem 0.55rem 0.35rem;
+	background: color-mix(in srgb, var(--re-accent) 8%, var(--re-surface-inset));
+	border-bottom: 1px solid color-mix(in srgb, var(--re-accent) 28%, var(--re-border));
+	overflow-x: auto;
+
+	.part-type-buttons,
+	.preset-buttons {
+		flex-wrap: nowrap;
+		gap: 0.3rem !important;
+	}
 }
 
-.rundown-media-toolbar .preset-button,
-.rundown-media-toolbar .part-button.preset-button,
+.segment-part-type-bar .preset-button,
+.segment-part-type-bar .part-button.preset-button,
 .segment-buttons .preset-button,
-.segment-buttons .import-button {
+.segment-buttons .import-button,
+.part-button.add-button-container .preset-button {
 	all: unset;
 	display: inline-flex;
 	align-items: center;

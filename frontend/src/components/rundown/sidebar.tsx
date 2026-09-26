@@ -12,13 +12,10 @@ import { SidebarSegment } from './sidebar/segment'
 import { StoryTableHeader } from './sidebar/partRow'
 import { useToasts } from '../toasts/useToasts'
 import { SegmentButtons } from './sidebar/segmentButtons'
-import { PartTypeButtons } from './sidebar/partTypeButtons'
 import { IconClip, IconRefresh, IconSearch } from '~/components/icons/broadcastIcons'
 import { useRundownReadinessContext } from '~/hooks/RundownReadinessContext'
 import { useScriptExpand } from '~/hooks/ScriptExpandContext'
-import { usePartInsertTarget } from '~/hooks/usePartInsertTarget'
 import { StoryFilterProvider } from '~/hooks/StoryFilterContext'
-import { canEditRundown } from '~/util/roles'
 
 /** Stable DnD row type — must not change identity when expand/readiness updates. */
 const SegmentComponent: DraggableWrappedComponent<Segment> = ({ data: segment }) => (
@@ -40,9 +37,7 @@ export function RundownSidebar({
 
 	const segments = useAppSelector((state) => state.segments.segments)
 	const parts = useAppSelector((state) => state.parts.parts)
-	const userRole = useAppSelector((s) => s.auth.user?.role)
 	const { expandedPartId } = useScriptExpand()
-	const insertTarget = usePartInsertTarget(rundownId)
 	const sortedSegments = useMemo(
 		() => [...segments].sort((a, b) => a.rank - b.rank),
 		[segments]
@@ -85,19 +80,6 @@ export function RundownSidebar({
 	return (
 		<div className="rundown-sidebar">
 			<div className="rundown-media-toolbar">
-				<div className="rundown-media-toolbar__types">
-					{!canEditRundown(userRole) ? (
-						<PartTypeButtons disabled disabledReason="Viewer role — read-only" />
-					) : insertTarget ? (
-						<PartTypeButtons
-							segment={insertTarget.segment}
-							rank={insertTarget.rank}
-							insertHint={insertTarget.hint}
-						/>
-					) : (
-						<PartTypeButtons disabled disabledReason="Open a story to add a part" />
-					)}
-				</div>
 				<div className="rundown-media-toolbar__meta">
 					<span className="rundown-sidebar-toolbar__summary" title={error ?? undefined}>
 						<IconClip size={13} />
