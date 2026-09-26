@@ -1,7 +1,7 @@
 .sync-status-indicator {
 	display: inline-flex;
 	align-items: center;
-	gap: 0.35rem;
+	gap: 0.3rem;
 	padding: 0.15rem 0.4rem;
 	border-radius: var(--re-radius-sm);
 	font-size: 0.66rem;
@@ -9,31 +9,34 @@
 	color: var(--re-text);
 	font-weight: 600;
 
-	&__dot {
-		width: 0.45rem;
-		height: 0.45rem;
-		border-radius: 50%;
+	&__icon {
+		display: inline-flex;
+		align-items: center;
 		flex-shrink: 0;
+		opacity: 0.95;
 	}
 
 	&--synced {
 		background: color-mix(in srgb, var(--re-sync-ok) 18%, transparent);
-		.sync-status-indicator__dot {
-			background: var(--re-sync-ok);
+		color: var(--re-status-ready-fg);
+		.sync-status-indicator__icon {
+			color: var(--re-sync-ok);
 		}
 	}
 
 	&--pending {
 		background: color-mix(in srgb, var(--re-sync-pending) 14%, transparent);
-		.sync-status-indicator__dot {
-			background: var(--re-sync-pending);
+		color: var(--re-text-muted);
+		.sync-status-indicator__icon {
+			color: var(--re-sync-pending);
 		}
 	}
 
 	&--error {
 		background: color-mix(in srgb, var(--re-sync-error) 18%, transparent);
-		.sync-status-indicator__dot {
-			background: var(--re-sync-error);
+		color: var(--re-status-notready-fg);
+		.sync-status-indicator__icon {
+			color: var(--re-sync-error);
 		}
 	}
 }

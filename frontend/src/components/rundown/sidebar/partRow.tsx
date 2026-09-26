@@ -1,6 +1,12 @@
 import { useMemo, useRef, useState } from 'react'
 import { Button, Modal } from 'react-bootstrap'
-import { BsGripVertical, BsLockFill } from 'react-icons/bs'
+import {
+	IconClip,
+	IconDragHandle,
+	IconLock,
+	IconScriptCue,
+	PartTypeIcon
+} from '~/components/icons/broadcastIcons'
 import { useAppDispatch, useAppSelector } from '~/store/app'
 import type { Part, PieceReadiness, RundownReadiness } from '~backend/background/interfaces'
 import { TypeManifestEntity } from '~backend/background/interfaces'
@@ -129,6 +135,10 @@ export function SidebarPartRow({ part }: { part: Part }) {
 	)
 	const scriptPreview = showScriptExcerpt ? firstScriptLine(livePart.script) : null
 	const typeColour = partTypeManifest?.colour ?? '#666'
+	const mediaPieceCount = partPieces.filter(
+		(piece) => readiness?.pieces[piece.id]?.requirements.length
+	).length
+	const hasScript = Boolean(livePart.script?.trim())
 	const lockNames = locks.map((lock) => lock.displayName).join(', ')
 	const scriptDriven = partUsesScriptDuration(
 		livePart.partType,
@@ -303,7 +313,7 @@ export function SidebarPartRow({ part }: { part: Part }) {
 			>
 				<div className="col-lead">
 					<span className="story-row__grip" aria-hidden title="Drag to reorder">
-						<BsGripVertical />
+						<IconDragHandle size={14} />
 					</span>
 					<span className="story-row__num">{storyNumber}</span>
 					<span className="d-inline-flex gap-1 align-items-center story-row__badges">
@@ -325,6 +335,9 @@ export function SidebarPartRow({ part }: { part: Part }) {
 						style={{ backgroundColor: typeColour }}
 						title={partTypeManifest?.name ?? livePart.partType}
 					>
+						<span className="story-type-chip__icon" aria-hidden>
+							<PartTypeIcon partType={livePart.partType} size={11} />
+						</span>
 						{partTypeManifest?.shortName ?? livePart.partType.slice(0, 4).toUpperCase()}
 					</span>
 				</div>
@@ -345,10 +358,23 @@ export function SidebarPartRow({ part }: { part: Part }) {
 							className="story-row__lock"
 							title={`${lockNames} is editing this story`}
 						>
-							<BsLockFill aria-hidden /> {lockNames}
+							<IconLock size={11} /> {lockNames}
 						</span>
 					) : null}
 					{scriptPreview ? <div className="story-row__script">{scriptPreview}</div> : null}
+				</div>
+				<div className="col-meta" aria-hidden={!hasScript && mediaPieceCount === 0}>
+					{mediaPieceCount > 0 ? (
+						<span className="story-row__meta-icon" title={`${mediaPieceCount} media cue(s)`}>
+							<IconClip size={13} />
+							<span className="story-row__meta-count">{mediaPieceCount}</span>
+						</span>
+					) : null}
+					{hasScript ? (
+						<span className="story-row__meta-icon" title="Has script">
+							<IconScriptCue size={13} />
+						</span>
+					) : null}
 				</div>
 				<div className="col-duration">
 					<span
@@ -478,6 +504,7 @@ export function StoryTableHeader() {
 			<div className="col-lead"># / Status</div>
 			<div className="col-type">Type</div>
 			<div className="col-title">Story</div>
+			<div className="col-meta">Cues</div>
 			<div className="col-duration">DUR / AUTO</div>
 		</div>
 	)

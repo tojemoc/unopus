@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useCallback, useEffect, useState } from 'react'
 import { Button, Dropdown, SplitButton, Stack, Tab, Tabs } from 'react-bootstrap'
-import { BsBoxArrowInUp, BsPlus } from 'react-icons/bs'
+import { IconImport, IconPlusRundown } from '~/components/icons/broadcastIcons'
 import { RundownListGrouped } from '~/components/rundownList/rundownListGrouped'
 import { useToasts } from '~/components/toasts/useToasts'
 import { ipcAPI } from '~/lib/IPC'
@@ -140,7 +140,9 @@ function Index() {
 					<SplitButton
 						title={
 							<span className="d-inline-flex align-items-center gap-2">
-								<BsPlus className="bttn-icon icon-lg" aria-hidden />
+								<span className="d-inline-flex" aria-hidden>
+									<IconPlusRundown size={16} />
+								</span>
 								New Rundown
 							</span>
 						}
@@ -157,8 +159,12 @@ function Index() {
 						))}
 					</SplitButton>
 					<Button onClick={() => selectImportRundown(activeTab === 'templates')} variant="outline-primary">
-						<BsBoxArrowInUp className="bttn-icon icon-md me-2" aria-hidden />
-						Import
+						<span className="d-inline-flex align-items-center gap-2">
+							<span className="d-inline-flex" aria-hidden>
+								<IconImport size={15} />
+							</span>
+							Import
+						</span>
 					</Button>
 				</Stack>
 			</Stack>

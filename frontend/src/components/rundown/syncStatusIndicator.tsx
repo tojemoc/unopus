@@ -1,4 +1,5 @@
 import { OverlayTrigger, Tooltip } from 'react-bootstrap'
+import { IconSync } from '~/components/icons/broadcastIcons'
 import { useAppSelector } from '~/store/app'
 import { CoreConnectionStatus, type Rundown } from '~backend/background/interfaces'
 import './syncStatusIndicator.scss'
@@ -31,7 +32,9 @@ export function SyncStatusIndicator({ rundown }: { rundown: Rundown }) {
 	return (
 		<OverlayTrigger overlay={<Tooltip>{labels[state]}</Tooltip>}>
 			<div className={`sync-status-indicator sync-status-indicator--${state}`} role="status">
-				<span className="sync-status-indicator__dot" />
+				<span className="sync-status-indicator__icon" aria-hidden>
+					<IconSync size={12} />
+				</span>
 				<span className="sync-status-indicator__label">{labels[state]}</span>
 			</div>
 		</OverlayTrigger>

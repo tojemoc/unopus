@@ -1,7 +1,7 @@
 import { useNavigate } from '@tanstack/react-router'
 import { type Dispatch, type SetStateAction } from 'react'
 import { Stack } from 'react-bootstrap'
-import { BsBoxArrowInUp } from 'react-icons/bs'
+import { IconImport, IconSegment } from '~/components/icons/broadcastIcons'
 import { useToasts } from '~/components/toasts/useToasts'
 import { useAppDispatch, useAppSelector } from '~/store/app'
 import { addNewSegment } from '~/store/segments'
@@ -64,6 +64,9 @@ export function SegmentButtons({
 					style={{ borderColor: manifest.colour }}
 					onClick={() => handleAddSegment(manifest.id, manifest.buttonLabel ?? manifest.name)}
 				>
+					<span className="preset-button__icon" aria-hidden>
+						<IconSegment size={12} />
+					</span>
 					{manifest.buttonLabel ?? manifest.name}
 				</button>
 			))}
@@ -73,7 +76,9 @@ export function SegmentButtons({
 					type="button"
 					onClick={() => setShowImportModal(rank)}
 				>
-					<BsBoxArrowInUp aria-hidden style={{ marginRight: '.2em' }} />
+					<span className="preset-button__icon" aria-hidden>
+						<IconImport size={13} />
+					</span>
 					Import
 				</button>
 			)}

@@ -1,8 +1,18 @@
 import { Link, useMatchRoute, useNavigate } from '@tanstack/react-router'
 import { useMemo, useState } from 'react'
 import { Button } from 'react-bootstrap'
-import { BsGear } from 'react-icons/bs'
 import type { Rundown } from '~backend/background/interfaces'
+import {
+	IconCalendarShow,
+	IconClock,
+	IconDiff,
+	IconLogout,
+	IconOnAir,
+	IconRundowns,
+	IconScripts,
+	IconSettingsGear,
+	IconUnopusMark
+} from '~/components/icons/broadcastIcons'
 import { ThemeToggle } from '~/components/theme/ThemeToggle'
 import { SyncControl } from '~/components/rundown/syncControl'
 import { CoreDiagnosticsChip } from '~/components/rundown/coreDiagnosticsChip'
@@ -64,11 +74,13 @@ export function DuopusNavbar({ rundown, rundownName }: DuopusNavbarProps) {
 		<div className="duopus-navbar">
 			<div className="duopus-navbar__left">
 				<Link to="/" className="duopus-navbar__brand">
-					Unopus
+					<IconUnopusMark size={18} className="duopus-navbar__brand-mark" />
+					<span>Unopus</span>
 				</Link>
 				<nav className="duopus-navbar__nav" aria-label="Primary">
 					<Link to="/" className={isRundowns && !isInRundown ? 'active' : undefined}>
-						Rundowns
+						<IconRundowns size={14} />
+						<span>Rundowns</span>
 					</Link>
 					{rundown ? (
 						<Link
@@ -76,18 +88,18 @@ export function DuopusNavbar({ rundown, rundownName }: DuopusNavbarProps) {
 							params={{ rundownId: rundown.id }}
 							className={isRewrite ? 'active' : undefined}
 						>
-							Skripty
+							<IconScripts size={14} />
+							<span>Skripty</span>
 						</Link>
 					) : (
 						<span className="duopus-navbar__nav-disabled" title="Open a rundown to edit scripts">
-							Skripty
+							<IconScripts size={14} />
+							<span>Skripty</span>
 						</span>
 					)}
-					<Link
-						to="/settings/connection"
-						className={isSettings ? 'active' : undefined}
-					>
-						Settings
+					<Link to="/settings/connection" className={isSettings ? 'active' : undefined}>
+						<IconSettingsGear size={14} />
+						<span>Settings</span>
 					</Link>
 				</nav>
 			</div>
@@ -99,6 +111,7 @@ export function DuopusNavbar({ rundown, rundownName }: DuopusNavbarProps) {
 					<>
 						<div className="duopus-navbar__rundown-meta">
 							<span className="duopus-navbar__rundown-name" title={title}>
+								<IconCalendarShow size={14} className="duopus-navbar__rundown-icon" />
 								{title}
 							</span>
 							<Link
@@ -115,7 +128,7 @@ export function DuopusNavbar({ rundown, rundownName }: DuopusNavbarProps) {
 								title="Rundown settings"
 								onClick={() => setShowSettings(true)}
 							>
-								<BsGear aria-hidden />
+								<IconSettingsGear size={15} />
 							</button>
 						</div>
 						<RundownPropertiesModal
@@ -135,7 +148,8 @@ export function DuopusNavbar({ rundown, rundownName }: DuopusNavbarProps) {
 						</span>
 						<span className="duopus-navbar__user-name">{user.displayName}</span>
 						<button type="button" className="duopus-navbar__logout" onClick={() => void onLogout()}>
-							Log out
+							<IconLogout size={13} />
+							<span>Log out</span>
 						</button>
 					</div>
 				) : (
@@ -223,7 +237,7 @@ function RundownHeaderCenter({ rundown }: { rundown: Rundown }) {
 								: `${readyCount}/${totalCount} media items ready`
 					}
 				>
-					<span className="status-pill__dot" aria-hidden />
+					<IconOnAir size={12} className="status-pill__icon" />
 					{mediaReady ? 'On Air Ready' : totalCount === 0 ? 'No media' : 'Media pending'}
 				</span>
 				<SyncControl rundown={rundown} compact />
@@ -231,15 +245,21 @@ function RundownHeaderCenter({ rundown }: { rundown: Rundown }) {
 			</div>
 			<div className="duopus-navbar__timing">
 				<div className="timing-cell">
-					<span className="timing-cell__label">Expected start</span>
+					<span className="timing-cell__label">
+						<IconClock size={11} /> Expected start
+					</span>
 					<span className="timing-cell__value">{start}</span>
 				</div>
 				<div className="timing-cell">
-					<span className="timing-cell__label">Expected duration</span>
+					<span className="timing-cell__label">
+						<IconClock size={11} /> Expected duration
+					</span>
 					<span className="timing-cell__value">{duration}</span>
 				</div>
 				<div className={`timing-cell${diffNegative ? ' timing-cell--alert' : ''}`}>
-					<span className="timing-cell__label">DIF</span>
+					<span className="timing-cell__label">
+						<IconDiff size={11} /> DIF
+					</span>
 					<span className="timing-cell__value">{diff}</span>
 				</div>
 			</div>

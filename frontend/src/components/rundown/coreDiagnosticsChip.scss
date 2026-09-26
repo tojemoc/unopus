@@ -20,12 +20,11 @@
 	padding: 0.15rem 0.4rem;
 }
 
-.core-diagnostics-chip__dot {
-	width: 0.45rem;
-	height: 0.45rem;
-	border-radius: 50%;
+.core-diagnostics-chip__icon {
+	display: inline-flex;
+	align-items: center;
 	flex-shrink: 0;
-	background: #888;
+	opacity: 0.95;
 }
 
 .core-diagnostics-chip--green {
@@ -34,20 +33,32 @@
 	border-color: color-mix(in srgb, var(--re-success) 40%, transparent);
 }
 
-.core-diagnostics-chip--green .core-diagnostics-chip__dot {
-	background: var(--re-success);
+.core-diagnostics-chip--green .core-diagnostics-chip__icon {
+	color: var(--re-success);
 }
 
-.core-diagnostics-chip--yellow .core-diagnostics-chip__dot {
-	background: var(--re-warning);
+.core-diagnostics-chip--yellow {
+	background: color-mix(in srgb, var(--re-warning) 16%, transparent);
+	color: var(--re-text);
+	border-color: color-mix(in srgb, var(--re-warning) 40%, transparent);
 }
 
-.core-diagnostics-chip--red .core-diagnostics-chip__dot {
-	background: var(--re-danger);
+.core-diagnostics-chip--yellow .core-diagnostics-chip__icon {
+	color: var(--re-warning);
 }
 
-.core-diagnostics-chip--unknown .core-diagnostics-chip__dot {
-	background: #888;
+.core-diagnostics-chip--red {
+	background: color-mix(in srgb, var(--re-danger) 16%, transparent);
+	color: var(--re-status-notready-fg);
+	border-color: color-mix(in srgb, var(--re-danger) 40%, transparent);
+}
+
+.core-diagnostics-chip--red .core-diagnostics-chip__icon {
+	color: var(--re-danger);
+}
+
+.core-diagnostics-chip--unknown .core-diagnostics-chip__icon {
+	color: #888;
 }
 
 .core-diagnostics-chip-tooltip__content {
