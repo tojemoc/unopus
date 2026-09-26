@@ -777,7 +777,7 @@ function resolveWipeCutPointMsForExport(payload: Piece['payload'] | undefined): 
 
 export function mutatePieceForExport(piece: Piece): MutatedPiece {
 	const objectTime = piece.start ?? 0
-	const attributes: Record<string, unknown> = {
+	const attributes: MutatedPiece['attributes'] = {
 		...normalizeGraphicAttributesForExport(piece.payload),
 		adlib: false,
 		skip: Boolean(piece.skip),
