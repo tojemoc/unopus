@@ -73,8 +73,9 @@ export function CoreDiagnosticsChip({ compact = false }: { compact?: boolean }) 
 
 	return (
 		<OverlayTrigger
+			placement="bottom"
 			overlay={
-				<Tooltip className="core-diagnostics-chip-tooltip">
+				<Tooltip id="core-diagnostics-chip" className="core-diagnostics-chip-tooltip">
 					<span className="core-diagnostics-chip-tooltip__content">{tooltipText}</span>
 				</Tooltip>
 			}
