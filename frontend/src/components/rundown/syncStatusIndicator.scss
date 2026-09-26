@@ -8,12 +8,28 @@
 	cursor: default;
 	color: var(--re-text);
 	font-weight: 600;
+	white-space: nowrap;
+	max-width: 100%;
+	min-width: 0;
 
 	&__icon {
 		display: inline-flex;
 		align-items: center;
 		flex-shrink: 0;
 		opacity: 0.95;
+	}
+
+	&__label {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		min-width: 0;
+	}
+
+	&--compact {
+		padding: 0.1rem 0.3rem;
+		font-size: 0.62rem;
+		max-width: 8.5rem;
 	}
 
 	&--synced {

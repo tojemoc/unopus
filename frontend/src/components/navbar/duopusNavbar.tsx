@@ -104,9 +104,15 @@ export function DuopusNavbar({ rundown, rundownName }: DuopusNavbarProps) {
 							{userInitials(user.displayName)}
 						</span>
 						<span className="duopus-navbar__user-name">{user.displayName}</span>
-						<button type="button" className="duopus-navbar__logout" onClick={() => void onLogout()}>
+						<button
+							type="button"
+							className="duopus-navbar__logout"
+							onClick={() => void onLogout()}
+							aria-label="Log out"
+							title="Log out"
+						>
 							<IconLogout size={13} />
-							<span>Log out</span>
+							<span className="duopus-navbar__logout-text">Log out</span>
 						</button>
 					</div>
 				) : (
