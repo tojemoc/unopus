@@ -96,6 +96,14 @@ export function IconPlusRundown(props: IconProps) {
 	)
 }
 
+export function IconPlus(props: IconProps) {
+	return (
+		<Svg {...props}>
+			<path d="M8 3.5v9M3.5 8h9" {...stroke} />
+		</Svg>
+	)
+}
+
 export function IconCalendarShow(props: IconProps) {
 	return (
 		<Svg {...props}>
