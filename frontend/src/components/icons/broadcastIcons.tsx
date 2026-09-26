@@ -371,14 +371,21 @@ export function IconLock(props: IconProps) {
 export function PartTypeIcon({ partType, size = 12, className }: IconProps & { partType: string }) {
 	const id = partType.toLowerCase()
 	if (id.includes('cam')) return <IconCamera size={size} className={className} />
-	if (id.includes('syn') || id.includes('siv') || id.includes('vo'))
+	if (
+		id.includes('syn') ||
+		id.includes('siv') ||
+		id.includes('sjv') ||
+		id === 'vo' ||
+		id.startsWith('vo') ||
+		id.includes('voice')
+	)
 		return <IconMic size={size} className={className} />
-	if (id.includes('gfx') || id.includes('l3d') || id.includes('double'))
+	if (id.includes('gfx') || id.includes('l3d') || id.includes('double') || id.includes('box'))
 		return <IconGfx size={size} className={className} />
 	if (id.includes('sport')) return <IconSport size={size} className={className} />
-	if (id.includes('ilu') || id.includes('vt') || id.includes('clip'))
+	if (id.includes('ilu') || id.includes('vt') || id.includes('clip') || id.includes('package'))
 		return <IconClip size={size} className={className} />
-	if (id.includes('intro') || id.includes('headline') || id.includes('zaver'))
+	if (id.includes('intro') || id.includes('headline') || id.includes('zaver') || id.includes('tema'))
 		return <IconHeadline size={size} className={className} />
 	return <IconScripts size={size} className={className} />
 }
