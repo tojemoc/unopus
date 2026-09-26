@@ -14,7 +14,6 @@
 	},
 	"scripts": {
 		"dev": "cross-env NODE_ENV=development dotenv -e .env -- nodemon",
-		"dev:sim": "cross-env NODE_ENV=development SIMULATE_SOFIE_CORE=true dotenv -e .env -- nodemon",
 		"build": "run -T rimraf dist && run build:main",
 		"build:main": "run -T tsc -p tsconfig.json",
 		"typecheck": "run -T tsc -p tsconfig.json --noEmit",

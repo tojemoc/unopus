@@ -12,7 +12,6 @@ Sofie Rundown Editor is a web app for creating/editing broadcast rundowns. It ha
 
 ```bash
 yarn dev          # starts both backend and frontend concurrently
-yarn dev:sim      # same as yarn dev, with in-process Sofie Core simulator (no Core on :3000)
 yarn dev:backend  # backend only (port 3010, uses nodemon for hot-reload)
 yarn dev:ui       # frontend only (Vite, port 5173)
 ```
@@ -22,30 +21,12 @@ The backend requires a `.env` file in the `backend/` directory. Copy from `.env.
 cp backend/.env.example backend/.env
 ```
 
-### Simulated Sofie Core (local sync demo)
-
-Real Sofie Core at `127.0.0.1:3000` is usually absent in Cloud/dev; `ECONNREFUSED` retries are
-expected with the default `yarn dev`. For a working sync path without installing Core:
-
-```bash
-yarn dev:sim
-# or: SIMULATE_SOFIE_CORE=true in backend/.env, then yarn dev
-```
-
-When simulation is on:
-- Backend logs `SIMULATE_SOFIE_CORE=true` and `Simulated Core Connected!` (no DDP / no ECONNREFUSED spam)
-- Connection status is `Connected` with `url: simulated`; UI chip shows **Core SIM** (green)
-- Enabling **Sync to Sofie** on a rundown calls the usual ingest methods; the simulator accepts them and logs `[simulate-sofie-core] …`
-- Media readiness uses **local filesystem** checks (content-status returns empty piece list)
-- Production / real Core: leave `SIMULATE_SOFIE_CORE` unset or `false`
-
 ### Key caveats
 
-- Without simulation, the backend connects to Sofie Core at `127.0.0.1:3000` by default. "Core Initialization Error: connect ECONNREFUSED" messages are normal when Sofie Core is not running — the app is fully usable without it (sync stays pending/error until Core is up).
+- The backend connects to Sofie Core at `127.0.0.1:3000` by default. "Core Initialization Error: connect ECONNREFUSED" messages are normal when Sofie Core is not running — the app is fully usable without it.
 - SQLite is experimental in Node.js 22; the `ExperimentalWarning` log is expected and harmless.
 - The backend's nodemon config rebuilds TypeScript before restarting (`run build:main && node ./dist/main.js`). After editing backend source, wait a moment for the rebuild cycle.
 - The frontend proxies Socket.IO to the backend. Both must be running for full functionality.
-- Vite binds `0.0.0.0:5173` for port forwarding.
 
 ### Lint / Build / Test
 
