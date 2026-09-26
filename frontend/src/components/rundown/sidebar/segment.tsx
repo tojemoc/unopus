@@ -11,7 +11,8 @@ import type { DraggableWrappedComponent } from '~/components/drag-and-drop/Dragg
 import { SidebarPartRow } from './partRow'
 import { SidebarElementHeader } from './sidebarElementHeader'
 import { useToasts } from '~/components/toasts/useToasts'
-import { BsCaretDownFill, BsFillTrashFill, BsTrash } from 'react-icons/bs'
+import { BsFillTrashFill, BsTrash } from 'react-icons/bs'
+import { IconSegment } from '~/components/icons/broadcastIcons'
 import { Stack, type ButtonProps } from 'react-bootstrap'
 import { HoverIconButton } from '~/components/rundownList/hoverIconButton'
 import { DeleteSegmentButton } from '../deleteSegmentButton'
@@ -179,12 +180,23 @@ export function SidebarSegment({ segment }: { segment: Segment }) {
 						}}
 						aria-label={isOpen ? 'Collapse segment' : 'Expand segment'}
 					>
-						<BsCaretDownFill />
+						<svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden>
+							<path
+								d="M4 6.5 8 10.5 12 6.5"
+								stroke="currentColor"
+								strokeWidth="1.6"
+								strokeLinecap="round"
+								strokeLinejoin="round"
+							/>
+						</svg>
 					</span>
 					<div style={{ flexGrow: 2, minWidth: 0 }}>
 						<SidebarElementHeader
 							label={
 								<span className="segment-header__label">
+									<span className="segment-header__mark" aria-hidden>
+										<IconSegment size={13} />
+									</span>
 									<span className="segment-header__name">{segment.name}</span>
 									<span className="segment-header__count">{storyCount}</span>
 								</span>

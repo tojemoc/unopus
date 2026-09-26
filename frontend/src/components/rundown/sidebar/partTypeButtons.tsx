@@ -1,5 +1,6 @@
 import { useNavigate } from '@tanstack/react-router'
 import { Stack } from 'react-bootstrap'
+import { PartTypeIcon } from '~/components/icons/broadcastIcons'
 import { useToasts } from '~/components/toasts/useToasts'
 import { useAppDispatch, useAppSelector } from '~/store/app'
 import { addNewPart } from '~/store/parts'
@@ -103,6 +104,9 @@ export function PartTypeButtons(props: PartTypeButtonsProps) {
 					}
 					onClick={() => handleAddPart(manifest.id)}
 				>
+					<span className="preset-button__icon" aria-hidden>
+						<PartTypeIcon partType={manifest.id} size={12} />
+					</span>
 					{manifest.buttonLabel ?? manifest.shortName ?? manifest.name}
 				</button>
 			))}

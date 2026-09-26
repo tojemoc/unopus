@@ -1,4 +1,5 @@
 import { OverlayTrigger, Tooltip } from 'react-bootstrap'
+import { IconCore } from '~/components/icons/broadcastIcons'
 import { useCoreDiagnostics } from '~/hooks/useCoreDiagnostics'
 import './coreDiagnosticsChip.scss'
 
@@ -63,7 +64,9 @@ export function CoreDiagnosticsChip({ compact = false }: { compact?: boolean }) 
 			role="status"
 			aria-label={tooltipText.replace(/\n/g, '. ')}
 		>
-			<span className="core-diagnostics-chip__dot" aria-hidden="true" />
+			<span className="core-diagnostics-chip__icon" aria-hidden="true">
+				<IconCore size={12} />
+			</span>
 			<span className="core-diagnostics-chip__label">{label}</span>
 		</span>
 	)

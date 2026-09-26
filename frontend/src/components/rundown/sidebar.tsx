@@ -13,6 +13,7 @@ import { StoryTableHeader } from './sidebar/partRow'
 import { useToasts } from '../toasts/useToasts'
 import { SegmentButtons } from './sidebar/segmentButtons'
 import { PartTypeButtons } from './sidebar/partTypeButtons'
+import { IconClip, IconRefresh, IconSearch } from '~/components/icons/broadcastIcons'
 import { useRundownReadinessContext } from '~/hooks/RundownReadinessContext'
 import { useScriptExpand } from '~/hooks/ScriptExpandContext'
 import { usePartInsertTarget } from '~/hooks/usePartInsertTarget'
@@ -99,9 +100,13 @@ export function RundownSidebar({
 				</div>
 				<div className="rundown-media-toolbar__meta">
 					<span className="rundown-sidebar-toolbar__summary" title={error ?? undefined}>
+						<IconClip size={13} />
 						{summaryText}
 					</span>
 					<label className="rundown-media-toolbar__search">
+						<span className="rundown-media-toolbar__search-icon" aria-hidden>
+							<IconSearch size={13} />
+						</span>
 						<span className="visually-hidden">Search rundown</span>
 						<input
 							type="search"
@@ -115,6 +120,7 @@ export function RundownSidebar({
 						className="rundown-sidebar-toolbar__refresh"
 						onClick={() => void refresh()}
 					>
+						<IconRefresh size={13} />
 						Refresh
 					</button>
 				</div>

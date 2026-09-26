@@ -1,5 +1,6 @@
 import { OverlayTrigger, Tooltip } from 'react-bootstrap'
 import type { ReadinessStatusSource } from '~backend/background/interfaces'
+import { IconClip, IconMediaMissing, IconMediaReady } from '~/components/icons/broadcastIcons'
 import './readinessBadge.scss'
 
 export type ReadinessState = 'ready' | 'not-ready' | 'na'
@@ -25,12 +26,24 @@ export function ReadinessBadge({
 		na: 'Not applicable'
 	}
 
+	const icon =
+		state === 'ready' ? (
+			<IconMediaReady size={compact ? 10 : 12} />
+		) : state === 'not-ready' ? (
+			<IconMediaMissing size={compact ? 10 : 12} />
+		) : (
+			<IconClip size={compact ? 10 : 12} />
+		)
+
 	const badge = (
 		<span
-			className={`readiness-badge readiness-badge--${state}`}
+			className={`readiness-badge readiness-badge--${state}${compact ? ' readiness-badge--compact' : ''}`}
 			role="status"
 			aria-label={ariaLabels[state]}
 		>
+			<span className="readiness-badge__icon" aria-hidden>
+				{icon}
+			</span>
 			{labels[state]}
 		</span>
 	)

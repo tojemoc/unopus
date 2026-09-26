@@ -1,16 +1,16 @@
 import { Link, useMatchRoute, useNavigate, useParams } from '@tanstack/react-router'
 import classNames from 'classnames'
 import {
-	BsArchive,
-	BsCalendar3,
-	BsChevronBarLeft,
-	BsChevronBarRight,
-	BsCollectionPlay,
-	BsGear,
-	BsPeople,
-	BsPlusLg,
-	BsPlug
-} from 'react-icons/bs'
+	IconAllRundowns,
+	IconCalendarShow,
+	IconCollapseSidebar,
+	IconExpandSidebar,
+	IconIntegrations,
+	IconPlusRundown,
+	IconSettingsGear,
+	IconTemplates,
+	IconUsers
+} from '~/components/icons/broadcastIcons'
 import { useAppDispatch, useAppSelector } from '~/store/app'
 import { addNewRundown } from '~/store/rundowns'
 import { canEditRundown } from '~/util/roles'
@@ -81,7 +81,7 @@ export function AppSidebar() {
 		{
 			id: 'new',
 			label: 'Nový rundown',
-			icon: <BsPlusLg aria-hidden />,
+			icon: <IconPlusRundown size={16} />,
 			onClick: createRundown,
 			disabled: !canEdit,
 			title: canEdit ? 'Create a new rundown' : 'Viewer role — read-only'
@@ -91,7 +91,7 @@ export function AppSidebar() {
 					{
 						id: 'current',
 						label: currentRundown.name,
-						icon: <BsCalendar3 aria-hidden />,
+						icon: <IconCalendarShow size={16} />,
 						to: '/rundown/$rundownId',
 						params: { rundownId: currentRundown.id },
 						active: true
@@ -101,14 +101,14 @@ export function AppSidebar() {
 		{
 			id: 'all',
 			label: 'Všetky rundowns',
-			icon: <BsCollectionPlay aria-hidden />,
+			icon: <IconAllRundowns size={16} />,
 			onClick: () => goHomeTab('rundowns'),
 			active: isHome && !isTemplatesTab
 		},
 		{
 			id: 'templates',
 			label: 'Šablóny',
-			icon: <BsArchive aria-hidden />,
+			icon: <IconTemplates size={16} />,
 			onClick: () => goHomeTab('templates'),
 			active: isTemplatesTab,
 			title: 'Templates'
@@ -119,14 +119,14 @@ export function AppSidebar() {
 		{
 			id: 'settings',
 			label: 'Nastavenia',
-			icon: <BsGear aria-hidden />,
+			icon: <IconSettingsGear size={16} />,
 			to: '/settings/profile',
 			active: isSettings && !isUsers && !isConnection
 		},
 		{
 			id: 'users',
 			label: 'Používatelia',
-			icon: <BsPeople aria-hidden />,
+			icon: <IconUsers size={16} />,
 			to: '/settings/users',
 			active: isUsers,
 			disabled: userRole !== 'admin',
@@ -135,7 +135,7 @@ export function AppSidebar() {
 		{
 			id: 'integrations',
 			label: 'Integrácie',
-			icon: <BsPlug aria-hidden />,
+			icon: <IconIntegrations size={16} />,
 			to: '/settings/connection',
 			active: isConnection
 		}
@@ -153,7 +153,7 @@ export function AppSidebar() {
 				aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
 				title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
 			>
-				{sidebarCollapsed ? <BsChevronBarRight aria-hidden /> : <BsChevronBarLeft aria-hidden />}
+				{sidebarCollapsed ? <IconExpandSidebar size={16} /> : <IconCollapseSidebar size={16} />}
 			</button>
 
 			<nav className="app-sidebar__nav">
