@@ -632,8 +632,6 @@ export interface CoreConnectionInfo {
 	status: CoreConnectionStatus
 	url?: string
 	port?: number
-	/** True when backend is using SIMULATE_SOFIE_CORE (in-process mock, not real DDP). */
-	simulated?: boolean
 }
 
 export interface SerializedRundown {

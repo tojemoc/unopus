@@ -58,17 +58,11 @@ export function CoreConnectionSettingsForm({ settings }: { settings: Application
 			const info = await ipcAPI.getCoreConnectionInfo()
 			if (info.status === CoreConnectionStatus.CONNECTED) {
 				setTestVariant('success')
-				setTestMessage(
-					info.simulated
-						? 'Connected to simulated Sofie Core (SIMULATE_SOFIE_CORE)'
-						: 'Connected to Sofie Core'
-				)
+				setTestMessage('Connected to Sofie Core')
 			} else {
 				setTestVariant('danger')
 				setTestMessage(
-					info.simulated
-						? 'Simulated Core is not connected — restart the backend with SIMULATE_SOFIE_CORE=true.'
-						: 'Could not connect — check the URL and make sure Sofie Core is running.'
+					'Could not connect — check the URL and make sure Sofie Core is running.'
 				)
 			}
 		} catch (error) {
@@ -513,11 +507,7 @@ export function CoreConnectionSettingsForm({ settings }: { settings: Application
 						{testing ? 'Testing…' : 'Test Connection'}
 					</Button>
 					{connectionStatus.status === CoreConnectionStatus.CONNECTED && !testMessage && (
-						<span className="text-success ms-3 small">
-							{connectionStatus.simulated
-								? 'Currently connected (simulated Core)'
-								: 'Currently connected'}
-						</span>
+						<span className="text-success ms-3 small">Currently connected</span>
 					)}
 				</div>
 				{testMessage && <Alert variant={testVariant}>{testMessage}</Alert>}

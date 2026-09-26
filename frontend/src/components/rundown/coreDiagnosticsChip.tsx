@@ -16,19 +16,14 @@ function trafficLabel(diagnostics: ReturnType<typeof useCoreDiagnostics>['diagno
 	}
 
 	const probe = diagnostics.contentStatusProbe
-	const simulated = Boolean(diagnostics.simulated)
 	return {
 		light: probe.trafficLight,
 		short:
 			probe.trafficLight === 'green'
-				? simulated
-					? 'Core SIM'
-					: 'Core ON'
+				? 'Core ON'
 				: probe.trafficLight === 'yellow'
 					? 'Core local-scan'
-					: simulated
-						? 'Core SIM down'
-						: 'Core down',
+					: 'Core down',
 		detail: probe.summary
 	}
 }
@@ -48,9 +43,7 @@ export function CoreDiagnosticsChip({ compact = false }: { compact?: boolean }) 
 		: [
 				detail,
 				diagnostics?.connection.url
-					? `Core: ${diagnostics.connection.url}${
-							diagnostics.connection.port ? `:${diagnostics.connection.port}` : ''
-						}${diagnostics.simulated ? ' (simulated)' : ''}`
+					? `Core: ${diagnostics.connection.url}:${diagnostics.connection.port ?? ''}`
 					: null,
 				diagnostics?.deviceAuth.usingUnsecureToken
 					? 'Device auth: using default unsecureToken'

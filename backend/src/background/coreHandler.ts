@@ -19,10 +19,6 @@ import { CoreConnectionInfo, CoreConnectionStatus } from './interfaces'
 import { mutateRundown, mutations as rundownMutations } from './api/rundowns'
 import { PeripheralDeviceCommandId } from '@sofie-automation/shared-lib/dist/core/model/Ids'
 import { getSocketIO } from './socket'
-import {
-	isSimulateSofieCoreEnabled,
-	SimulatedCoreConnection
-} from './sofieCoreSimulation'
 
 export interface DeviceConfig {
 	deviceId: string
@@ -36,23 +32,17 @@ export interface CoreDeviceAuthInfo {
 	usingUnsecureToken: boolean
 }
 
-/** Real CoreConnection or the in-process simulator (SIMULATE_SOFIE_CORE). */
-export type CoreConnectionHandle = CoreConnection | SimulatedCoreConnection
-
 /**
  * Manages the connection and communication with Sofie Core.
  * Handles device authentication, subscriptions, and command execution.
  */
 export class CoreHandler {
-	public core: CoreConnectionHandle
+	public core: CoreConnection
 	public get connectionInfo(): Readonly<CoreConnectionInfo> {
 		return Object.freeze({ ...this._connectionInfo })
 	}
 	public get deviceAuthInfo(): Readonly<CoreDeviceAuthInfo> {
 		return Object.freeze({ ...this._deviceAuthInfo })
-	}
-	public get simulatingCore(): boolean {
-		return this._simulatingCore
 	}
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -61,28 +51,24 @@ export class CoreHandler {
 	private _connectionInfo: CoreConnectionInfo = {
 		url: undefined,
 		port: undefined,
-		status: CoreConnectionStatus.DISCONNECTED,
-		simulated: false
+		status: CoreConnectionStatus.DISCONNECTED
 	}
 	private _deviceAuthInfo: CoreDeviceAuthInfo = {
 		deviceIdConfigured: false,
 		usingUnsecureToken: true
 	}
-	private _simulatingCore = false
-	private _initGeneration = 0
 
 	constructor() {
-		const options = this.getCoreConnectionOptions(
-			{
-				deviceId: '',
-				deviceToken: ''
-			},
-			'sofie-rundown-editor'
+		// todo - have settings for this
+		this.core = new CoreConnection(
+			this.getCoreConnectionOptions(
+				{
+					deviceId: '',
+					deviceToken: ''
+				},
+				'sofie-rundown-editor'
+			)
 		)
-		this._simulatingCore = isSimulateSofieCoreEnabled()
-		this.core = this._simulatingCore
-			? new SimulatedCoreConnection(options)
-			: new CoreConnection(options)
 	}
 
 	/**
@@ -90,7 +76,6 @@ export class CoreHandler {
 	 * Sets up event handlers and establishes connection to Sofie Core.
 	 */
 	async init() {
-		const generation = ++this._initGeneration
 		const { result: settings } = await settingsMutations.read()
 
 		const sendConnectionInfo = () => {
@@ -102,17 +87,15 @@ export class CoreHandler {
 		}
 
 		this.core.onConnected(() => {
-			console.log(this._simulatingCore ? 'Simulated Core Connected!' : 'Core Connected!')
+			console.log('Core Connected!')
 			this._connectionInfo.status = CoreConnectionStatus.CONNECTED
-			this._connectionInfo.simulated = this._simulatingCore
 			sendConnectionInfo()
 			this.setStatus(StatusCode.GOOD, [])
 			// if (this._isInitialized) this.onConnectionRestored()
 		})
 		this.core.onDisconnected(() => {
-			console.log(this._simulatingCore ? 'Simulated Core Disconnected!' : 'Core Disconnected!')
+			console.log('Core Disconnected!')
 			this._connectionInfo.status = CoreConnectionStatus.DISCONNECTED
-			this._connectionInfo.simulated = this._simulatingCore
 			sendConnectionInfo()
 		})
 		this.core.onError((err) => {
@@ -123,28 +106,9 @@ export class CoreHandler {
 			host: (settings || {}).coreUrl || process.env.CORE_HOST || '127.0.0.1',
 			port: (settings || {}).corePort || Number(process.env.CORE_PORT) || 3000
 		}
-		this._connectionInfo.url = this._simulatingCore ? 'simulated' : ddpConfig.host
-		this._connectionInfo.port = this._simulatingCore ? 0 : ddpConfig.port
-		this._connectionInfo.simulated = this._simulatingCore
+		this._connectionInfo.url = ddpConfig.host
+		this._connectionInfo.port = ddpConfig.port
 		sendConnectionInfo()
-
-		if (this._simulatingCore) {
-			console.log(
-				'SIMULATE_SOFIE_CORE=true — using in-process Sofie Core simulator (no DDP to :3000)'
-			)
-			try {
-				await this.core.init(ddpConfig)
-				if (generation !== this._initGeneration) return
-				await this.setupSubscriptionsAndObservers()
-			} catch (error) {
-				console.error(
-					'Simulated Core Initialization Error:',
-					error instanceof Error ? error.message : error
-				)
-			}
-			return
-		}
-
 		// if (this._process && this._process.certificates.length) {
 		// 	ddpConfig.tlsOpts = {
 		// 		ca: this._process.certificates
@@ -153,17 +117,14 @@ export class CoreHandler {
 		this.core
 			.init(ddpConfig)
 			.then(() => {
-				if (generation !== this._initGeneration) return
 				return this.setupSubscriptionsAndObservers()
 			})
 			.catch((error) => {
-				if (generation !== this._initGeneration) return
 				console.error('Core Initialization Error:', error instanceof Error ? error.message : error)
-				void this.core.destroy() // Cleanup to prevent EventEmitter leaks.
+				this.core.destroy() // Cleanup to prevent EventEmitter leaks.
 
 				setTimeout(() => {
-					if (generation !== this._initGeneration) return
-					void this.init() // Keep retrying until successful.
+					this.init() // Keep retrying until successful.
 				}, 1000) // Debounce to ensure it doesnt cause an infinite loop on an EHOSTUNREACH
 			})
 	}
@@ -278,7 +239,7 @@ export class CoreHandler {
 				PeripheralDevicePubSubCollectionsNames.peripheralDeviceCommands
 			)
 			if (!cmds) throw Error('"peripheralDeviceCommands" collection not found!')
-			const cmd = cmds.findOne(id) as PeripheralDeviceCommand | undefined
+			const cmd = cmds.findOne(id)
 			if (!cmd) throw Error(`PeripheralCommand "${id}" not found!`)
 			if (cmd.deviceId === this.core.deviceId) {
 				this.executeFunction(cmd, this)
@@ -298,8 +259,7 @@ export class CoreHandler {
 		)
 		if (!cmds) throw Error('"peripheralDeviceCommands" collection not found!')
 		// any should be PeripheralDeviceCommand
-		cmds.find({}).forEach((cmdDoc) => {
-			const cmd = cmdDoc as PeripheralDeviceCommand
+		cmds.find({}).forEach((cmd) => {
 			if (!this.core) {
 				throw Error('functionObject.core is undefined!')
 			}

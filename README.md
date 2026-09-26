@@ -52,11 +52,6 @@ yarn dev
 
 The frontend with hot-reloads will be available at `http://localhost:5173/`
 
-**Without Sofie Core installed:** use `yarn dev:sim` (or set `SIMULATE_SOFIE_CORE=true` in
-`backend/.env`). The backend stays Connected to an in-process Core simulator so Sync to Sofie,
-status chips (Core SIM), and local media readiness work without a real Core on port 3000.
-Leave the flag unset for production / real Core integration.
-
 ### Compiles and minifies for production
 
 ```
