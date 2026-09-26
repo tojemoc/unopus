@@ -42,7 +42,10 @@ export function SyncStatusIndicator({
 	const label = compact ? shortLabels[state] : detailLabels[state]
 
 	return (
-		<OverlayTrigger overlay={<Tooltip>{detailLabels[state]}</Tooltip>}>
+		<OverlayTrigger
+			placement="bottom"
+			overlay={<Tooltip id={`sync-status-${state}`}>{detailLabels[state]}</Tooltip>}
+		>
 			<div
 				className={`sync-status-indicator sync-status-indicator--${state}${compact ? ' sync-status-indicator--compact' : ''}`}
 				role="status"
