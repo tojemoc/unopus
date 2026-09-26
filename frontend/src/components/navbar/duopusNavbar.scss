@@ -115,30 +115,6 @@
 		color: var(--re-text-muted);
 	}
 
-	&__type-link {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.25rem;
-		font-size: 0.66rem;
-		font-weight: 600;
-		color: var(--re-text-muted);
-		text-decoration: none;
-		padding: 0.1rem 0.35rem;
-		border: 1px solid var(--re-border);
-		border-radius: var(--re-radius-sm);
-		white-space: nowrap;
-		flex-shrink: 0;
-
-		svg {
-			flex-shrink: 0;
-		}
-
-		&:hover {
-			color: var(--re-text);
-			border-color: var(--re-accent);
-		}
-	}
-
 	&__icon-btn {
 		all: unset;
 		display: inline-flex;

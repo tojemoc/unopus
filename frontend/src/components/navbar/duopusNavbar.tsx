@@ -8,7 +8,6 @@ import {
 	IconDiff,
 	IconLogout,
 	IconOnAir,
-	IconScripts,
 	IconSettingsGear,
 	IconUnopusMark
 } from '~/components/icons/broadcastIcons'
@@ -70,14 +69,6 @@ export function DuopusNavbar({ rundown, rundownName }: DuopusNavbarProps) {
 								<IconCalendarShow size={14} className="duopus-navbar__rundown-icon" />
 								{title}
 							</span>
-							<Link
-								to="/rundown/$rundownId/rewrite"
-								params={{ rundownId: rundown.id }}
-								className="duopus-navbar__type-link"
-							>
-								<IconScripts size={12} />
-								<span>Skripty</span>
-							</Link>
 							<button
 								type="button"
 								className="duopus-navbar__icon-btn"
