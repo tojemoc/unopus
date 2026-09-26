@@ -2,6 +2,7 @@ import { Form, Stack } from 'react-bootstrap'
 import type { Rundown } from '~backend/background/interfaces'
 import { useAppDispatch } from '~/store/app'
 import { updateRundown } from '~/store/rundowns'
+import { CoreSyncStatusChip } from './coreSyncStatusChip'
 import { SyncStatusIndicator } from './syncStatusIndicator'
 import { friendlyLabel } from '~/util/fieldLabels'
 
@@ -15,7 +16,11 @@ export function SyncControl({ rundown, compact = false }: { rundown: Rundown; co
 			gap={compact ? 1 : 3}
 			className={`align-items-center sync-control-bar${compact ? ' sync-control-bar--compact' : ' mb-3 p-2'}`}
 		>
-			<SyncStatusIndicator rundown={rundown} compact={compact} />
+			{compact ? (
+				<CoreSyncStatusChip rundown={rundown} />
+			) : (
+				<SyncStatusIndicator rundown={rundown} />
+			)}
 			{!rundown.isTemplate && (
 				<Form.Check
 					type="switch"

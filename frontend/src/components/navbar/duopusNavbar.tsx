@@ -13,7 +13,6 @@ import {
 } from '~/components/icons/broadcastIcons'
 import { ThemeToggle } from '~/components/theme/ThemeToggle'
 import { SyncControl } from '~/components/rundown/syncControl'
-import { CoreDiagnosticsChip } from '~/components/rundown/coreDiagnosticsChip'
 import { RundownPropertiesModal } from '~/components/rundown/rundownPropertiesModal'
 import { useAppDispatch, useAppSelector } from '~/store/app'
 import { logout } from '~/store/auth'
@@ -220,7 +219,6 @@ function RundownStatusChips({ rundown }: { rundown: Rundown }) {
 				{mediaReady ? 'On Air Ready' : totalCount === 0 ? 'No media' : 'Media pending'}
 			</span>
 			<SyncControl rundown={rundown} compact />
-			<CoreDiagnosticsChip compact />
 		</div>
 	)
 }
