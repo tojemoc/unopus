@@ -19,23 +19,38 @@ function getSyncState(rundown: Rundown, coreStatus: CoreConnectionStatus): SyncV
 	return 'pending'
 }
 
-export function SyncStatusIndicator({ rundown }: { rundown: Rundown }) {
+export function SyncStatusIndicator({
+	rundown,
+	compact = false
+}: {
+	rundown: Rundown
+	compact?: boolean
+}) {
 	const coreStatus = useAppSelector((s) => s.coreConnectionStatus.status)
 	const state = getSyncState(rundown, coreStatus)
 
-	const labels: Record<SyncVisualState, string> = {
+	const detailLabels: Record<SyncVisualState, string> = {
 		synced: 'Synced to Sofie',
 		pending: rundown.sync ? 'Waiting for Sofie connection' : 'Sync off — changes stay local',
 		error: 'Could not reach Sofie Core — check connection settings'
 	}
+	const shortLabels: Record<SyncVisualState, string> = {
+		synced: 'Synced',
+		pending: rundown.sync ? 'Connecting…' : 'Sync off',
+		error: 'Core unreachable'
+	}
+	const label = compact ? shortLabels[state] : detailLabels[state]
 
 	return (
-		<OverlayTrigger overlay={<Tooltip>{labels[state]}</Tooltip>}>
-			<div className={`sync-status-indicator sync-status-indicator--${state}`} role="status">
+		<OverlayTrigger overlay={<Tooltip>{detailLabels[state]}</Tooltip>}>
+			<div
+				className={`sync-status-indicator sync-status-indicator--${state}${compact ? ' sync-status-indicator--compact' : ''}`}
+				role="status"
+			>
 				<span className="sync-status-indicator__icon" aria-hidden>
 					<IconSync size={12} />
 				</span>
-				<span className="sync-status-indicator__label">{labels[state]}</span>
+				<span className="sync-status-indicator__label">{label}</span>
 			</div>
 		</OverlayTrigger>
 	)
