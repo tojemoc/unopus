@@ -69,4 +69,32 @@ describe('mutatePieceForExport', () => {
 		assert.equal(exported.skip, true)
 		assert.equal(exported.attributes.skip, true)
 	})
+
+	it('always exports wipe cutPoint ms for blueprints (default 380 when unset)', () => {
+		const without = mutatePieceForExport(
+			makePiece({
+				pieceType: 'wipe',
+				duration: 2.5,
+				payload: { fileName: 'wipes/wipe.mov', transition: 'Double Box' }
+			})
+		)
+		assert.equal(without.attributes.cutPoint, 380)
+
+		const editorial = mutatePieceForExport(
+			makePiece({
+				pieceType: 'wipe',
+				duration: 2.5,
+				payload: { fileName: 'wipes/wipe.mov', cutPoint: 500 }
+			})
+		)
+		assert.equal(editorial.attributes.cutPoint, 500)
+
+		const asString = mutatePieceForExport(
+			makePiece({
+				pieceType: 'wipe',
+				payload: { fileName: 'wipes/wipe.mov', cutPoint: '900' }
+			})
+		)
+		assert.equal(asString.attributes.cutPoint, 900)
+	})
 })
