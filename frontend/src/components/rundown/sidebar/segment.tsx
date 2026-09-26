@@ -16,8 +16,11 @@ import { IconSegment } from '~/components/icons/broadcastIcons'
 import { Stack, type ButtonProps } from 'react-bootstrap'
 import { HoverIconButton } from '~/components/rundownList/hoverIconButton'
 import { DeleteSegmentButton } from '../deleteSegmentButton'
+import { PartTypeButtons } from './partTypeButtons'
 import { useScriptExpand } from '~/hooks/ScriptExpandContext'
+import { usePartInsertTarget } from '~/hooks/usePartInsertTarget'
 import { matchesStoryFilter, useStoryFilter } from '~/hooks/StoryFilterContext'
+import { computeInsertRank } from '~/util/lib'
 import { resolvePartOnAirDuration } from '~/util/pieceDuration'
 import { resolveEffectiveScriptCps } from '~/util/scriptReadingTime'
 import { canEditRundown } from '~/util/roles'
@@ -39,8 +42,9 @@ export function SidebarSegment({ segment }: { segment: Segment }) {
 	const toasts = useToasts()
 	const [isOpen, setIsOpen] = useState(true)
 	const { expandedPartId } = useScriptExpand()
+	const insertTarget = usePartInsertTarget(segment.rundownId)
 
-	// Route segment is the insert target for toolbar part pills — highlight it so
+	// Route segment is the insert target for part pills — highlight it so
 	// editors can see which story they're adding into (Link.active no longer applies
 	// after click-to-select / double-click-rename replaced the segment Link).
 	const isSelectedSegment = useRouterState({
@@ -158,6 +162,41 @@ export function SidebarSegment({ segment }: { segment: Segment }) {
 	const userRole = useAppSelector((s) => s.auth.user?.role)
 	const canEdit = canEditRundown(userRole)
 
+	// Show add-part chips on the active segment: route selection and/or expanded story.
+	// Expanding a story does not always update the segment route, so fall back to local rank.
+	const localInsertTarget = useMemo(() => {
+		if (!canEdit) return null
+
+		if (insertTarget?.segment.id === segment.id) {
+			return insertTarget
+		}
+
+		const expandedPart = expandedPartId
+			? sortedParts.find((part) => part.id === expandedPartId)
+			: undefined
+		if (expandedPart) {
+			return {
+				segment,
+				rank: computeInsertRank(sortedParts, expandedPart.id),
+				hint: `after "${expandedPart.name}"`
+			}
+		}
+
+		if (isSelectedSegment) {
+			if (sortedParts.length === 0) {
+				return { segment, rank: 0, hint: `in "${segment.name}"` }
+			}
+			const lastPart = sortedParts[sortedParts.length - 1]
+			return {
+				segment,
+				rank: computeInsertRank(sortedParts, lastPart.id),
+				hint: `at end of "${segment.name}"`
+			}
+		}
+
+		return null
+	}, [canEdit, insertTarget, segment, sortedParts, expandedPartId, isSelectedSegment])
+
 	if (hideForFilter) {
 		return null
 	}
@@ -237,6 +276,19 @@ export function SidebarSegment({ segment }: { segment: Segment }) {
 				</Stack>
 			</div>
 
+			{localInsertTarget ? (
+				<div
+					className="segment-part-type-bar"
+					aria-label={`Add story ${localInsertTarget.hint}`}
+				>
+					<PartTypeButtons
+						segment={localInsertTarget.segment}
+						rank={localInsertTarget.rank}
+						insertHint={localInsertTarget.hint}
+					/>
+				</div>
+			) : null}
+
 			{isOpen ? (
 				<div className="segment-content">
 					{sortedParts.length > 0 ? (
@@ -250,7 +302,9 @@ export function SidebarSegment({ segment }: { segment: Segment }) {
 						/>
 					) : (
 						<div className="story-table-empty px-2 py-2 text-muted">
-							No stories yet — use the toolbar above to add one.
+							{canEdit
+								? 'No stories yet — use the buttons above to add one.'
+								: 'No stories yet.'}
 						</div>
 					)}
 				</div>
