@@ -754,8 +754,39 @@ function normalizeGraphicAttributesForExport(
 	return attributes
 }
 
+/** Default cover-frame cut (ms) — matches blueprints `WIPE_CUT_POINT_MS`. */
+const DEFAULT_WIPE_CUT_POINT_MS = 380
+
+/**
+ * Editorial wipe cut point from RE payload `cutPoint` (ms), else the blueprints default.
+ * Always export an explicit number so Sofie ingest / blueprints never fall back silently.
+ */
+function resolveWipeCutPointMsForExport(payload: Piece['payload'] | undefined): number {
+	const raw = payload?.cutPoint
+	if (typeof raw === 'number' && Number.isFinite(raw) && raw >= 0) {
+		return Math.floor(raw)
+	}
+	if (typeof raw === 'string' && raw.trim() !== '') {
+		const parsed = Number(raw)
+		if (Number.isFinite(parsed) && parsed >= 0) {
+			return Math.floor(parsed)
+		}
+	}
+	return DEFAULT_WIPE_CUT_POINT_MS
+}
+
 export function mutatePieceForExport(piece: Piece): MutatedPiece {
 	const objectTime = piece.start ?? 0
+	const attributes: Record<string, unknown> = {
+		...normalizeGraphicAttributesForExport(piece.payload),
+		adlib: false,
+		skip: Boolean(piece.skip),
+		editorChecked: Boolean(piece.editorChecked)
+	}
+
+	if (piece.pieceType === 'wipe') {
+		attributes.cutPoint = resolveWipeCutPointMsForExport(piece.payload)
+	}
 
 	return {
 		id: piece.id,
@@ -765,12 +796,7 @@ export function mutatePieceForExport(piece: Piece): MutatedPiece {
 		duration: piece.duration ?? undefined,
 		clipName: undefined,
 		skip: Boolean(piece.skip),
-		attributes: {
-			...normalizeGraphicAttributesForExport(piece.payload),
-			adlib: false,
-			skip: Boolean(piece.skip),
-			editorChecked: Boolean(piece.editorChecked)
-		},
+		attributes,
 		position: undefined
 	}
 }
