@@ -1,7 +1,8 @@
 .duopus-navbar {
-	display: flex;
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
 	align-items: center;
-	gap: 0.6rem 0.85rem;
+	column-gap: 0.75rem;
 	height: var(--re-header-height);
 	padding: 0 0.65rem 0 0.75rem;
 	background: var(--re-surface-1);
@@ -12,7 +13,8 @@
 		display: flex;
 		align-items: center;
 		gap: 0.85rem;
-		flex-shrink: 0;
+		justify-self: start;
+		min-width: 0;
 	}
 
 	&__brand {
@@ -40,32 +42,33 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		gap: 1rem 1.25rem;
-		flex: 1 1 auto;
+		justify-self: center;
 		min-width: 0;
-		flex-wrap: wrap;
 	}
 
 	&__status {
 		display: flex;
 		align-items: center;
-		gap: 0.55rem;
+		gap: 0.45rem;
 		flex-shrink: 0;
 	}
 
 	&__timing {
 		display: flex;
 		align-items: center;
-		gap: 0.85rem;
+		justify-content: center;
+		gap: 1rem;
 		flex-shrink: 0;
 	}
 
 	&__right {
 		display: flex;
 		align-items: center;
-		gap: 0.65rem;
-		flex-shrink: 0;
-		margin-left: auto;
+		justify-content: flex-end;
+		justify-self: end;
+		gap: 0.55rem;
+		min-width: 0;
+		flex-wrap: wrap;
 	}
 
 	&__rundown-meta {

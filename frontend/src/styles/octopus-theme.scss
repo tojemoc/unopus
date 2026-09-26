@@ -263,9 +263,12 @@
 
 .segment-part-type-bar .preset-button,
 .segment-part-type-bar .part-button.preset-button,
+.segment-part-type-bar .empty-part-button,
 .segment-buttons .preset-button,
 .segment-buttons .import-button,
-.part-button.add-button-container .preset-button {
+.segment-buttons .empty-segment-button,
+.part-button.add-button-container .preset-button,
+.part-button.add-button-container .empty-part-button {
 	all: unset;
 	display: inline-flex;
 	align-items: center;
@@ -304,13 +307,70 @@
 	}
 }
 
-.segment-buttons .import-button {
+.segment-buttons .import-button,
+.segment-buttons .empty-segment-button,
+.segment-part-type-bar .empty-part-button,
+.part-type-buttons .empty-part-button {
 	color: var(--re-link);
 	background: var(--re-accent-subtle);
 	border-color: var(--re-accent-subtle);
 	text-transform: none;
 	letter-spacing: 0.01em;
 	font-weight: 650;
+}
+
+.segment-create--hero {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 1.1rem;
+	text-align: center;
+}
+
+.segment-create__intro {
+	max-width: 28rem;
+}
+
+.segment-create__title {
+	margin: 0 0 0.35rem;
+	font-size: 1.25rem;
+	font-weight: 700;
+	color: var(--re-text);
+	letter-spacing: 0.01em;
+}
+
+.segment-create__subtitle {
+	margin: 0;
+	font-size: 0.85rem;
+	line-height: 1.4;
+	color: var(--re-text-muted);
+}
+
+.segment-buttons--hero {
+	justify-content: center;
+	flex-wrap: wrap;
+	gap: 0.55rem !important;
+	max-width: 40rem;
+
+	.segment-button {
+		font-size: 0.82rem !important;
+		font-weight: 700;
+		padding: 0.65rem 1rem !important;
+		border-radius: var(--re-radius-md);
+		min-height: 2.6rem;
+	}
+
+	.empty-segment-button {
+		border: 1px solid var(--re-accent);
+		background: color-mix(in srgb, var(--re-accent) 18%, var(--re-surface-1));
+		color: var(--re-text);
+	}
+
+	.import-button {
+		border: 1px solid var(--re-border);
+		background: var(--re-surface-1);
+		color: var(--re-text-muted);
+	}
 }
 
 .story-table {

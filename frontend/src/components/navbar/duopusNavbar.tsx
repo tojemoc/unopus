@@ -59,11 +59,12 @@ export function DuopusNavbar({ rundown, rundownName }: DuopusNavbarProps) {
 				</Link>
 			</div>
 
-			{rundown ? <RundownHeaderCenter rundown={rundown} /> : <div className="duopus-navbar__center" />}
+			{rundown ? <RundownTimingCenter rundown={rundown} /> : <div className="duopus-navbar__center" />}
 
 			<div className="duopus-navbar__right">
 				{rundown ? (
 					<>
+						<RundownStatusChips rundown={rundown} />
 						<div className="duopus-navbar__rundown-meta">
 							<span className="duopus-navbar__rundown-name" title={title}>
 								<IconCalendarShow size={14} className="duopus-navbar__rundown-icon" />
@@ -118,7 +119,7 @@ export function DuopusNavbar({ rundown, rundownName }: DuopusNavbarProps) {
 	)
 }
 
-function RundownHeaderCenter({ rundown }: { rundown: Rundown }) {
+function RundownTimingCenter({ rundown }: { rundown: Rundown }) {
 	const parts = useAppSelector((state) =>
 		state.parts.parts.filter((p) => p.rundownId === rundown.id)
 	)
@@ -138,8 +139,6 @@ function RundownHeaderCenter({ rundown }: { rundown: Rundown }) {
 		}),
 		[scriptCps, settings?.iluDurationMode]
 	)
-
-	const readiness = useRundownReadinessContextOptional()
 
 	const start = rundown.expectedStartTime
 		? new Date(rundown.expectedStartTime).toLocaleTimeString()
@@ -175,31 +174,9 @@ function RundownHeaderCenter({ rundown }: { rundown: Rundown }) {
 		diffNegative = delta < 0
 	}
 
-	const readyCount = readiness?.readiness?.summary.readyMediaPieces ?? 0
-	const totalCount = readiness?.readiness?.summary.totalMediaPieces ?? 0
-	const mediaReady =
-		!readiness?.loading && !readiness?.error && totalCount > 0 && readyCount === totalCount
-
 	return (
 		<div className="duopus-navbar__center">
-			<div className="duopus-navbar__status">
-				<span
-					className={`status-pill ${mediaReady ? 'status-pill--ok' : 'status-pill--muted'}`}
-					title={
-						readiness?.error
-							? readiness.error
-							: totalCount === 0
-								? 'No media items'
-								: `${readyCount}/${totalCount} media items ready`
-					}
-				>
-					<IconOnAir size={12} className="status-pill__icon" />
-					{mediaReady ? 'On Air Ready' : totalCount === 0 ? 'No media' : 'Media pending'}
-				</span>
-				<SyncControl rundown={rundown} compact />
-				<CoreDiagnosticsChip compact />
-			</div>
-			<div className="duopus-navbar__timing">
+			<div className="duopus-navbar__timing" aria-label="Rundown timing">
 				<div className="timing-cell">
 					<span className="timing-cell__label">
 						<IconClock size={11} /> Expected start
@@ -219,6 +196,34 @@ function RundownHeaderCenter({ rundown }: { rundown: Rundown }) {
 					<span className="timing-cell__value">{diff}</span>
 				</div>
 			</div>
+		</div>
+	)
+}
+
+function RundownStatusChips({ rundown }: { rundown: Rundown }) {
+	const readiness = useRundownReadinessContextOptional()
+	const readyCount = readiness?.readiness?.summary.readyMediaPieces ?? 0
+	const totalCount = readiness?.readiness?.summary.totalMediaPieces ?? 0
+	const mediaReady =
+		!readiness?.loading && !readiness?.error && totalCount > 0 && readyCount === totalCount
+
+	return (
+		<div className="duopus-navbar__status">
+			<span
+				className={`status-pill ${mediaReady ? 'status-pill--ok' : 'status-pill--muted'}`}
+				title={
+					readiness?.error
+						? readiness.error
+						: totalCount === 0
+							? 'No media items'
+							: `${readyCount}/${totalCount} media items ready`
+				}
+			>
+				<IconOnAir size={12} className="status-pill__icon" />
+				{mediaReady ? 'On Air Ready' : totalCount === 0 ? 'No media' : 'Media pending'}
+			</span>
+			<SyncControl rundown={rundown} compact />
+			<CoreDiagnosticsChip compact />
 		</div>
 	)
 }

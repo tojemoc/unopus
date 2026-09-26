@@ -16,6 +16,7 @@ import { IconClip, IconRefresh, IconSearch } from '~/components/icons/broadcastI
 import { useRundownReadinessContext } from '~/hooks/RundownReadinessContext'
 import { useScriptExpand } from '~/hooks/ScriptExpandContext'
 import { StoryFilterProvider } from '~/hooks/StoryFilterContext'
+import { canEditRundown } from '~/util/roles'
 
 /** Stable DnD row type — must not change identity when expand/readiness updates. */
 const SegmentComponent: DraggableWrappedComponent<Segment> = ({ data: segment }) => (
@@ -37,11 +38,14 @@ export function RundownSidebar({
 
 	const segments = useAppSelector((state) => state.segments.segments)
 	const parts = useAppSelector((state) => state.parts.parts)
+	const userRole = useAppSelector((s) => s.auth.user?.role)
+	const canEdit = canEditRundown(userRole)
 	const { expandedPartId } = useScriptExpand()
 	const sortedSegments = useMemo(
 		() => [...segments].sort((a, b) => a.rank - b.rank),
 		[segments]
 	)
+	const isEmptyRundown = sortedSegments.length === 0
 	const expandedPartSegmentId = useMemo(() => {
 		if (!expandedPartId) return null
 		return parts.find((part) => part.id === expandedPartId)?.segmentId ?? null
@@ -108,30 +112,52 @@ export function RundownSidebar({
 				</div>
 			</div>
 
-			<div className="rundown-sidebar-scroll">
-				<StoryFilterProvider filter={storyFilter}>
-					<div className="story-table story-table--sidebar">
-						<StoryTableHeader />
-						<DraggableContainer
-							items={sortedSegments}
-							itemType={DragTypes.SEGMENT}
-							Component={SegmentComponent}
-							id={rundownId}
-							reorder={handleReorderSegment}
-							// Expanded story UI (script / opened piece forms) lives inside the
-							// segment drag source; disable segment drag while a part is open so
-							// mouse drag selects text instead of starting a reorder.
-							canDragItem={(segment) => expandedPartSegmentId !== segment.id}
-						/>
+			<div
+				className={`rundown-sidebar-scroll${isEmptyRundown ? ' rundown-sidebar-scroll--empty' : ''}`}
+			>
+				{isEmptyRundown ? (
+					<div className="rundown-empty-create">
+						{canEdit ? (
+							<SegmentButtons
+								rundownId={rundownId}
+								playlistId={playlistId}
+								rank={0}
+								setShowImportModal={setShowImportModal}
+								variant="hero"
+							/>
+						) : (
+							<p className="rundown-empty-create__readonly">This rundown has no segments yet.</p>
+						)}
 					</div>
-				</StoryFilterProvider>
+				) : (
+					<>
+						<StoryFilterProvider filter={storyFilter}>
+							<div className="story-table story-table--sidebar">
+								<StoryTableHeader />
+								<DraggableContainer
+									items={sortedSegments}
+									itemType={DragTypes.SEGMENT}
+									Component={SegmentComponent}
+									id={rundownId}
+									reorder={handleReorderSegment}
+									// Expanded story UI (script / opened piece forms) lives inside the
+									// segment drag source; disable segment drag while a part is open so
+									// mouse drag selects text instead of starting a reorder.
+									canDragItem={(segment) => expandedPartSegmentId !== segment.id}
+								/>
+							</div>
+						</StoryFilterProvider>
 
-				<SegmentButtons
-					rundownId={rundownId}
-					playlistId={playlistId}
-					rank={sortedSegments.length}
-					setShowImportModal={setShowImportModal}
-				/>
+						{canEdit ? (
+							<SegmentButtons
+								rundownId={rundownId}
+								playlistId={playlistId}
+								rank={sortedSegments.length}
+								setShowImportModal={setShowImportModal}
+							/>
+						) : null}
+					</>
+				)}
 
 				<ImportSegmentModal
 					rank={showImportModal}
