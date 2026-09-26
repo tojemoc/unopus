@@ -1,4 +1,4 @@
-import { Link, useMatchRoute, useNavigate } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import { useMemo, useState } from 'react'
 import { Button } from 'react-bootstrap'
 import type { Rundown } from '~backend/background/interfaces'
@@ -8,7 +8,6 @@ import {
 	IconDiff,
 	IconLogout,
 	IconOnAir,
-	IconRundowns,
 	IconScripts,
 	IconSettingsGear,
 	IconUnopusMark
@@ -42,7 +41,6 @@ export function DuopusNavbar({ rundown, rundownName }: DuopusNavbarProps) {
 	const dispatch = useAppDispatch()
 	const navigate = useNavigate()
 	const user = useAppSelector((s) => s.auth.user)
-	const matchRoute = useMatchRoute()
 	const [showSettings, setShowSettings] = useState(false)
 
 	const onLogout = async () => {
@@ -50,58 +48,15 @@ export function DuopusNavbar({ rundown, rundownName }: DuopusNavbarProps) {
 		await navigate({ to: '/login' })
 	}
 
-	const isRundowns = Boolean(matchRoute({ to: '/' }))
-	const isSettings = Boolean(matchRoute({ to: '/settings', fuzzy: true }))
-	const isRewrite = Boolean(
-		rundown &&
-			matchRoute({
-				to: '/rundown/$rundownId/rewrite',
-				params: { rundownId: rundown.id }
-			})
-	)
-	const isInRundown = Boolean(
-		rundown &&
-			matchRoute({
-				to: '/rundown/$rundownId',
-				params: { rundownId: rundown.id },
-				fuzzy: true
-			})
-	)
-
 	const title = rundown?.name ?? rundownName
 
 	return (
 		<div className="duopus-navbar">
 			<div className="duopus-navbar__left">
-				<Link to="/" className="duopus-navbar__brand">
+				<Link to="/" className="duopus-navbar__brand" title="All rundowns">
 					<IconUnopusMark size={18} className="duopus-navbar__brand-mark" />
 					<span>Unopus</span>
 				</Link>
-				<nav className="duopus-navbar__nav" aria-label="Primary">
-					<Link to="/" className={isRundowns && !isInRundown ? 'active' : undefined}>
-						<IconRundowns size={14} />
-						<span>Rundowns</span>
-					</Link>
-					{rundown ? (
-						<Link
-							to="/rundown/$rundownId/rewrite"
-							params={{ rundownId: rundown.id }}
-							className={isRewrite ? 'active' : undefined}
-						>
-							<IconScripts size={14} />
-							<span>Skripty</span>
-						</Link>
-					) : (
-						<span className="duopus-navbar__nav-disabled" title="Open a rundown to edit scripts">
-							<IconScripts size={14} />
-							<span>Skripty</span>
-						</span>
-					)}
-					<Link to="/settings/connection" className={isSettings ? 'active' : undefined}>
-						<IconSettingsGear size={14} />
-						<span>Settings</span>
-					</Link>
-				</nav>
 			</div>
 
 			{rundown ? <RundownHeaderCenter rundown={rundown} /> : <div className="duopus-navbar__center" />}
@@ -119,7 +74,8 @@ export function DuopusNavbar({ rundown, rundownName }: DuopusNavbarProps) {
 								params={{ rundownId: rundown.id }}
 								className="duopus-navbar__type-link"
 							>
-								Daily rewrite
+								<IconScripts size={12} />
+								<span>Skripty</span>
 							</Link>
 							<button
 								type="button"
