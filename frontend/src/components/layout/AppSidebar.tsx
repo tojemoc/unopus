@@ -7,6 +7,7 @@ import {
 	IconExpandSidebar,
 	IconIntegrations,
 	IconPlusRundown,
+	IconScripts,
 	IconSettingsGear,
 	IconTemplates,
 	IconUsers
@@ -57,6 +58,22 @@ export function AppSidebar() {
 	const isSettings = Boolean(matchRoute({ to: '/settings', fuzzy: true }))
 	const isUsers = Boolean(matchRoute({ to: '/settings/users' }))
 	const isConnection = Boolean(matchRoute({ to: '/settings/connection' }))
+	const isRewrite = Boolean(
+		currentRundownId &&
+			matchRoute({
+				to: '/rundown/$rundownId/rewrite',
+				params: { rundownId: currentRundownId }
+			})
+	)
+	const isRundownEditor = Boolean(
+		currentRundownId &&
+			matchRoute({
+				to: '/rundown/$rundownId',
+				params: { rundownId: currentRundownId },
+				fuzzy: true
+			}) &&
+			!isRewrite
+	)
 	const homeTab = isHome ? readHomeTab() : null
 	const isTemplatesTab = homeTab === 'templates'
 
@@ -94,7 +111,16 @@ export function AppSidebar() {
 						icon: <IconCalendarShow size={16} />,
 						to: '/rundown/$rundownId',
 						params: { rundownId: currentRundown.id },
-						active: true
+						active: isRundownEditor
+					} satisfies NavItem,
+					{
+						id: 'scripts',
+						label: 'Skripty',
+						icon: <IconScripts size={16} />,
+						to: '/rundown/$rundownId/rewrite',
+						params: { rundownId: currentRundown.id },
+						active: isRewrite,
+						title: 'Daily rewrite / scripts'
 					} satisfies NavItem
 				]
 			: []),

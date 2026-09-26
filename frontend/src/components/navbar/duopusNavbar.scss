@@ -36,49 +36,6 @@
 		flex-shrink: 0;
 	}
 
-	&__nav {
-		display: flex;
-		align-items: center;
-		gap: 0.15rem;
-
-		a,
-		.duopus-navbar__nav-disabled {
-			display: inline-flex;
-			align-items: center;
-			gap: 0.35rem;
-			padding: 0.35rem 0.55rem;
-			border-radius: var(--re-radius-sm);
-			color: var(--re-text-muted);
-			text-decoration: none;
-			font-weight: 500;
-			font-size: 0.78rem;
-			border-bottom: 2px solid transparent;
-			margin-bottom: -1px;
-
-			svg {
-				flex-shrink: 0;
-				opacity: 0.9;
-			}
-		}
-
-		a:hover {
-			color: var(--re-text);
-			background: var(--re-row-hover);
-		}
-
-		a.active {
-			color: var(--re-accent);
-			font-weight: 600;
-			border-bottom-color: var(--re-accent);
-			background: transparent;
-		}
-
-		.duopus-navbar__nav-disabled {
-			opacity: 0.4;
-			cursor: default;
-		}
-	}
-
 	&__center {
 		display: flex;
 		align-items: center;
@@ -137,13 +94,21 @@
 	}
 
 	&__type-link {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3rem;
 		font-size: 0.7rem;
+		font-weight: 600;
 		color: var(--re-text-muted);
 		text-decoration: none;
-		padding: 0.15rem 0.4rem;
+		padding: 0.15rem 0.45rem;
 		border: 1px solid var(--re-border);
 		border-radius: var(--re-radius-sm);
 		white-space: nowrap;
+
+		svg {
+			flex-shrink: 0;
+		}
 
 		&:hover {
 			color: var(--re-text);
