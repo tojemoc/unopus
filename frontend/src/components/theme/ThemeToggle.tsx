@@ -8,7 +8,12 @@ export function ThemeToggle() {
 
 	return (
 		<OverlayTrigger
-			overlay={<Tooltip>{isDark ? 'Switch to light theme' : 'Switch to dark theme'}</Tooltip>}
+			placement="bottom"
+			overlay={
+				<Tooltip id="theme-toggle">
+					{isDark ? 'Switch to light theme' : 'Switch to dark theme'}
+				</Tooltip>
+			}
 		>
 			<Button
 				variant="outline-secondary"
