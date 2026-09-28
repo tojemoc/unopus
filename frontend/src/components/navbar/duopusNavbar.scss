@@ -1,3 +1,358 @@
 .duopus-navbar {
-	/* Styles live in octopus-theme.scss using semantic tokens */
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+	align-items: center;
+	column-gap: 0.55rem;
+	height: var(--re-header-height);
+	max-height: var(--re-header-height);
+	overflow: hidden;
+	padding: 0 0.55rem 0 0.65rem;
+	background: var(--re-surface-1);
+	color: var(--re-text);
+	font-size: 0.78rem;
+
+	&__left {
+		display: flex;
+		align-items: center;
+		gap: 0.55rem;
+		justify-self: start;
+		min-width: 0;
+		height: 100%;
+		overflow: hidden;
+	}
+
+	&__brand {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+		font-weight: 700;
+		font-size: 0.95rem;
+		letter-spacing: 0.02em;
+		color: var(--re-text);
+		text-decoration: none;
+		line-height: 1;
+		white-space: nowrap;
+
+		&:hover {
+			color: var(--re-text);
+		}
+	}
+
+	&__brand-mark {
+		color: var(--re-accent);
+		flex-shrink: 0;
+	}
+
+	&__center {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		justify-self: center;
+		min-width: 0;
+		height: 100%;
+		overflow: hidden;
+	}
+
+	&__status {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3rem;
+		flex-shrink: 1;
+		min-width: 0;
+		max-width: 100%;
+		overflow: hidden;
+		height: 100%;
+	}
+
+	&__timing {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.75rem;
+		flex-shrink: 0;
+		height: 100%;
+	}
+
+	&__right {
+		display: inline-flex;
+		align-items: center;
+		justify-content: flex-end;
+		justify-self: end;
+		flex-wrap: nowrap;
+		gap: 0.35rem;
+		min-width: 0;
+		width: 100%;
+		height: 100%;
+		max-height: 100%;
+		overflow: hidden;
+	}
+
+	&__rundown-meta {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3rem;
+		min-width: 0;
+		max-width: 11rem;
+		flex-shrink: 1;
+		overflow: hidden;
+		height: 100%;
+	}
+
+	&__rundown-name {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3rem;
+		font-weight: 600;
+		font-size: 0.75rem;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		min-width: 0;
+	}
+
+	&__rundown-icon {
+		flex-shrink: 0;
+		color: var(--re-text-muted);
+	}
+
+	&__icon-btn {
+		all: unset;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 1.45rem;
+		height: 1.45rem;
+		border-radius: var(--re-radius-sm);
+		color: var(--re-text-muted);
+		cursor: pointer;
+		flex-shrink: 0;
+
+		&:hover {
+			color: var(--re-text);
+			background: var(--re-row-hover);
+		}
+
+		&:focus-visible {
+			outline: 2px solid var(--re-focus);
+		}
+	}
+
+	&__user {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3rem;
+		flex-shrink: 0;
+		height: 100%;
+	}
+
+	&__avatar {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 1.4rem;
+		height: 1.4rem;
+		border-radius: 50%;
+		background: var(--re-accent);
+		color: var(--re-text-on-accent);
+		font-size: 0.58rem;
+		font-weight: 700;
+		letter-spacing: 0.02em;
+		flex-shrink: 0;
+	}
+
+	&__user-name {
+		display: none;
+	}
+
+	&__logout {
+		all: unset;
+		cursor: pointer;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.25rem;
+		font-size: 0.66rem;
+		font-weight: 600;
+		color: var(--re-link);
+		padding: 0.1rem 0.2rem;
+		border-radius: var(--re-radius-sm);
+		white-space: nowrap;
+		flex-shrink: 0;
+
+		svg {
+			flex-shrink: 0;
+		}
+
+		&:hover {
+			color: var(--re-link-hover);
+			text-decoration: underline;
+		}
+
+		&:focus-visible {
+			outline: 2px solid var(--re-focus);
+		}
+	}
+
+	.theme-toggle-btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 1.45rem;
+		height: 1.45rem;
+		padding: 0;
+		font-size: 0.72rem;
+		flex-shrink: 0;
+	}
+
+	.sync-control-bar--compact {
+		margin: 0;
+		padding: 0;
+		gap: 0.25rem !important;
+		flex-wrap: nowrap !important;
+		flex-shrink: 1;
+		min-width: 0;
+		max-width: 12rem;
+		overflow: hidden;
+
+		.sync-status-indicator {
+			min-width: 0;
+		}
+
+		.form-check {
+			margin: 0;
+			min-height: 0;
+			padding-left: 1.85rem;
+			min-width: 1.85rem;
+			flex-shrink: 0;
+		}
+
+		.form-check-input {
+			width: 1.55rem;
+			height: 0.85rem;
+			margin-top: 0.15rem;
+			margin-left: -1.85rem;
+		}
+
+		.form-check-label {
+			display: none;
+		}
+	}
+
+	.core-diagnostics-chip {
+		flex-shrink: 0;
+		white-space: nowrap;
+	}
+
+	.status-pill {
+		flex-shrink: 0;
+	}
+}
+
+.status-pill {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.25rem;
+	padding: 0.1rem 0.32rem;
+	border-radius: var(--re-radius-sm);
+	font-size: 0.62rem;
+	font-weight: 600;
+	white-space: nowrap;
+	border: 1px solid transparent;
+	line-height: 1.2;
+
+	&__icon {
+		display: inline-flex;
+		align-items: center;
+		flex-shrink: 0;
+	}
+
+	&--ok {
+		background: color-mix(in srgb, var(--re-success) 18%, transparent);
+		color: var(--re-status-ready-fg);
+		border-color: color-mix(in srgb, var(--re-success) 45%, transparent);
+	}
+
+	&--muted {
+		background: var(--re-status-na-bg);
+		color: var(--re-status-na-fg);
+		border-color: var(--re-status-na-border);
+	}
+}
+
+.timing-cell {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	line-height: 1.1;
+	min-width: 0;
+
+	&__label {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.18rem;
+		font-size: 0.52rem;
+		font-weight: 600;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		color: var(--re-text-subtle);
+		white-space: nowrap;
+
+		svg {
+			flex-shrink: 0;
+			opacity: 0.85;
+		}
+	}
+
+	&__label-short {
+		display: none;
+	}
+
+	&__value {
+		font-family: var(--re-font-mono);
+		font-size: 0.74rem;
+		font-weight: 600;
+		font-variant-numeric: tabular-nums;
+		color: var(--re-text);
+		white-space: nowrap;
+	}
+
+	&--alert &__value {
+		color: var(--re-danger);
+	}
+}
+
+@media (max-width: 1400px) {
+	.duopus-navbar__status .status-pill {
+		max-width: 5.5rem;
+		overflow: hidden;
+	}
+
+	.duopus-navbar__logout-text {
+		display: none;
+	}
+}
+
+@media (max-width: 1200px) {
+	.duopus-navbar__timing .timing-cell__label-full {
+		position: absolute !important;
+		width: 1px !important;
+		height: 1px !important;
+		padding: 0 !important;
+		margin: -1px !important;
+		overflow: hidden !important;
+		clip: rect(0, 0, 0, 0) !important;
+		white-space: nowrap !important;
+		border: 0 !important;
+	}
+
+	.duopus-navbar__timing .timing-cell__label-short {
+		display: inline;
+	}
+
+	.duopus-navbar__rundown-meta {
+		max-width: 7.5rem;
+	}
+
+	.duopus-navbar__type-link span {
+		display: none;
+	}
 }

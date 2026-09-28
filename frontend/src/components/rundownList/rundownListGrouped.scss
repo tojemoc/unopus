@@ -9,16 +9,28 @@
 	background: var(--re-card-bg);
 	border-color: var(--re-card-border);
 	color: var(--re-text);
+	border-radius: var(--re-radius-md);
 
 	.card-title,
 	.card-text {
 		color: var(--re-text);
 	}
 
+	.badge,
+	.badge.rounded-pill,
+	.badge.bg-secondary {
+		--bs-badge-border-radius: var(--re-radius-sm);
+		border-radius: var(--re-radius-sm) !important;
+		font-weight: 700;
+		letter-spacing: 0.02em;
+		padding: 0.28em 0.5em;
+	}
+
 	&__sync {
-		padding: 0.15rem 0.5rem;
-		border-radius: 0.25rem;
-		font-size: 0.75rem;
+		padding: 0.12rem 0.4rem;
+		border-radius: var(--re-radius-sm);
+		font-size: 0.72rem;
+		font-weight: 700;
 
 		&--synced {
 			background: color-mix(in srgb, var(--re-sync-ok) 25%, transparent);

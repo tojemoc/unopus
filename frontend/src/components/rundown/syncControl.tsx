@@ -2,24 +2,31 @@ import { Form, Stack } from 'react-bootstrap'
 import type { Rundown } from '~backend/background/interfaces'
 import { useAppDispatch } from '~/store/app'
 import { updateRundown } from '~/store/rundowns'
+import { CoreSyncStatusChip } from './coreSyncStatusChip'
 import { SyncStatusIndicator } from './syncStatusIndicator'
 import { friendlyLabel } from '~/util/fieldLabels'
 
 export function SyncControl({ rundown, compact = false }: { rundown: Rundown; compact?: boolean }) {
 	const dispatch = useAppDispatch()
+	const syncLabel = friendlyLabel('sync')
 
 	return (
 		<Stack
 			direction="horizontal"
-			gap={compact ? 2 : 3}
+			gap={compact ? 1 : 3}
 			className={`align-items-center sync-control-bar${compact ? ' sync-control-bar--compact' : ' mb-3 p-2'}`}
 		>
-			<SyncStatusIndicator rundown={rundown} />
+			{compact ? (
+				<CoreSyncStatusChip rundown={rundown} />
+			) : (
+				<SyncStatusIndicator rundown={rundown} />
+			)}
 			{!rundown.isTemplate && (
 				<Form.Check
 					type="switch"
 					id={`sync-${rundown.id}`}
-					label={friendlyLabel('sync')}
+					label={compact ? <span className="visually-hidden">{syncLabel}</span> : syncLabel}
+					title={syncLabel}
 					checked={rundown.sync}
 					onChange={(e) =>
 						void dispatch(

@@ -1,47 +1,64 @@
 .core-diagnostics-chip {
 	display: inline-flex;
 	align-items: center;
-	gap: 0.35rem;
-	padding: 0.15rem 0.55rem;
-	border-radius: 2px;
-	font-size: 0.7rem;
+	gap: 0.3rem;
+	padding: 0.15rem 0.4rem;
+	border-radius: var(--re-radius-sm);
+	font-size: 0.66rem;
 	font-weight: 600;
 	letter-spacing: 0.02em;
 	line-height: 1.2;
 	white-space: nowrap;
-	border: 1px solid var(--re-border, #555);
-	background: var(--re-panel-bg, transparent);
-	color: var(--re-text, inherit);
+	border: 1px solid transparent;
+	background: var(--re-status-na-bg);
+	color: var(--re-text-muted);
 	cursor: default;
 }
 
 .core-diagnostics-chip--compact {
-	font-size: 0.65rem;
-	padding: 0.1rem 0.4rem;
+	font-size: 0.66rem;
+	padding: 0.15rem 0.4rem;
 }
 
-.core-diagnostics-chip__dot {
-	width: 0.55rem;
-	height: 0.55rem;
-	border-radius: 50%;
+.core-diagnostics-chip__icon {
+	display: inline-flex;
+	align-items: center;
 	flex-shrink: 0;
-	background: #888;
+	opacity: 0.95;
 }
 
-.core-diagnostics-chip--green .core-diagnostics-chip__dot {
-	background: #2ea44f;
+.core-diagnostics-chip--green {
+	background: color-mix(in srgb, var(--re-success) 18%, transparent);
+	color: var(--re-status-ready-fg);
+	border-color: color-mix(in srgb, var(--re-success) 40%, transparent);
 }
 
-.core-diagnostics-chip--yellow .core-diagnostics-chip__dot {
-	background: #d4a017;
+.core-diagnostics-chip--green .core-diagnostics-chip__icon {
+	color: var(--re-success);
 }
 
-.core-diagnostics-chip--red .core-diagnostics-chip__dot {
-	background: #cf222e;
+.core-diagnostics-chip--yellow {
+	background: color-mix(in srgb, var(--re-warning) 16%, transparent);
+	color: var(--re-text);
+	border-color: color-mix(in srgb, var(--re-warning) 40%, transparent);
 }
 
-.core-diagnostics-chip--unknown .core-diagnostics-chip__dot {
-	background: #888;
+.core-diagnostics-chip--yellow .core-diagnostics-chip__icon {
+	color: var(--re-warning);
+}
+
+.core-diagnostics-chip--red {
+	background: color-mix(in srgb, var(--re-danger) 16%, transparent);
+	color: var(--re-status-notready-fg);
+	border-color: color-mix(in srgb, var(--re-danger) 40%, transparent);
+}
+
+.core-diagnostics-chip--red .core-diagnostics-chip__icon {
+	color: var(--re-danger);
+}
+
+.core-diagnostics-chip--unknown .core-diagnostics-chip__icon {
+	color: #888;
 }
 
 .core-diagnostics-chip-tooltip__content {

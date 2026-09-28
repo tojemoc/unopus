@@ -12,7 +12,6 @@ import { useAppSelector } from '~/store/app'
 import { Button, Stack } from 'react-bootstrap'
 import { usePartInsertTarget } from '~/hooks/usePartInsertTarget'
 import { PartTypeButtons } from './sidebar/partTypeButtons'
-import { CoreDiagnosticsChip } from './coreDiagnosticsChip'
 import { resolvePartOnAirDuration } from '~/util/pieceDuration'
 import { resolveEffectiveScriptCps } from '~/util/scriptReadingTime'
 import { useMemo, useState } from 'react'
@@ -81,7 +80,6 @@ export function RundownNavbar({ rundown }: { rundown: Rundown }) {
 			<Container fluid className="rundown-navbar__inner">
 				<Stack className="timing" direction="horizontal" gap={3}>
 					<SyncControl rundown={rundown} compact />
-					<CoreDiagnosticsChip compact />
 					<Stack>
 						<div className="label">Expected start:</div>
 						<div>{start}</div>

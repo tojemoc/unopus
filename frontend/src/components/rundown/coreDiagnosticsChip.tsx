@@ -1,4 +1,5 @@
 import { OverlayTrigger, Tooltip } from 'react-bootstrap'
+import { IconCore } from '~/components/icons/broadcastIcons'
 import { useCoreDiagnostics } from '~/hooks/useCoreDiagnostics'
 import './coreDiagnosticsChip.scss'
 
@@ -20,7 +21,7 @@ function trafficLabel(diagnostics: ReturnType<typeof useCoreDiagnostics>['diagno
 		light: probe.trafficLight,
 		short:
 			probe.trafficLight === 'green'
-				? 'Core OK'
+				? 'Core ON'
 				: probe.trafficLight === 'yellow'
 					? 'Core local-scan'
 					: 'Core down',
@@ -63,15 +64,18 @@ export function CoreDiagnosticsChip({ compact = false }: { compact?: boolean }) 
 			role="status"
 			aria-label={tooltipText.replace(/\n/g, '. ')}
 		>
-			<span className="core-diagnostics-chip__dot" aria-hidden="true" />
+			<span className="core-diagnostics-chip__icon" aria-hidden="true">
+				<IconCore size={12} />
+			</span>
 			<span className="core-diagnostics-chip__label">{label}</span>
 		</span>
 	)
 
 	return (
 		<OverlayTrigger
+			placement="bottom"
 			overlay={
-				<Tooltip className="core-diagnostics-chip-tooltip">
+				<Tooltip id="core-diagnostics-chip" className="core-diagnostics-chip-tooltip">
 					<span className="core-diagnostics-chip-tooltip__content">{tooltipText}</span>
 				</Tooltip>
 			}

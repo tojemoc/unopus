@@ -11,11 +11,16 @@ import type { DraggableWrappedComponent } from '~/components/drag-and-drop/Dragg
 import { SidebarPartRow } from './partRow'
 import { SidebarElementHeader } from './sidebarElementHeader'
 import { useToasts } from '~/components/toasts/useToasts'
-import { BsCaretDownFill, BsFillTrashFill, BsTrash } from 'react-icons/bs'
+import { BsFillTrashFill, BsTrash } from 'react-icons/bs'
+import { IconSegment } from '~/components/icons/broadcastIcons'
 import { Stack, type ButtonProps } from 'react-bootstrap'
 import { HoverIconButton } from '~/components/rundownList/hoverIconButton'
 import { DeleteSegmentButton } from '../deleteSegmentButton'
+import { PartTypeButtons } from './partTypeButtons'
 import { useScriptExpand } from '~/hooks/ScriptExpandContext'
+import { usePartInsertTarget } from '~/hooks/usePartInsertTarget'
+import { matchesStoryFilter, useStoryFilter } from '~/hooks/StoryFilterContext'
+import { computeInsertRank } from '~/util/lib'
 import { resolvePartOnAirDuration } from '~/util/pieceDuration'
 import { resolveEffectiveScriptCps } from '~/util/scriptReadingTime'
 import { canEditRundown } from '~/util/roles'
@@ -37,8 +42,9 @@ export function SidebarSegment({ segment }: { segment: Segment }) {
 	const toasts = useToasts()
 	const [isOpen, setIsOpen] = useState(true)
 	const { expandedPartId } = useScriptExpand()
+	const insertTarget = usePartInsertTarget(segment.rundownId)
 
-	// Route segment is the insert target for toolbar part pills — highlight it so
+	// Route segment is the insert target for part pills — highlight it so
 	// editors can see which story they're adding into (Link.active no longer applies
 	// after click-to-select / double-click-rename replaced the segment Link).
 	const isSelectedSegment = useRouterState({
@@ -67,6 +73,13 @@ export function SidebarSegment({ segment }: { segment: Segment }) {
 		defaultDurationMode: settings?.iluDurationMode ?? ('auto' as const)
 	}
 	const sortedParts = useMemo(() => [...parts].sort((a, b) => a.rank - b.rank), [parts])
+	const storyFilter = useStoryFilter()
+	const visibleParts = useMemo(
+		() =>
+			sortedParts.filter((part) => matchesStoryFilter(storyFilter, part.name, part.script)),
+		[sortedParts, storyFilter]
+	)
+	const hideForFilter = Boolean(storyFilter.trim()) && visibleParts.length === 0
 
 	const segmentDuration = sortedParts.reduce((acc, part) => {
 		const partPieces = allPieces
@@ -149,13 +162,54 @@ export function SidebarSegment({ segment }: { segment: Segment }) {
 	const userRole = useAppSelector((s) => s.auth.user?.role)
 	const canEdit = canEditRundown(userRole)
 
+	// Show add-part chips on the active segment: route selection and/or expanded story.
+	// Expanding a story does not always update the segment route, so fall back to local rank.
+	const localInsertTarget = useMemo(() => {
+		if (!canEdit) return null
+
+		if (insertTarget?.segment.id === segment.id) {
+			return insertTarget
+		}
+
+		const expandedPart = expandedPartId
+			? sortedParts.find((part) => part.id === expandedPartId)
+			: undefined
+		if (expandedPart) {
+			return {
+				segment,
+				rank: computeInsertRank(sortedParts, expandedPart.id),
+				hint: `after "${expandedPart.name}"`
+			}
+		}
+
+		if (isSelectedSegment) {
+			if (sortedParts.length === 0) {
+				return { segment, rank: 0, hint: `in "${segment.name}"` }
+			}
+			const lastPart = sortedParts[sortedParts.length - 1]
+			return {
+				segment,
+				rank: computeInsertRank(sortedParts, lastPart.id),
+				hint: `at end of "${segment.name}"`
+			}
+		}
+
+		return null
+	}, [canEdit, insertTarget, segment, sortedParts, expandedPartId, isSelectedSegment])
+
+	if (hideForFilter) {
+		return null
+	}
+
+	const storyCount = storyFilter.trim() ? visibleParts.length : sortedParts.length
+
 	return (
 		<div
 			className={`sidebar-segment ${isOpen ? 'open' : 'closed'}${isOnAirSegment ? ' sidebar-segment--on-air' : ''}${isSelectedSegment ? ' sidebar-segment--selected' : ''}`}
 			aria-current={isSelectedSegment ? 'true' : undefined}
 		>
 			<div className="copy-item segment-header-row">
-				<Stack direction="horizontal">
+				<Stack direction="horizontal" className="segment-header-row__inner">
 					<span
 						className="segment-toggle"
 						onClick={(e) => {
@@ -165,11 +219,27 @@ export function SidebarSegment({ segment }: { segment: Segment }) {
 						}}
 						aria-label={isOpen ? 'Collapse segment' : 'Expand segment'}
 					>
-						<BsCaretDownFill />
+						<svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden>
+							<path
+								d="M4 6.5 8 10.5 12 6.5"
+								stroke="currentColor"
+								strokeWidth="1.6"
+								strokeLinecap="round"
+								strokeLinejoin="round"
+							/>
+						</svg>
 					</span>
-					<div style={{ flexGrow: 2 }}>
+					<div style={{ flexGrow: 2, minWidth: 0 }}>
 						<SidebarElementHeader
-							label={segment.name}
+							label={
+								<span className="segment-header__label">
+									<span className="segment-header__mark" aria-hidden>
+										<IconSegment size={13} />
+									</span>
+									<span className="segment-header__name">{segment.name}</span>
+									<span className="segment-header__count">{storyCount}</span>
+								</span>
+							}
 							renameValue={segment.name}
 							onRename={canEdit ? handleRenameSegment : undefined}
 							onSelect={() => {
@@ -206,6 +276,19 @@ export function SidebarSegment({ segment }: { segment: Segment }) {
 				</Stack>
 			</div>
 
+			{localInsertTarget ? (
+				<div
+					className="segment-part-type-bar"
+					aria-label={`Add story ${localInsertTarget.hint}`}
+				>
+					<PartTypeButtons
+						segment={localInsertTarget.segment}
+						rank={localInsertTarget.rank}
+						insertHint={localInsertTarget.hint}
+					/>
+				</div>
+			) : null}
+
 			{isOpen ? (
 				<div className="segment-content">
 					{sortedParts.length > 0 ? (
@@ -219,7 +302,9 @@ export function SidebarSegment({ segment }: { segment: Segment }) {
 						/>
 					) : (
 						<div className="story-table-empty px-2 py-2 text-muted">
-							No stories yet — use the toolbar above to add one.
+							{canEdit
+								? 'No stories yet — use the buttons above to add one.'
+								: 'No stories yet.'}
 						</div>
 					)}
 				</div>

@@ -19,18 +19,21 @@ export default defineConfig({
 		react()
 	],
 	server: {
+		host: '127.0.0.1',
+		port: 5173,
+		strictPort: true,
 		proxy: {
 			'/api': {
-				target: 'http://localhost:3010',
+				target: 'http://127.0.0.1:3010',
 				changeOrigin: true
 			},
 			'/socket.io': {
-				target: 'http://localhost:3010',
+				target: 'http://127.0.0.1:3010',
 				ws: true,
 				changeOrigin: true
 			},
 			'/demo-assets': {
-				target: 'http://localhost:3010',
+				target: 'http://127.0.0.1:3010',
 				changeOrigin: true
 			}
 		}
