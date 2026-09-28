@@ -27,9 +27,16 @@ function buildChipView(
 	const socketUp = coreStatus === CoreConnectionStatus.CONNECTED
 
 	if (error) {
+		if (socketDown) {
+			return {
+				tone: 'error',
+				label: 'Core down',
+				tipLines: [`Diagnostics unavailable: ${error}`]
+			}
+		}
 		return {
-			tone: 'error',
-			label: 'Core down',
+			tone: 'warn',
+			label: 'Core ?',
 			tipLines: [`Diagnostics unavailable: ${error}`]
 		}
 	}

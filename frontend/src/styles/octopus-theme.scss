@@ -796,7 +796,8 @@
 }
 
 .template-rundown-card__header {
-	background: var(--re-accent) !important;
+	/* Darken accent fill so --re-text-on-accent meets ≥4.5:1 in dark mode */
+	background: color-mix(in srgb, var(--re-accent) 75%, #000) !important;
 	color: var(--re-text-on-accent) !important;
 	border: none !important;
 

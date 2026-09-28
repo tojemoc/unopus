@@ -1,5 +1,6 @@
 import { Link, useMatchRoute, useNavigate, useParams } from '@tanstack/react-router'
 import classNames from 'classnames'
+import { useEffect, useState } from 'react'
 import {
 	IconAllRundowns,
 	IconCalendarShow,
@@ -12,6 +13,7 @@ import {
 	IconTemplates,
 	IconUsers
 } from '~/components/icons/broadcastIcons'
+import { useToasts } from '~/components/toasts/useToasts'
 import { useAppDispatch, useAppSelector } from '~/store/app'
 import { addNewRundown } from '~/store/rundowns'
 import { canEditRundown } from '~/util/roles'
@@ -47,6 +49,19 @@ export function AppSidebar() {
 	const userRole = useAppSelector((s) => s.auth.user?.role)
 	const canEdit = canEditRundown(userRole)
 	const rundowns = useAppSelector((s) => s.rundowns)
+	const toasts = useToasts()
+	const [homeTab, setHomeTab] = useState(readHomeTab)
+
+	useEffect(() => {
+		const onTab = (event: Event) => {
+			const detail = (event as CustomEvent<string>).detail
+			if (detail === 'rundowns' || detail === 'templates') {
+				setHomeTab(detail)
+			}
+		}
+		window.addEventListener('unopus-home-tab', onTab)
+		return () => window.removeEventListener('unopus-home-tab', onTab)
+	}, [])
 
 	const rundownParams = useParams({ strict: false }) as { rundownId?: string }
 	const currentRundownId = rundownParams.rundownId
@@ -74,14 +89,20 @@ export function AppSidebar() {
 			}) &&
 			!isRewrite
 	)
-	const homeTab = isHome ? readHomeTab() : null
-	const isTemplatesTab = homeTab === 'templates'
+	const isTemplatesTab = isHome && homeTab === 'templates'
 
 	const createRundown = () => {
 		if (!canEdit) return
 		void dispatch(addNewRundown({ playlistId: null, isTemplate: false }))
 			.unwrap()
 			.then((rd) => navigate({ to: `/rundown/${rd.id}` }))
+			.catch((e) => {
+				console.error(e)
+				toasts.show({
+					headerContent: 'Adding rundown',
+					bodyContent: 'Encountered an unexpected error'
+				})
+			})
 	}
 
 	const goHomeTab = (tab: 'rundowns' | 'templates') => {
@@ -90,6 +111,7 @@ export function AppSidebar() {
 		} catch {
 			/* ignore */
 		}
+		setHomeTab(tab)
 		void navigate({ to: '/' })
 		window.dispatchEvent(new CustomEvent('unopus-home-tab', { detail: tab }))
 	}
