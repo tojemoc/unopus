@@ -49,6 +49,7 @@ function Index() {
 		} catch {
 			/* ignore */
 		}
+		window.dispatchEvent(new CustomEvent('unopus-home-tab', { detail: next }))
 	}
 
 	const createNewRundown = useCallback(

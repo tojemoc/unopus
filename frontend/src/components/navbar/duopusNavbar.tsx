@@ -116,11 +116,15 @@ export function DuopusNavbar({ rundown, rundownName }: DuopusNavbarProps) {
 }
 
 function RundownTimingCenter({ rundown }: { rundown: Rundown }) {
-	const parts = useAppSelector((state) =>
-		state.parts.parts.filter((p) => p.rundownId === rundown.id)
+	const allParts = useAppSelector((state) => state.parts.parts)
+	const allPieces = useAppSelector((state) => state.pieces.pieces)
+	const parts = useMemo(
+		() => allParts.filter((p) => p.rundownId === rundown.id),
+		[allParts, rundown.id]
 	)
-	const pieces = useAppSelector((state) =>
-		state.pieces.pieces.filter((p) => p.rundownId === rundown.id)
+	const pieces = useMemo(
+		() => allPieces.filter((p) => p.rundownId === rundown.id),
+		[allPieces, rundown.id]
 	)
 	const userScriptCps = useAppSelector((s) => s.auth.user?.scriptCps)
 	const settings = useAppSelector((s) => s.settings.settings)
@@ -175,19 +179,31 @@ function RundownTimingCenter({ rundown }: { rundown: Rundown }) {
 			<div className="duopus-navbar__timing" aria-label="Rundown timing">
 				<div className="timing-cell">
 					<span className="timing-cell__label">
-						<IconClock size={11} /> Expected start
+						<IconClock size={11} />
+						<span className="timing-cell__label-full">Expected start</span>
+						<span className="timing-cell__label-short" aria-hidden="true">
+							Start
+						</span>
 					</span>
 					<span className="timing-cell__value">{start}</span>
 				</div>
 				<div className="timing-cell">
 					<span className="timing-cell__label">
-						<IconClock size={11} /> Expected duration
+						<IconClock size={11} />
+						<span className="timing-cell__label-full">Expected duration</span>
+						<span className="timing-cell__label-short" aria-hidden="true">
+							Dur
+						</span>
 					</span>
 					<span className="timing-cell__value">{duration}</span>
 				</div>
 				<div className={`timing-cell${diffNegative ? ' timing-cell--alert' : ''}`}>
 					<span className="timing-cell__label">
-						<IconDiff size={11} /> DIF
+						<IconDiff size={11} />
+						<span className="timing-cell__label-full">DIF</span>
+						<span className="timing-cell__label-short" aria-hidden="true">
+							DIF
+						</span>
 					</span>
 					<span className="timing-cell__value">{diff}</span>
 				</div>
