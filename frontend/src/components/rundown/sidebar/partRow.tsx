@@ -21,6 +21,7 @@ import { resolveShowPartScriptExcerpt } from '~/util/scriptExcerptPreference'
 import { resolveEditorialStatus } from '~/util/editorialStatus'
 import { requestPresenceFocus, useRowLocks } from '~/hooks/usePresence'
 import { useRundownReadinessContext } from '~/hooks/RundownReadinessContext'
+import { useRundownAutoNextContext } from '~/hooks/RundownAutoNextContext'
 import { useScriptExpand } from '~/hooks/ScriptExpandContext'
 import { matchesStoryFilter, useStoryFilter } from '~/hooks/StoryFilterContext'
 import { PartExpandedPanel } from '../partExpandedPanel'
@@ -74,6 +75,7 @@ export function SidebarPartRow({ part }: { part: Part }) {
 	const dispatch = useAppDispatch()
 	const toasts = useToasts()
 	const { readiness } = useRundownReadinessContext()
+	const { getPartStatus: getAutoNextPartStatus, state: autoNextState } = useRundownAutoNextContext()
 	const { expandedPartId, setExpandedPartId } = useScriptExpand()
 	const livePart = useAppSelector((s) => s.parts.parts.find((p) => p.id === part.id) ?? part)
 	const storyFilter = useStoryFilter()
@@ -149,6 +151,7 @@ export function SidebarPartRow({ part }: { part: Part }) {
 		siteDurationMode
 	)
 	const autoOn = effectiveDurationMode === 'auto'
+	const autoNextStatus = getAutoNextPartStatus(livePart.id, autoOn)
 	const displayedDuration =
 		formatPartOnAirDuration(
 			livePart,
@@ -170,7 +173,7 @@ export function SidebarPartRow({ part }: { part: Part }) {
 		}
 		setAutoBusy(true)
 		try {
-			await dispatch(
+			const updatedPart = await dispatch(
 				updatePart({
 					part: {
 						...livePart,
@@ -179,6 +182,12 @@ export function SidebarPartRow({ part }: { part: Part }) {
 					}
 				})
 			).unwrap()
+			if (!autoOn && !(typeof updatedPart.duration === 'number' && updatedPart.duration > 0)) {
+				toasts.show({
+					headerContent: 'AUTO on, but no duration',
+					bodyContent: 'Sofie cannot auto-take this part until it has an expected duration.'
+				})
+			}
 		} catch (error) {
 			console.error(error)
 			toasts.show({
@@ -390,30 +399,38 @@ export function SidebarPartRow({ part }: { part: Part }) {
 						{displayedDuration}
 					</span>
 					{scriptDriven ? (
-						<button
-							type="button"
-							className={`story-row__auto${autoOn ? ' story-row__auto--on' : ''}`}
-							aria-pressed={autoOn}
-							disabled={autoBusy || locks.length > 0 || !canEditRundown(userRole)}
-							title={
-								!canEditRundown(userRole)
-									? 'AUTO unavailable in read-only mode'
-									: locks.length > 0
-										? lockedBySystem
-											? 'AUTO unavailable while System holds this story'
-											: `AUTO unavailable while ${lockNames || 'another user'} is editing`
-										: autoOn
-											? 'AUTO on — script/CPS drives On air; Sofie may auto-take. Click for until next take.'
-											: 'AUTO off — until next take (no autoNext). Click to enable AUTO.'
-							}
-							onClick={(event) => {
-								void toggleAuto(event)
-							}}
-							onPointerDown={(event) => event.stopPropagation()}
-							onKeyDown={(event) => event.stopPropagation()}
-						>
-							AUTO
-						</button>
+						<>
+							<button
+								type="button"
+								className={`story-row__auto${autoOn ? ' story-row__auto--on' : ''}`}
+								aria-pressed={autoOn}
+								disabled={autoBusy || locks.length > 0 || !canEditRundown(userRole)}
+								title={
+									!canEditRundown(userRole)
+										? 'AUTO unavailable in read-only mode'
+										: locks.length > 0
+											? lockedBySystem
+												? 'AUTO unavailable while System holds this story'
+												: `AUTO unavailable while ${lockNames || 'another user'} is editing`
+											: autoOn
+												? 'AUTO on — script/CPS drives On air; Sofie may auto-take. Click for until next take.'
+												: 'AUTO off — until next take (no autoNext). Click to enable AUTO.'
+								}
+								onClick={(event) => {
+									void toggleAuto(event)
+								}}
+								onPointerDown={(event) => event.stopPropagation()}
+								onKeyDown={(event) => event.stopPropagation()}
+							>
+								AUTO
+							</button>
+							<span
+								className={`story-row__auto-status story-row__auto-status--${autoNextStatus.status}`}
+								title={autoNextStatus.detail ?? autoNextState?.checkedAt ?? undefined}
+							>
+								{autoNextStatus.label}
+							</span>
+						</>
 					) : null}
 				</div>
 			</div>

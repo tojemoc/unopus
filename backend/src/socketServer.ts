@@ -17,6 +17,7 @@ import { registerAuthRoutes } from './routes/auth'
 import { registerEditsRoutes } from './routes/edits'
 import { registerMediaRoutes } from './routes/media'
 import { registerReadinessRoutes } from './routes/readiness'
+import { registerAutoNextStateRoutes } from './routes/autoNextState'
 import { registerCoreDiagnosticsRoutes } from './routes/coreDiagnostics'
 import { registerConfigRoutes } from './routes/config'
 import { registerDailyGenerationRoutes } from './routes/dailyGeneration'
@@ -89,6 +90,7 @@ export async function initSocketServer(port: number = 3010) {
 	registerEditsRoutes(app)
 	registerMediaRoutes(app)
 	registerReadinessRoutes(app)
+	registerAutoNextStateRoutes(app)
 	registerCoreDiagnosticsRoutes(app)
 	registerConfigRoutes(app)
 	registerDailyGenerationRoutes(app)

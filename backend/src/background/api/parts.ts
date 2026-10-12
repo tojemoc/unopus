@@ -43,6 +43,7 @@ import {
 import { syncStoryDurationsForPart, broadcastStoryDurationSync } from '../storyDurationSync'
 import { partUsesScriptDuration } from '../scriptReadingTime'
 import { readApplicationSettingsSync } from '../settingsResolver'
+import { recordPartIngestForAutoNext } from '../autoNextState'
 import { encodeJsonMergePatchClears } from '../jsonMergePatch'
 
 function partExcludedFromSofie(part: Part): boolean {
@@ -153,6 +154,9 @@ async function sendPartDiffToCore(oldPart: Part, newPart: Part) {
 
 	const wasExcluded = partExcludedFromSofie(oldPart)
 	const isExcluded = partExcludedFromSofie(newPart)
+	if (!isExcluded) {
+		recordPartIngestForAutoNext(newPart.rundownId, newPart.id)
+	}
 
 	if (wasExcluded && !isExcluded) {
 		// Restored from float/skip — push a fresh update into Sofie.
@@ -804,6 +808,7 @@ async function handlePartCreate(payload: MutationPartCreate, io?: Server, editor
 						result.segmentId,
 						await mutatePart(partForExport)
 					)
+					recordPartIngestForAutoNext(result.rundownId, result.id)
 				} catch (error) {
 					console.error(error)
 					returnedError = error
