@@ -25,7 +25,8 @@ import { recordPartIngestForAutoNext } from '../autoNextState'
 async function recordRundownPartsIngested(rundownId: string): Promise<void> {
 	const { result, error } = await partMutations.read({ rundownId })
 	if (error) {
-		throw error
+		console.error('Could not record rundown part ingest timestamps:', error)
+		return
 	}
 	const parts = Array.isArray(result) ? result : result ? [result] : []
 	for (const part of parts) {

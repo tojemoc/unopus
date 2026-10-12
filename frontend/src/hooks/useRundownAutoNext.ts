@@ -19,12 +19,14 @@ export function useRundownAutoNext(rundownId: string) {
 		} catch (error) {
 			if (requestId === requestIdRef.current) {
 				console.error('Could not refresh Core AUTO state:', error)
-				setState({
-					rundownId,
-					source: 'core-error',
-					parts: [],
-					checkedAt: new Date().toISOString()
-				})
+				setState((previous) =>
+					previous ?? {
+						rundownId,
+						source: 'core-error',
+						parts: [],
+						checkedAt: new Date().toISOString()
+					}
+				)
 			}
 		} finally {
 			if (requestId === requestIdRef.current) {

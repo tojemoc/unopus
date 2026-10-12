@@ -13,7 +13,7 @@ import { TypeManifestEntity } from '~backend/background/interfaces'
 import { findTypeManifest } from '~/util/typeManifest'
 import { ReadinessBadge, getPieceReadinessTooltip } from '../readinessBadge'
 import { EditorialStatusBadge } from '../editorialStatusBadge'
-import { formatPartOnAirDuration } from '~/util/pieceDuration'
+import { formatPartOnAirDuration, resolvePartOnAirDuration } from '~/util/pieceDuration'
 import { partUsesScriptDuration, resolveEffectiveScriptCps } from '~/util/scriptReadingTime'
 import { resolveEffectiveIluDurationMode } from '~backend/background/storyDuration'
 import { firstScriptLine } from '~/util/scriptPreview'
@@ -182,7 +182,7 @@ export function SidebarPartRow({ part }: { part: Part }) {
 					}
 				})
 			).unwrap()
-			if (!autoOn && !(typeof updatedPart.duration === 'number' && updatedPart.duration > 0)) {
+			if (!autoOn && !resolvePartOnAirDuration(updatedPart, partPieces, durationOpts)) {
 				toasts.show({
 					headerContent: 'AUTO on, but no duration',
 					bodyContent: 'Sofie cannot auto-take this part until it has an expected duration.'
