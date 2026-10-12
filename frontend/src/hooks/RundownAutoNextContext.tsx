@@ -1,5 +1,8 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react'
-import type { CoreRundownPartSettings, RundownAutoNextState } from '~backend/background/autoNextState'
+import type {
+	CoreRundownPartSettings,
+	RundownAutoNextState
+} from '~backend/background/autoNextTypes'
 import { getAutoNextStatus, type AutoNextStatus } from '~backend/background/autoNextStatus'
 import { useRundownAutoNext } from './useRundownAutoNext'
 

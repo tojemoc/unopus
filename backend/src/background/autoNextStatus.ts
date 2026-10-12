@@ -1,4 +1,4 @@
-import type { CoreRundownPartSettings, RundownAutoNextSource } from './autoNextState'
+import type { CoreRundownPartSettings, RundownAutoNextSource } from './autoNextTypes'
 
 export const AUTO_NEXT_PENDING_GRACE_MS = 15_000
 export type AutoNextStatus = 'confirmed' | 'pending' | 'mismatch' | 'no-duration' | 'unknown'

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { RundownAutoNextState } from '~backend/background/autoNextState'
+import type { RundownAutoNextState } from '~backend/background/autoNextTypes'
 import { fetchRundownAutoNextState } from '~/lib/authApi'
 
 const REFRESH_INTERVAL_MS = 10_000

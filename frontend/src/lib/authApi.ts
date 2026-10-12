@@ -122,7 +122,7 @@ export async function fetchRundownReadiness(rundownId: string) {
 }
 
 export async function fetchRundownAutoNextState(rundownId: string) {
-	return request<import('~backend/background/autoNextState').RundownAutoNextState>(
+	return request<import('~backend/background/autoNextTypes').RundownAutoNextState>(
 		`/api/rundowns/${rundownId}/auto-next-state`
 	)
 }

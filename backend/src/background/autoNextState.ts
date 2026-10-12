@@ -1,43 +1,25 @@
 import { CoreConnectionStatus } from './interfaces'
 import { coreHandler } from './coreHandler'
 import { toSafeCoreOperatorLabel } from './coreOperatorLabels'
-
-export const CORE_PART_SETTINGS_METHOD = 'peripheralDevice.ingest.getRundownPartSettings'
-
-export interface CoreRundownPartSettings {
-	partExternalId: string
-	autoNext: boolean
-	expectedDuration: number | null
-	autoNextSource?: 'blueprint'
-}
+import type {
+	CorePartSettingsResult,
+	CoreRundownPartSettings,
+	RundownAutoNextState
+} from './autoNextTypes'
+export type {
+	CorePartSettingsResult,
+	CoreRundownPartSettings,
+	RundownAutoNextPartState,
+	RundownAutoNextSource,
+	RundownAutoNextState
+} from './autoNextTypes'
 
 interface CoreRundownPartSettingsResponse {
 	rundownExternalId: string
 	parts: CoreRundownPartSettings[]
 }
 
-export type CorePartSettingsResult =
-	| { source: 'core'; parts: CoreRundownPartSettings[] }
-	| { source: 'core-disconnected' }
-	| { source: 'core-error'; error: string }
-
-export type RundownAutoNextSource = CorePartSettingsResult['source'] | 'not-synced'
-
-export interface RundownAutoNextPartState {
-	partExternalId: string
-	autoNext?: boolean
-	expectedDuration?: number | null
-	autoNextSource?: 'blueprint'
-	lastIngestAt?: number
-}
-
-export interface RundownAutoNextState {
-	rundownId: string
-	source: RundownAutoNextSource
-	parts: RundownAutoNextPartState[]
-	checkedAt: string
-	error?: string
-}
+export const CORE_PART_SETTINGS_METHOD = 'peripheralDevice.ingest.getRundownPartSettings'
 
 const CORE_CACHE_TTL_MS = 5_000
 const LAST_INGEST_RETENTION_MS = 60_000
