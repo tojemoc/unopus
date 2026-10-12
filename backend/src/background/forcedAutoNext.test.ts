@@ -55,6 +55,21 @@ describe('resolveForcedAutoNext', () => {
 			true
 		)
 	})
+	it('does not force AUTO for skipped or floated parts', () => {
+		for (const excluded of [{ skip: true }, { float: true }, { skip: true, float: true }]) {
+			for (const partType of ['intro', 'ilu']) {
+				assert.deepEqual(
+					resolveForcedAutoNext(
+						manifests,
+						{ partType, ...excluded },
+						[{ pieceType: 'weather' }],
+						0
+					),
+					{ forced: false, missingDuration: false }
+				)
+			}
+		}
+	})
 	it('does not flag other parts', () => {
 		assert.deepEqual(resolveForcedAutoNext(manifests, { partType: 'ilu' }, [], 0), {
 			forced: false,

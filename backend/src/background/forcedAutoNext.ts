@@ -23,12 +23,13 @@ function findManifest(
  */
 export function resolveForcedAutoNext(
 	manifests: TypeManifest[] | null | undefined,
-	part: { partType: string; skip?: boolean },
+	part: { partType: string; skip?: boolean; float?: boolean },
 	pieces: Array<{ pieceType: string; skip?: boolean }>,
 	effectiveDuration: number | undefined | null
 ): ForcedAutoNextResult {
 	const forced =
 		!part.skip &&
+		!part.float &&
 		(findManifest(manifests, part.partType, TypeManifestEntity.Part)?.autoNext === true ||
 			pieces.some(
 				(piece) =>
