@@ -216,6 +216,17 @@ export interface TypeManifest {
 	 * (e.g. `"l3d"` → a single + L3D dropdown).
 	 */
 	toolbarGroup?: string
+	/**
+	 * Part types: Sofie blueprints always set `autoNext` for parts of this type
+	 * (e.g. Intro, Outro, Počasie). Mirror of a blueprint rule, authored in the
+	 * megarepo manifests; RE only displays it.
+	 */
+	autoNext?: boolean
+	/**
+	 * Piece types: any active piece of this type forces `autoNext` on its part
+	 * (megarepo manifests, mirrors blueprint behaviour).
+	 */
+	forcesAutoNext?: boolean
 	/** Part types: pieces created automatically when adding this part type */
 	defaultPieces?: DefaultPieceTemplate[]
 	/** Segment types: parts created automatically when adding this segment type */

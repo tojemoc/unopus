@@ -21,6 +21,8 @@ import { resolveShowPartScriptExcerpt } from '~/util/scriptExcerptPreference'
 import { resolveEditorialStatus } from '~/util/editorialStatus'
 import { requestPresenceFocus, useRowLocks } from '~/hooks/usePresence'
 import { useRundownReadinessContext } from '~/hooks/RundownReadinessContext'
+import { ForcedAutoBadge } from '~/components/rundown/forcedAutoBadge'
+import { resolveForcedAutoNext } from '~backend/background/forcedAutoNext'
 import { useRundownAutoNextContext } from '~/hooks/RundownAutoNextContext'
 import { useScriptExpand } from '~/hooks/ScriptExpandContext'
 import { matchesStoryFilter, useStoryFilter } from '~/hooks/StoryFilterContext'
@@ -162,6 +164,14 @@ export function SidebarPartRow({ part }: { part: Part }) {
 			})),
 			durationOpts
 		) || '--:--'
+
+	const allManifests = useAppSelector((state) => state.typeManifests.manifests)
+	const forcedAuto = resolveForcedAutoNext(
+		allManifests,
+		livePart,
+		partPieces,
+		resolvePartOnAirDuration(livePart, partPieces, durationOpts)
+	)
 
 	const toggleAuto = async (event: React.MouseEvent) => {
 		event.preventDefault()
@@ -398,6 +408,9 @@ export function SidebarPartRow({ part }: { part: Part }) {
 					>
 						{displayedDuration}
 					</span>
+					{forcedAuto.forced ? (
+						<ForcedAutoBadge missingDuration={forcedAuto.missingDuration} />
+					) : null}
 					{scriptDriven ? (
 						<>
 							<button
