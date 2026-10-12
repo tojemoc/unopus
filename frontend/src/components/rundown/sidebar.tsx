@@ -14,9 +14,12 @@ import { useToasts } from '../toasts/useToasts'
 import { SegmentButtons } from './sidebar/segmentButtons'
 import { IconClip, IconRefresh, IconSearch } from '~/components/icons/broadcastIcons'
 import { useRundownReadinessContext } from '~/hooks/RundownReadinessContext'
+import { useRundownAutoNextContext } from '~/hooks/RundownAutoNextContext'
 import { useScriptExpand } from '~/hooks/ScriptExpandContext'
 import { StoryFilterProvider } from '~/hooks/StoryFilterContext'
 import { canEditRundown } from '~/util/roles'
+import { resolveEffectiveIluDurationMode } from '~backend/background/storyDuration'
+import { partUsesScriptDuration } from '~backend/background/scriptReadingTime'
 
 /** Stable DnD row type — must not change identity when expand/readiness updates. */
 const SegmentComponent: DraggableWrappedComponent<Segment> = ({ data: segment }) => (
@@ -38,6 +41,8 @@ export function RundownSidebar({
 
 	const segments = useAppSelector((state) => state.segments.segments)
 	const parts = useAppSelector((state) => state.parts.parts)
+	const pieces = useAppSelector((state) => state.pieces.pieces)
+	const settings = useAppSelector((state) => state.settings.settings)
 	const userRole = useAppSelector((s) => s.auth.user?.role)
 	const canEdit = canEditRundown(userRole)
 	const { expandedPartId } = useScriptExpand()
@@ -52,6 +57,7 @@ export function RundownSidebar({
 	}, [expandedPartId, parts])
 
 	const { readiness, loading, error, refresh } = useRundownReadinessContext()
+	const { getPartStatus: getAutoNextPartStatus } = useRundownAutoNextContext()
 
 	const handleReorderSegment = useCallback(
 		(_targetSegment: Segment, sourceSegment: Segment, sourceIndex: number, targetIndex: number) => {
@@ -80,6 +86,16 @@ export function RundownSidebar({
 		: loading
 			? 'Checking media…'
 			: `${readyCount}/${totalCount} media items ready`
+	const autoMismatchCount = parts.filter((part) => {
+		if (part.rundownId !== rundownId) return false
+		const partPieces = pieces
+			.filter((piece) => piece.partId === part.id && !piece.skip)
+			.map((piece) => ({ pieceType: piece.pieceType }))
+		const intentOn =
+			partUsesScriptDuration(part.partType, partPieces.map((piece) => piece.pieceType)) &&
+			resolveEffectiveIluDurationMode(part.durationMode, settings?.iluDurationMode ?? 'auto') === 'auto'
+		return getAutoNextPartStatus(part.id, intentOn).status === 'mismatch'
+	}).length
 
 	return (
 		<div className="rundown-sidebar">
@@ -89,6 +105,11 @@ export function RundownSidebar({
 						<IconClip size={13} />
 						{summaryText}
 					</span>
+					{autoMismatchCount > 0 ? (
+						<span className="rundown-auto-summary" role="status">
+							{autoMismatchCount} AUTO {autoMismatchCount === 1 ? 'part mismatched' : 'parts mismatched'}
+						</span>
+					) : null}
 					<label className="rundown-media-toolbar__search">
 						<span className="rundown-media-toolbar__search-icon" aria-hidden>
 							<IconSearch size={13} />

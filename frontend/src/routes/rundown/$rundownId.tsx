@@ -8,6 +8,7 @@ import { loadPieces } from '~/store/pieces'
 import { loadSegments } from '~/store/segments'
 import { MyErrorBoundary } from '~/util/errorBoundary'
 import { RundownReadinessProvider } from '~/hooks/RundownReadinessContext'
+import { RundownAutoNextProvider } from '~/hooks/RundownAutoNextContext'
 import { ScriptExpandProvider } from '~/hooks/ScriptExpandContext'
 
 export const Route = createFileRoute('/rundown/$rundownId')({
@@ -64,6 +65,7 @@ function RouteComponent() {
 
 	return (
 		<RundownReadinessProvider rundownId={rundown.id}>
+			<RundownAutoNextProvider rundownId={rundown.id}>
 			<ScriptExpandProvider>
 				<AppShell rundown={rundown}>
 					{isRewriteView ? (
@@ -88,6 +90,7 @@ function RouteComponent() {
 					)}
 				</AppShell>
 			</ScriptExpandProvider>
+			</RundownAutoNextProvider>
 		</RundownReadinessProvider>
 	)
 }

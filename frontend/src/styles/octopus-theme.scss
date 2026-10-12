@@ -7,6 +7,34 @@
 	padding: 0.75rem 1rem 1.25rem;
 }
 
+.story-row__auto-status {
+	flex: 1 1 7rem;
+	font-family: var(--re-font-sans);
+	font-size: 0.58rem;
+	font-weight: 700;
+	line-height: 1.2;
+	text-align: left;
+	white-space: normal;
+
+	&--confirmed {
+		color: var(--re-success);
+	}
+
+	&--pending,
+	&--no-duration {
+		color: var(--re-warning);
+	}
+
+	&--mismatch {
+		color: var(--re-danger);
+		font-weight: 900;
+	}
+
+	&--unknown {
+		color: var(--re-text-muted);
+	}
+}
+
 .app-page__inner {
 	max-width: none;
 }
@@ -38,6 +66,12 @@
 		color: var(--re-text);
 		font-weight: 600;
 	}
+}
+
+.rundown-auto-summary {
+	color: var(--re-danger);
+	font-size: 0.7rem;
+	font-weight: 800;
 }
 
 .rundown-sidebar {
@@ -379,7 +413,7 @@
 	.story-table-header,
 	.story-row {
 		display: grid;
-		grid-template-columns: 6.75rem 4.5rem minmax(0, 1fr) 3.25rem 6.5rem;
+		grid-template-columns: 6.75rem 4.5rem minmax(0, 1fr) 3.25rem minmax(8rem, 11rem);
 		align-items: center;
 		gap: 0.35rem;
 	}
@@ -536,6 +570,7 @@
 
 	.col-duration {
 		display: flex;
+		flex-wrap: wrap;
 		align-items: center;
 		justify-content: flex-end;
 		gap: 0.35rem;

@@ -20,6 +20,19 @@ import { mutations as segmentsMutations } from './segments'
 import { Server, Socket } from 'socket.io'
 import type { AuthenticatedSocket } from '../auth/socketAuth'
 import { forbidRundownMutation } from '../auth/roles'
+import { recordPartIngestForAutoNext } from '../autoNextState'
+
+async function recordRundownPartsIngested(rundownId: string): Promise<void> {
+	const { result, error } = await partMutations.read({ rundownId })
+	if (error) {
+		console.error('Could not record rundown part ingest timestamps:', error)
+		return
+	}
+	const parts = Array.isArray(result) ? result : result ? [result] : []
+	for (const part of parts) {
+		recordPartIngestForAutoNext(rundownId, part.id)
+	}
+}
 
 export async function mutateRundown(rundown: Rundown): Promise<MutatedRundown> {
 	return {
@@ -45,10 +58,14 @@ export async function sendRundownDiffToCore(oldDocument: Rundown, newDocument: R
 		return coreHandler.core.coreMethods.dataRundownDelete(oldDocument.id)
 	} else if (!wasSynced && willSync) {
 		// The rundown was not synced, but now it should be synced (so we create it in core)
-		return coreHandler.core.coreMethods.dataRundownCreate(await mutateRundown(newDocument))
+		const result = await coreHandler.core.coreMethods.dataRundownCreate(await mutateRundown(newDocument))
+		await recordRundownPartsIngested(newDocument.id)
+		return result
 	} else if (wasSynced && willSync) {
 		// The rundown was synced and still should be synced (so we send an update to core)
-		return coreHandler.core.coreMethods.dataRundownUpdate(await mutateRundown(newDocument))
+		const result = await coreHandler.core.coreMethods.dataRundownUpdate(await mutateRundown(newDocument))
+		await recordRundownPartsIngested(newDocument.id)
+		return result
 	}
 }
 
