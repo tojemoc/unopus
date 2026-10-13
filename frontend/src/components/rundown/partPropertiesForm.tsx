@@ -11,6 +11,8 @@ import { useNavigate } from '@tanstack/react-router'
 import { useAppDispatch, useAppSelector } from '~/store/app'
 import { removePart, updatePart } from '~/store/parts'
 import { useToasts } from '../toasts/useToasts'
+import { ForcedAutoBadge } from '~/components/rundown/forcedAutoBadge'
+import { resolveForcedAutoNext } from '~backend/background/forcedAutoNext'
 import { formatPartOnAirDuration, resolvePartOnAirDuration, formatSecondsClock } from '~/util/pieceDuration'
 import { ScriptReadingCounter } from './scriptReadingCounter'
 import { ClockDurationInput } from './clockDurationInput'
@@ -50,6 +52,13 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 				skip: piece.skip
 			})),
 		[childPieces]
+	)
+
+	const forcedAuto = resolveForcedAutoNext(
+		manifests,
+		livePart,
+		durationChildPieces,
+		resolvePartOnAirDuration(livePart, durationChildPieces, durationOpts)
 	)
 
 	useEffect(() => {
@@ -115,7 +124,12 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 
 	return (
 		<div className="part-properties-form">
-			<h2>Story</h2>
+			<h2>
+				Story{' '}
+				{forcedAuto.forced ? (
+					<ForcedAutoBadge missingDuration={forcedAuto.missingDuration} />
+				) : null}
+			</h2>
 			{lastEdit && (
 				<p className="text-muted small">
 					Last saved by {lastEdit.displayName} ·{' '}

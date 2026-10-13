@@ -1207,3 +1207,24 @@
 	transition: transform 0.15s ease;
 	flex-shrink: 0;
 }
+
+.forced-auto-badge {
+	display: inline-block;
+	flex-shrink: 0;
+	border: 1px solid var(--re-accent);
+	background: var(--re-accent-subtle);
+	color: var(--re-link);
+	border-radius: var(--re-radius-sm);
+	font-size: 0.58rem;
+	font-weight: 800;
+	letter-spacing: 0.04em;
+	line-height: 1;
+	padding: 0.22rem 0.3rem;
+	cursor: help;
+
+	&--warning {
+		border-color: var(--re-warning);
+		background: transparent;
+		color: var(--re-warning);
+	}
+}
