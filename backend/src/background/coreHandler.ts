@@ -215,7 +215,7 @@ export class CoreHandler {
 		this.core
 			.setStatus({
 				statusCode: statusCode,
-				messages: messages
+				statusDetails: messages.map((message) => ({ message }))
 			})
 			.catch((e) => console.warn('Error when setting status:' + e))
 	}
