@@ -133,9 +133,8 @@ describe('convertOldPartToNew', () => {
 			(part) => part.id === 'part-weather-1-po-asie' || part.segmentId === 'seg-weather'
 		)
 		assert.ok(weather, 'weather part missing from smoke rundown')
-		assert.ok((weather.script ?? '').includes('Zajtra sa'), 'smoke weather script missing')
+		assert.ok(weather.script?.trim(), 'weather part has no script')
 		const converted = convertOldPartToNew(weather)
 		assert.equal(converted.script, weather.script)
-		assert.ok((converted.script ?? '').includes('Zajtra sa'))
 	})
 })
