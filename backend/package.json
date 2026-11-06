@@ -24,7 +24,7 @@
 	},
 	"main": "dist/main.js",
 	"dependencies": {
-		"@sofie-automation/server-core-integration": "1.53.0-nightly-release53-20250423-081454-dc957dd.0",
+		"@sofie-automation/server-core-integration": "26.9.2",
 		"@types/uuid": "^10.0.0",
 		"electron-is-dev": "^2.0.0",
 		"express": "^5.2.1",
