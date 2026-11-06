@@ -1075,8 +1075,8 @@ __metadata:
   linkType: hard
 
 "@koa/router@npm:^15.7.0":
-  version: 15.7.0
-  resolution: "@koa/router@npm:15.7.0"
+  version: 15.7.1
+  resolution: "@koa/router@npm:15.7.1"
   dependencies:
     debug: "npm:^4.4.3"
     http-errors: "npm:^2.0.1"
@@ -1087,7 +1087,7 @@ __metadata:
   peerDependenciesMeta:
     koa:
       optional: false
-  checksum: 10c0/da1f23f07684f5b39db5536cd6d4b77f7e38930786c2c0c13cf27d84ab90b6c9eea5ecf17f8f4c1b87ccc822a874f64c351b6e9b4c2e6c9324765564fce689cb
+  checksum: 10c0/57a71a01fb19c97a5e5a4aaf9cd4080432b974287bfd664ac6890c8c8e83c6d020f9f53b13ce683d9f2a3bc1a96ee9e0f305baab2c2d5866c0a84ed5c9692430
   languageName: node
   linkType: hard
 
@@ -1113,7 +1113,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mos-connection/model@npm:^5.0.0-alpha.0":
+"@mos-connection/model@npm:^5.0.0":
   version: 5.0.0
   resolution: "@mos-connection/model@npm:5.0.0"
   checksum: 10c0/e0fb38bca8e307c937825b625dd5f8d68f09ae4bf253bc6b054f69d57cbe64cfe5041c1590cb0a625b23ede2b04adb5235afcdc8779de7de82e95a3521467ab8
@@ -1592,33 +1592,33 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@sofie-automation/server-core-integration@npm:26.3.0-nightly-main-20260810-055126-73a9f46.0":
-  version: 26.3.0-nightly-main-20260810-055126-73a9f46.0
-  resolution: "@sofie-automation/server-core-integration@npm:26.3.0-nightly-main-20260810-055126-73a9f46.0"
+"@sofie-automation/server-core-integration@npm:26.9.2":
+  version: 26.9.2
+  resolution: "@sofie-automation/server-core-integration@npm:26.9.2"
   dependencies:
     "@koa/router": "npm:^15.7.0"
     "@kubernetes/client-node": "npm:^0.22.3"
-    "@sofie-automation/shared-lib": "npm:26.3.0-nightly-main-20260810-055126-73a9f46.0"
+    "@sofie-automation/shared-lib": "npm:26.9.2"
     ejson: "npm:^2.2.3"
     koa: "npm:^3.2.1"
     prom-client: "npm:^15.1.3"
     tslib: "npm:^2.8.1"
     underscore: "npm:^1.13.8"
     ws: "npm:^8.21.1"
-  checksum: 10c0/792e1872da1d378b07624e661483856596411b8ce8ce787ba5c6773d876eca3618f0eb0501fecc715ba1640a16739a6bebcd736fdf974341c448e9f727d63692
+  checksum: 10c0/0e83787ac4f351e9bc173a8d70ebd0990133e4daa000ee8f46058d7a082c9e5d8260db8f0a8a469a870c3c863b63f6bd87292a34d4ceae640b6aa0b5d778a55e
   languageName: node
   linkType: hard
 
-"@sofie-automation/shared-lib@npm:26.3.0-nightly-main-20260810-055126-73a9f46.0":
-  version: 26.3.0-nightly-main-20260810-055126-73a9f46.0
-  resolution: "@sofie-automation/shared-lib@npm:26.3.0-nightly-main-20260810-055126-73a9f46.0"
+"@sofie-automation/shared-lib@npm:26.9.2":
+  version: 26.9.2
+  resolution: "@sofie-automation/shared-lib@npm:26.9.2"
   dependencies:
-    "@mos-connection/model": "npm:^5.0.0-alpha.0"
+    "@mos-connection/model": "npm:^5.0.0"
     kairos-lib: "npm:^1.0.0"
-    timeline-state-resolver-types: "npm:10.0.0-nightly-main-20260714-110908-7c702dedf.0"
+    timeline-state-resolver-types: "npm:10.0.0"
     tslib: "npm:^2.8.1"
     type-fest: "npm:^4.41.0"
-  checksum: 10c0/dd121bb3b9329257918efc186e8b94778680f17af6bdd16169052db647a4b31b59d0f2ebaf7f8e1e89186112f76edcd8525ce958e5a570d2707a972ca3dd26a3
+  checksum: 10c0/28774de696a175ad991c0413fce9a7fe64b1d7f628e1046a80ea347de1c13985a765bc3c44625b09c9ce9b82b5027c7b8a33647e1882a8e3c9edd6c7ffa263bb
   languageName: node
   linkType: hard
 
@@ -1626,7 +1626,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@sofie-rundown-editor/backend@workspace:backend"
   dependencies:
-    "@sofie-automation/server-core-integration": "npm:26.3.0-nightly-main-20260810-055126-73a9f46.0"
+    "@sofie-automation/server-core-integration": "npm:26.9.2"
     "@types/express": "npm:^5.0.6"
     "@types/node": "npm:^22.19.3"
     "@types/uuid": "npm:^10.0.0"
@@ -4454,10 +4454,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"jose@npm:^6.2.12":
-  version: 6.2.14
-  resolution: "jose@npm:6.2.14"
-  checksum: 10c0/3db121220793e391c24803edae1ede848e7a67e2c3d37f9864f3e3e245c4b2d318f176d17f0f8ab02be07e210a3db5453612c8d5716af2deeaaa4e5d50e70641
+"jose@npm:^6.2.15":
+  version: 6.2.15
+  resolution: "jose@npm:6.2.15"
+  checksum: 10c0/0e72e53ead0e01adc4598438f889e753622043806a7ba0c802f7cd7da17466e5a6167a63b4b4e67490944c9f88eb0dd5c81c05aca2c38a72718443632a7b37b5
   languageName: node
   linkType: hard
 
@@ -4614,8 +4614,8 @@ __metadata:
   linkType: hard
 
 "koa@npm:^3.2.1":
-  version: 3.2.1
-  resolution: "koa@npm:3.2.1"
+  version: 3.3.0
+  resolution: "koa@npm:3.3.0"
   dependencies:
     accepts: "npm:^1.3.8"
     content-disposition: "npm:~1.0.1"
@@ -4635,7 +4635,7 @@ __metadata:
     statuses: "npm:^2.0.1"
     type-is: "npm:^2.0.1"
     vary: "npm:^1.1.2"
-  checksum: 10c0/84352ef0ec0f54898f119ac589c7d96442ac21f494f3e1abca55d19c0cd51177f43b75440092d74730261d4d91270b5ba0396156e04b21132ab2251f8b4d2cde
+  checksum: 10c0/0966b461ea8c64fbe72a09ec4c07bc146d120cb0c887ae0db83885d907fcdfd68b59f29e0b60586ee2fd3903cef03f05864aee7b8549a2fd9b635040366e30e8
   languageName: node
   linkType: hard
 
@@ -5164,12 +5164,12 @@ __metadata:
   linkType: hard
 
 "openid-client@npm:^6.1.3":
-  version: 6.8.8
-  resolution: "openid-client@npm:6.8.8"
+  version: 6.8.9
+  resolution: "openid-client@npm:6.8.9"
   dependencies:
-    jose: "npm:^6.2.12"
+    jose: "npm:^6.2.15"
     oauth4webapi: "npm:^3.8.8"
-  checksum: 10c0/b1d60ca45623c77b8869b5a9725e25309cca20d32823861c5f72f0e9126a3ce43da2a93be964bfe771a39560f356c06adaedb2be29fe1762c4d097f91a4b620e
+  checksum: 10c0/6ec85b68a9a153acfa23b1fe2a2130ab829c1e2be43e6a270d93bb9e550a0d21eac8d3ae47ba75cac9adbbae1e4cb7a714bfc3a836649cfd4ba8392ce860be4e
   languageName: node
   linkType: hard
 
@@ -6766,13 +6766,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"timeline-state-resolver-types@npm:10.0.0-nightly-main-20260714-110908-7c702dedf.0":
-  version: 10.0.0-nightly-main-20260714-110908-7c702dedf.0
-  resolution: "timeline-state-resolver-types@npm:10.0.0-nightly-main-20260714-110908-7c702dedf.0"
+"timeline-state-resolver-types@npm:10.0.0":
+  version: 10.0.0
+  resolution: "timeline-state-resolver-types@npm:10.0.0"
   dependencies:
     kairos-lib: "npm:1.0.0"
     tslib: "npm:^2.8.1"
-  checksum: 10c0/87c4a6feb4a85f3ef602ed45062318d6f5b6e71ce8a4139ac2b86d0b4148226a1f51a95e46cb5647c3249fd57fd4c3d6a70b1edbdf5344d6c21d224fb36045ec
+  checksum: 10c0/622d8142ba7a4da39d187ef0b5101a85c26158f1307232963781386d9a3f4743bc038380f7b01f948f86e22632cf5db7c3e39cb202a4fa40c5b898c25d3d4852
   languageName: node
   linkType: hard
 
@@ -6851,10 +6851,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tslib@npm:^2.0.1, tslib@npm:^2.1.0, tslib@npm:^2.4.1, tslib@npm:^2.8.0, tslib@npm:^2.8.1":
+"tslib@npm:^2.0.1, tslib@npm:^2.1.0, tslib@npm:^2.8.0, tslib@npm:^2.8.1":
   version: 2.8.1
   resolution: "tslib@npm:2.8.1"
   checksum: 10c0/9c4759110a19c53f992d9aae23aac5ced636e99887b51b9e61def52611732872ff7668757d4e4c61f19691e36f4da981cd9485e869b4a7408d689f6bf1f14e62
+  languageName: node
+  linkType: hard
+
+"tslib@npm:^2.4.1":
+  version: 2.9.1
+  resolution: "tslib@npm:2.9.1"
+  checksum: 10c0/8ff46e7a4d19fa62c23483c89cf5ccc3906e742ef6e6d60bd3826b686143b300b4f6f04161cc1cf31a6b11fe70e1058ae4d4e4a108b5c68326d469684736a83c
   languageName: node
   linkType: hard
 
@@ -7258,8 +7265,8 @@ __metadata:
   linkType: hard
 
 "ws@npm:^8.18.0, ws@npm:^8.21.1":
-  version: 8.22.0
-  resolution: "ws@npm:8.22.0"
+  version: 8.22.1
+  resolution: "ws@npm:8.22.1"
   peerDependencies:
     bufferutil: ^4.0.1
     utf-8-validate: ">=5.0.2"
@@ -7268,7 +7275,7 @@ __metadata:
       optional: true
     utf-8-validate:
       optional: true
-  checksum: 10c0/7304d14ef38898dd366a528a85e2da389c4eebf30f4ce8a007bd2dce6025f9b619cefe44fe2354f0bad0ec541b1c9a4da06a3f3e046ab56f01fd52d5784ecfb2
+  checksum: 10c0/858ccc31e56a7549c25d0bfd522b65c64f7bffdc5460eeb4c29517d34728d34de102d2ebf8296160c8b4594fd45ead6a324acd9a1ea0b0b8742bbed4d52d9a51
   languageName: node
   linkType: hard
 
