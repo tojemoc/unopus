@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet, useMatchRoute } from '@tanstack/react-router'
+import { createFileRoute, Outlet } from '@tanstack/react-router'
 import { useEffect } from 'react'
 import { AppShell } from '~/components/layout/AppShell'
 import { RundownSidebar } from '~/components/rundown/sidebar'
@@ -17,10 +17,6 @@ export const Route = createFileRoute('/rundown/$rundownId')({
 
 function RouteComponent() {
 	const { rundownId } = Route.useParams()
-	const matchRoute = useMatchRoute()
-	const isRewriteView = Boolean(
-		matchRoute({ to: '/rundown/$rundownId/rewrite', params: { rundownId } })
-	)
 
 	const dispatch = useAppDispatch()
 	// Select primitives individually — a new object from the selector would fail
@@ -68,26 +64,16 @@ function RouteComponent() {
 			<RundownAutoNextProvider rundownId={rundown.id}>
 			<ScriptExpandProvider>
 				<AppShell rundown={rundown}>
-					{isRewriteView ? (
-						<div className="rundown-rewrite-column">
-							<MyErrorBoundary>
-								<Outlet />
-							</MyErrorBoundary>
-						</div>
-					) : (
-						<>
-							<div className="rundown-script-column">
-								<RundownSidebar rundownId={rundown.id} playlistId={rundown.playlistId} />
-							</div>
+					<div className="rundown-script-column">
+						<RundownSidebar rundownId={rundown.id} playlistId={rundown.playlistId} />
+					</div>
 
-							{/* Part/piece/index child routes stay mounted for presence; UI is inline in the script column. */}
-							<div hidden aria-hidden>
-								<MyErrorBoundary>
-									<Outlet />
-								</MyErrorBoundary>
-							</div>
-						</>
-					)}
+					{/* Part/piece/index child routes stay mounted for presence; UI is inline in the script column. */}
+					<div hidden aria-hidden>
+						<MyErrorBoundary>
+							<Outlet />
+						</MyErrorBoundary>
+					</div>
 				</AppShell>
 			</ScriptExpandProvider>
 			</RundownAutoNextProvider>

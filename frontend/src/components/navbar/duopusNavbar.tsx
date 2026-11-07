@@ -1,14 +1,13 @@
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useMemo, useState } from 'react'
 import { Button } from 'react-bootstrap'
+import { BsGear } from 'react-icons/bs'
 import type { Rundown } from '~backend/background/interfaces'
 import {
-	IconCalendarShow,
 	IconClock,
 	IconDiff,
 	IconLogout,
 	IconOnAir,
-	IconSettingsGear,
 	IconUnopusMark
 } from '~/components/icons/broadcastIcons'
 import { ThemeToggle } from '~/components/theme/ThemeToggle'
@@ -64,10 +63,6 @@ export function DuopusNavbar({ rundown, rundownName }: DuopusNavbarProps) {
 					<>
 						<RundownStatusChips rundown={rundown} />
 						<div className="duopus-navbar__rundown-meta">
-							<span className="duopus-navbar__rundown-name" title={title}>
-								<IconCalendarShow size={14} className="duopus-navbar__rundown-icon" />
-								{title}
-							</span>
 							<button
 								type="button"
 								className="duopus-navbar__icon-btn"
@@ -75,8 +70,11 @@ export function DuopusNavbar({ rundown, rundownName }: DuopusNavbarProps) {
 								title="Rundown settings"
 								onClick={() => setShowSettings(true)}
 							>
-								<IconSettingsGear size={15} />
+								<BsGear size={13} />
 							</button>
+							<span className="duopus-navbar__rundown-name" title={title}>
+								{title}
+							</span>
 						</div>
 						<RundownPropertiesModal
 							rundown={rundown}
@@ -90,10 +88,17 @@ export function DuopusNavbar({ rundown, rundownName }: DuopusNavbarProps) {
 
 				{user ? (
 					<div className="duopus-navbar__user">
-						<span className="duopus-navbar__avatar" aria-hidden>
-							{userInitials(user.displayName)}
-						</span>
-						<span className="duopus-navbar__user-name">{user.displayName}</span>
+						<Link
+							to="/settings/profile"
+							className="duopus-navbar__user-link"
+							title="User settings"
+							aria-label="User settings"
+						>
+							<span className="duopus-navbar__avatar" aria-hidden>
+								{userInitials(user.displayName)}
+							</span>
+							<span className="duopus-navbar__user-name">{user.displayName}</span>
+						</Link>
 						<button
 							type="button"
 							className="duopus-navbar__logout"

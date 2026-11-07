@@ -110,10 +110,6 @@
 		min-width: 0;
 	}
 
-	&__rundown-icon {
-		flex-shrink: 0;
-		color: var(--re-text-muted);
-	}
 
 	&__icon-btn {
 		all: unset;
@@ -143,6 +139,26 @@
 		gap: 0.3rem;
 		flex-shrink: 0;
 		height: 100%;
+	}
+
+	&__user-link {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3rem;
+		color: var(--re-text);
+		text-decoration: none;
+		flex-shrink: 0;
+		border-radius: 50%;
+
+		&:hover {
+			color: var(--re-text);
+			text-decoration: none;
+		}
+
+		&:focus-visible {
+			outline: 2px solid var(--re-focus);
+			outline-offset: 2px;
+		}
 	}
 
 	&__avatar {

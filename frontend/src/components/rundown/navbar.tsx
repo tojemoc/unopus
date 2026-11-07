@@ -123,13 +123,6 @@ export function RundownNavbar({ rundown }: { rundown: Rundown }) {
 				</div>
 
 				<Nav className="rundown-navbar__close align-items-center gap-2">
-					<Nav.Link
-						as={Link}
-						to={`/rundown/${rundown.id}/rewrite`}
-						className="small"
-					>
-						Daily rewrite
-					</Nav.Link>
 					<Nav.Link as={Link} to="/">
 						<FontAwesomeIcon icon={faClose} size="xl" />
 					</Nav.Link>

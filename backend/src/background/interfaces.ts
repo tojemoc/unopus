@@ -252,11 +252,6 @@ export interface PayloadManifest {
 	/** Helper text shown below option radio buttons */
 	optionsHelperText?: string
 	/**
-	 * When true, this field appears in the Daily rewrite view for bulk day-of editing.
-	 * Set in megarepo piece-type manifests (`sofie-rundown-editor-piece-types.json`).
-	 */
-	dailyEditable?: boolean
-	/**
 	 * Max characters for string fields (e.g. GFX titles that must fit a fixed template).
 	 * Enforced in the piece editor — titles do not auto-scale or wrap at the clip edge.
 	 * Optional; set per field under Settings → Piece Types, or in megarepo manifests.
@@ -604,6 +599,10 @@ export type MutationRundownCopy = Pick<Rundown, 'id'> &
 		/** Stamped on the cloned rundown for daily-generation reconcile. */
 		attemptId?: string
 		idempotencyKey?: string
+		/** Calendar date (YYYY-MM-DD) a template copy's expected start/end are re-dated to. */
+		targetDate?: string
+		/** IANA zone for the wall-clock time-of-day (server-local when omitted). */
+		targetTimeZone?: string
 	}
 
 export type MutationRundownCopyResult = {
@@ -651,6 +650,12 @@ export interface SerializedRundown {
 	parts: Part[]
 	pieces: Piece[]
 	isTemplate?: boolean
+}
+
+export interface RundownStats {
+	segmentCount: number
+	partCount: number
+	pieceCount: number
 }
 
 export interface OpenFromFileArgs {

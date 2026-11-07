@@ -33,13 +33,13 @@ export function TypeManifestForm({
 					void maxLength
 					return rest
 				})
-				await dispatch(
+				const updatedManifest = await dispatch(
 					updateTypeManifest({
 						originalId: manifest.id,
 						typeManifest: { ...values.value, payload: sanitizedPayload }
 					})
 				).unwrap()
-				form.reset()
+				form.reset(updatedManifest.newDoc)
 			} catch (e) {
 				console.error(e)
 				toasts.show({ headerContent: 'Saving type', bodyContent: 'Unexpected error' })
@@ -177,7 +177,6 @@ export function TypeManifestForm({
 							<th>Type</th>
 							<th>Max length</th>
 							<th>Include in name</th>
-							<th>Daily editable</th>
 							<th>&nbsp;</th>
 						</tr>
 					</thead>
@@ -186,7 +185,7 @@ export function TypeManifestForm({
 							{(payload) =>
 								!payload || payload.length === 0 ? (
 									<tr>
-										<td colSpan={7} className="text-center">
+										<td colSpan={6} className="text-center">
 											No fields defined
 										</td>
 									</tr>
@@ -315,23 +314,6 @@ export function TypeManifestForm({
 																checked={field.state.value ?? false}
 																onBlur={field.handleBlur}
 																onChange={(e) => field.handleChange(e.target.checked)}
-															/>
-															<FieldInfo field={field} />
-														</>
-													)}
-												/>
-											</td>
-											<td>
-												<form.Field
-													name={`payload[${index}].dailyEditable`}
-													children={(field) => (
-														<>
-															<Form.Switch
-																name={field.name}
-																checked={field.state.value ?? false}
-																onBlur={field.handleBlur}
-																onChange={(e) => field.handleChange(e.target.checked)}
-																aria-label="Daily editable"
 															/>
 															<FieldInfo field={field} />
 														</>

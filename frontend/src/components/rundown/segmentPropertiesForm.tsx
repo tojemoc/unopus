@@ -25,10 +25,10 @@ export function SegmentPropertiesForm({
 			console.log('submit', values)
 
 			try {
-				await dispatch(updateSegment({ segment: values.value })).unwrap()
+				const updatedSegment = await dispatch(updateSegment({ segment: values.value })).unwrap()
 
 				// Mark as pristine
-				form.reset()
+				form.reset(updatedSegment)
 			} catch (e) {
 				console.error(e)
 				toasts.show({

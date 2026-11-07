@@ -37,9 +37,11 @@ export function CoreConnectionSettingsForm({ settings }: { settings: Application
 					ingestMediaRoot: values.value.ingestMediaRoot?.trim() || '',
 					previewBaseUrl: normalizeOptionalUrl(values.value.previewBaseUrl)
 				}
-				await dispatch(updateSettings({ settings: nextSettings })).unwrap()
+				const updatedSettings = await dispatch(
+					updateSettings({ settings: nextSettings })
+				).unwrap()
 				clearPreviewBaseUrlCache()
-				form.reset()
+				form.reset(updatedSettings)
 			} catch (e) {
 				console.error(e)
 				toasts.show({

@@ -21,6 +21,7 @@ import { Server, Socket } from 'socket.io'
 import type { AuthenticatedSocket } from '../auth/socketAuth'
 import { forbidRundownMutation } from '../auth/roles'
 import { recordPartIngestForAutoNext } from '../autoNextState'
+import { retimeTimestampToDate } from '../dailyGenerationTime'
 
 async function recordRundownPartsIngested(rundownId: string): Promise<void> {
 	const { result, error } = await partMutations.read({ rundownId })
@@ -129,6 +130,38 @@ export const mutations = {
 					}
 					if (!payload.attemptId) delete createArgs.attemptId
 					if (!payload.idempotencyKey) delete createArgs.idempotencyKey
+
+					if (sourceRundown.isTemplate) {
+						// Generating from a template lands on the generation date (server-local
+						// today for manual copies), keeping the template's time-of-day.
+						const now = new Date()
+						const targetDate =
+							payload.targetDate ??
+							`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
+								now.getDate()
+							).padStart(2, '0')}`
+						if (sourceRundown.expectedStartTime !== undefined) {
+							createArgs.expectedStartTime = retimeTimestampToDate(
+								sourceRundown.expectedStartTime,
+								targetDate,
+								payload.targetTimeZone
+							)
+						}
+						if (sourceRundown.expectedEndTime !== undefined) {
+							// Preserve the template's duration rather than dumping the end on
+							// the same date — a show ending after midnight keeps ending next day.
+							createArgs.expectedEndTime =
+								sourceRundown.expectedStartTime !== undefined &&
+								createArgs.expectedStartTime !== undefined
+									? createArgs.expectedStartTime +
+										(sourceRundown.expectedEndTime - sourceRundown.expectedStartTime)
+									: retimeTimestampToDate(
+											sourceRundown.expectedEndTime,
+											targetDate,
+											payload.targetTimeZone
+										)
+						}
+					}
 
 					const { result: newRundown, error: createError } = await mutations.create(createArgs)
 
@@ -263,6 +296,9 @@ export const mutations = {
 			db.prepare('DELETE FROM pieces WHERE rundownId = ?').run(payload.id)
 			db.prepare('DELETE FROM parts WHERE rundownId = ?').run(payload.id)
 			db.prepare('DELETE FROM segments WHERE rundownId = ?').run(payload.id)
+			// Clear daily-generation reservations pointing at this rundown so the
+			// template is treated as not-generated for the day again.
+			db.prepare('DELETE FROM dailyGenerations WHERE rundownId = ?').run(payload.id)
 			db.prepare('DELETE FROM rundowns WHERE id = ?').run(payload.id)
 
 			db.exec('COMMIT')
@@ -410,14 +446,12 @@ function getNewRundownName(
 	payload: { preserveName?: boolean; fromTemplate?: boolean }
 ) {
 	const now = new Date()
-	const dateSuffix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
-		now.getDate()
-	).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(
-		now.getMinutes()
-	).padStart(2, '0')}`
+	const dateSuffix = `${String(now.getDate()).padStart(2, '0')}.${String(
+		now.getMonth() + 1
+	).padStart(2, '0')}.${String(now.getFullYear()).slice(-2)}`
 
 	if (payload.fromTemplate) {
-		// From template → append date/time
+		// From template → append date (dd.mm.yy)
 		return `${sourceRundown.name} ${dateSuffix}`
 	}
 

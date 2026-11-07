@@ -2,10 +2,12 @@ import { Card, Col, Row, Button } from 'react-bootstrap'
 import { Link } from '@tanstack/react-router'
 import { useCallback, useEffect, useState } from 'react'
 import { BsGear } from 'react-icons/bs'
-import type { Rundown } from '~backend/background/interfaces'
+import type { Rundown, RundownStats } from '~backend/background/interfaces'
 import { useAppSelector } from '~/store/app'
 import { CoreConnectionStatus } from '~backend/background/interfaces'
 import { fetchDailyGenerationStatuses, type TemplateDailyStatus } from '~/lib/dailyGenerationApi'
+import { fetchRundownStats } from '~/lib/rundownStatsApi'
+import { getSocket } from '~/lib/socket'
 import { useGenerateDailyRundown } from '~/hooks/useGenerateDailyRundown'
 import { RundownPropertiesModal } from '~/components/rundown/rundownPropertiesModal'
 import './rundownListGrouped.scss'
@@ -60,11 +62,48 @@ interface RundownListGroupedProps {
 }
 
 export function RundownListGrouped({ rundowns }: RundownListGroupedProps) {
-	const parts = useAppSelector((s) => s.parts.parts)
 	const coreStatus = useAppSelector((s) => s.coreConnectionStatus.status)
 	const [statuses, setStatuses] = useState<Record<string, TemplateDailyStatus>>({})
-	const [settingsRundown, setSettingsRundown] = useState<Rundown | null>(null)
+	const [stats, setStats] = useState<Record<string, RundownStats>>({})
+	const [settingsRundownId, setSettingsRundownId] = useState<string | null>(null)
+	// Resolve live from the store so the modal closes when the rundown is deleted
+	// and reflects external updates while open.
+	const settingsRundown = useAppSelector((s) =>
+		settingsRundownId ? (s.rundowns.find((r) => r.id === settingsRundownId) ?? null) : null
+	)
 	const hasTemplates = rundowns.some((r) => r.isTemplate)
+
+	useEffect(() => {
+		let cancelled = false
+		const refresh = () => {
+			fetchRundownStats()
+				.then((next) => {
+					if (!cancelled) setStats(next)
+				})
+				.catch((error) => console.error(error))
+		}
+		refresh()
+
+		// The parts/segments/pieces store slices only hold the open rundown, so counts
+		// come from the stats endpoint; re-pull (debounced) on broadcast updates.
+		let timer: ReturnType<typeof setTimeout> | undefined
+		const debouncedRefresh = () => {
+			clearTimeout(timer)
+			timer = setTimeout(refresh, 300)
+		}
+		const socket = getSocket()
+		socket.on('segments:update', debouncedRefresh)
+		socket.on('parts:update', debouncedRefresh)
+		socket.on('pieces:update', debouncedRefresh)
+
+		return () => {
+			cancelled = true
+			clearTimeout(timer)
+			socket.off('segments:update', debouncedRefresh)
+			socket.off('parts:update', debouncedRefresh)
+			socket.off('pieces:update', debouncedRefresh)
+		}
+	}, [rundowns])
 
 	const refreshStatuses = useCallback(async () => {
 		if (!hasTemplates) {
@@ -149,7 +188,7 @@ export function RundownListGrouped({ rundowns }: RundownListGroupedProps) {
 					<h2 className="h5 text-muted mb-3">{group.label}</h2>
 					<Row xs={1} md={2} lg={3} className="g-3">
 						{group.rundowns.map((rundown) => {
-							const storyCount = parts.filter((p) => p.rundownId === rundown.id).length
+							const storyCount = stats[rundown.id]?.partCount ?? 0
 							const status = statuses[rundown.id]
 							const generatedToday =
 								rundown.isTemplate &&
@@ -214,7 +253,7 @@ export function RundownListGrouped({ rundowns }: RundownListGroupedProps) {
 													variant="outline-secondary"
 													aria-label={`Settings for ${rundown.name}`}
 													title="Rundown settings"
-													onClick={() => setSettingsRundown(rundown)}
+													onClick={() => setSettingsRundownId(rundown.id)}
 												>
 													<BsGear />
 												</Button>
@@ -231,7 +270,7 @@ export function RundownListGrouped({ rundowns }: RundownListGroupedProps) {
 				<RundownPropertiesModal
 					rundown={settingsRundown}
 					show
-					onHide={() => setSettingsRundown(null)}
+					onHide={() => setSettingsRundownId(null)}
 				/>
 			) : null}
 		</div>
