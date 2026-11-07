@@ -39,6 +39,9 @@ export function TypeManifestForm({
 						typeManifest: { ...values.value, payload: sanitizedPayload }
 					})
 				).unwrap()
+				if (!updatedManifest?.newDoc?.id) {
+					throw new Error('Update was rejected by the server')
+				}
 				form.reset(updatedManifest.newDoc)
 			} catch (e) {
 				console.error(e)

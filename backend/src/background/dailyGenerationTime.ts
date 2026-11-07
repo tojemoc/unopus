@@ -145,8 +145,31 @@ export function retimeTimestampToDate(
 		get('minute'),
 		get('second')
 	)
+	const zoneOffsetMs = (ts: number): number => {
+		const zp = new Intl.DateTimeFormat('en-US', {
+			timeZone,
+			year: 'numeric',
+			month: '2-digit',
+			day: '2-digit',
+			hour: '2-digit',
+			minute: '2-digit',
+			second: '2-digit',
+			hourCycle: 'h23'
+		}).formatToParts(new Date(ts))
+		const g = (type: string) => Number(zp.find((p) => p.type === type)?.value ?? '0')
+		return (
+			Date.UTC(g('year'), g('month') - 1, g('day'), g('hour'), g('minute'), g('second')) -
+			Math.floor(ts / 1000) * 1000
+		)
+	}
+
+	// Second pass: the first guess may sit on the other side of a DST transition
+	// from naiveUtc, so remeasure the offset at the guess before returning.
 	const offsetMs = wallAsUtc - Math.floor(naiveUtc / 1000) * 1000
-	return naiveUtc - offsetMs
+	let result = naiveUtc - offsetMs
+	const refinedOffset = zoneOffsetMs(result)
+	if (refinedOffset !== offsetMs) result = naiveUtc - refinedOffset
+	return result
 }
 
 /**

@@ -117,11 +117,18 @@ export const mutations = {
 			if (rundownReadError || !sourceRundown) returnedError = rundownReadError
 			else {
 				try {
+					const now = new Date()
+					const targetDate =
+						payload.targetDate ??
+						`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
+							now.getDate()
+						).padStart(2, '0')}`
 					const createArgs = {
 						...sourceRundown,
 						name: getNewRundownName(sourceRundown, {
 							preserveName: false,
-							fromTemplate: sourceRundown.isTemplate
+							fromTemplate: sourceRundown.isTemplate,
+							targetDate
 						}),
 						isTemplate: sourceRundown.isTemplate && (payload.preserveTemplate ?? false),
 						id: undefined,
@@ -134,12 +141,6 @@ export const mutations = {
 					if (sourceRundown.isTemplate) {
 						// Generating from a template lands on the generation date (server-local
 						// today for manual copies), keeping the template's time-of-day.
-						const now = new Date()
-						const targetDate =
-							payload.targetDate ??
-							`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
-								now.getDate()
-							).padStart(2, '0')}`
 						if (sourceRundown.expectedStartTime !== undefined) {
 							createArgs.expectedStartTime = retimeTimestampToDate(
 								sourceRundown.expectedStartTime,
@@ -443,16 +444,20 @@ async function handleDeleteRundown(payload: MutationRundownDelete) {
 
 function getNewRundownName(
 	sourceRundown: Rundown,
-	payload: { preserveName?: boolean; fromTemplate?: boolean }
+	payload: { preserveName?: boolean; fromTemplate?: boolean; targetDate?: string }
 ) {
-	const now = new Date()
-	const dateSuffix = `${String(now.getDate()).padStart(2, '0')}.${String(
-		now.getMonth() + 1
-	).padStart(2, '0')}.${String(now.getFullYear()).slice(-2)}`
-
 	if (payload.fromTemplate) {
-		// From template → append date (dd.mm.yy)
-		return `${sourceRundown.name} ${dateSuffix}`
+		// From template → append date (dd.mm.yy), sliced from the YYYY-MM-DD
+		// generation date so daily clones name the day in dailyCloneTimezone.
+		const date =
+			payload.targetDate ??
+			(() => {
+				const now = new Date()
+				return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
+					now.getDate()
+				).padStart(2, '0')}`
+			})()
+		return `${sourceRundown.name} ${date.slice(8, 10)}.${date.slice(5, 7)}.${date.slice(2, 4)}`
 	}
 
 	if (!payload.preserveName) {

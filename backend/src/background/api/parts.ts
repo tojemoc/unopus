@@ -774,6 +774,7 @@ export function registerPartsHandlers(socket: Socket, io: Server) {
 			case IpcOperationType.Delete:
 				{
 					const { result, error } = await handlePartDelete(payload)
+					if (!error) io.emit('parts:update', { action: 'update', parts: [] })
 					callback(result || error)
 				}
 				break

@@ -40,6 +40,13 @@ export function CoreConnectionSettingsForm({ settings }: { settings: Application
 				const updatedSettings = await dispatch(
 					updateSettings({ settings: nextSettings })
 				).unwrap()
+				if (
+					!updatedSettings ||
+					typeof updatedSettings !== 'object' ||
+					Object.keys(updatedSettings).length === 0
+				) {
+					throw new Error('Update was rejected by the server')
+				}
 				clearPreviewBaseUrlCache()
 				form.reset(updatedSettings)
 			} catch (e) {

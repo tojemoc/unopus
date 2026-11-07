@@ -8,6 +8,7 @@ function getSessionUser(req: Request) {
 	return getUserFromSession(sessionId)
 }
 
+/** Returns a per-rundown row count for the given entity table. */
 function countByRundown(table: 'segments' | 'parts' | 'pieces'): Map<string, number> {
 	const rows = db
 		.prepare(`SELECT rundownId, COUNT(*) AS count FROM ${table} GROUP BY rundownId`)

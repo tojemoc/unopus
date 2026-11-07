@@ -244,8 +244,12 @@ async function rundownForCompletedReservation(
 	row: DailyGenerationRow
 ): Promise<Rundown | undefined> {
 	if (row.status !== 'completed' || !row.rundownId) return undefined
-	const { result } = await rundownMutations.readOne(row.rundownId)
+	const { result, error } = await rundownMutations.readOne(row.rundownId)
 	if (result) return result
+	if (!error || !/not found/i.test(error.message)) {
+		throw error ?? new Error(`Failed to read rundown ${row.rundownId}`)
+	}
+	// Read confirmed the rundown row is gone — the reservation is dangling.
 	db.prepare(
 		`
 		DELETE FROM dailyGenerations

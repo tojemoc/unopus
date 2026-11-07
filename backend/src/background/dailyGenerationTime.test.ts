@@ -4,7 +4,8 @@ import {
 	getDailyGeneratedDate,
 	hasDailyCloneTimePassed,
 	isValidDailyCloneTime,
-	isValidIanaTimeZone
+	isValidIanaTimeZone,
+	retimeTimestampToDate
 } from './dailyGenerationTime.js'
 
 describe('getDailyGeneratedDate', () => {
@@ -91,5 +92,44 @@ describe('settings field validators', () => {
 		assert.equal(isValidIanaTimeZone('+02'), false)
 		assert.equal(isValidIanaTimeZone('-05:00'), false)
 		assert.equal(isValidIanaTimeZone('GMT+2'), false)
+	})
+})
+
+describe('retimeTimestampToDate', () => {
+	const TZ = 'Europe/Bratislava'
+	// 2026-06-01 17:30Z = 19:30 CEST
+	const SRC_1930 = Date.UTC(2026, 5, 1, 17, 30)
+
+	it('keeps the wall-clock time on an ordinary date', () => {
+		const out = retimeTimestampToDate(SRC_1930, '2026-11-07', TZ)
+		// 19:30 CET on 2026-11-07 = 18:30Z
+		assert.equal(new Date(out).toISOString(), '2026-11-07T18:30:00.000Z')
+	})
+
+	it('EU spring transition day (2026-03-29): keeps 19:30 wall time', () => {
+		const out = retimeTimestampToDate(SRC_1930, '2026-03-29', TZ)
+		// After the jump the zone is CEST (+2), so 19:30 = 17:30Z
+		assert.equal(new Date(out).toISOString(), '2026-03-29T17:30:00.000Z')
+	})
+
+	it('EU autumn transition day (2026-10-25): keeps 19:30 wall time', () => {
+		const out = retimeTimestampToDate(SRC_1930, '2026-10-25', TZ)
+		// After the fold the zone is CET (+1), so 19:30 = 18:30Z
+		assert.equal(new Date(out).toISOString(), '2026-10-25T18:30:00.000Z')
+	})
+
+	it('spring-forward gap: 02:30 target resolves to a valid instant after the gap', () => {
+		// source 02:30 CEST = 00:30Z on 2026-06-01
+		const src = Date.UTC(2026, 5, 1, 0, 30)
+		const out = retimeTimestampToDate(src, '2026-03-29', TZ)
+		// 02:30 does not exist (jump 02:00→03:00); lands just past it at 03:30 CEST
+		assert.equal(new Date(out).toISOString(), '2026-03-29T01:30:00.000Z')
+	})
+
+	it('autumn fold: 02:30 target lands on a valid 02:30 occurrence', () => {
+		const src = Date.UTC(2026, 5, 1, 0, 30)
+		const out = retimeTimestampToDate(src, '2026-10-25', TZ)
+		// resolves to the CET occurrence: 02:30 CET = 01:30Z
+		assert.equal(new Date(out).toISOString(), '2026-10-25T01:30:00.000Z')
 	})
 })

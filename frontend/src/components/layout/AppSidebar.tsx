@@ -136,7 +136,7 @@ export function AppSidebar() {
 							await dispatch(
 								importRundown({
 									...serializedRundown,
-									isTemplate: homeTab === 'templates'
+									isTemplate: isTemplatesTab
 								})
 							).unwrap()
 							await navigate({ to: `/rundown/${serializedRundown.rundown.id}` })
@@ -377,6 +377,7 @@ function SidebarLink({ item, collapsed }: { item: NavItem; collapsed: boolean })
 				className={className}
 				title={item.title ?? item.label}
 				onClick={item.onClick}
+				aria-expanded={item.children ? item.expanded : undefined}
 			>
 				{content}
 			</button>

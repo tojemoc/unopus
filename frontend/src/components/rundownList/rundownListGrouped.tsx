@@ -75,10 +75,12 @@ export function RundownListGrouped({ rundowns }: RundownListGroupedProps) {
 
 	useEffect(() => {
 		let cancelled = false
+		let latestSeq = 0
 		const refresh = () => {
+			const seq = ++latestSeq
 			fetchRundownStats()
 				.then((next) => {
-					if (!cancelled) setStats(next)
+					if (!cancelled && seq === latestSeq) setStats(next)
 				})
 				.catch((error) => console.error(error))
 		}

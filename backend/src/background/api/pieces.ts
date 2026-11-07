@@ -570,6 +570,7 @@ export function registerPiecesHandlers(socket: Socket, io: Server) {
 			case IpcOperationType.Delete:
 				{
 					const { result, error } = await handleDeletePiece(payload)
+					if (!error) io.emit('pieces:update', { action: 'update', pieces: [] })
 					callback(result || error)
 				}
 				break

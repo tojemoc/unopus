@@ -660,6 +660,7 @@ export function registerSegmentsHandlers(socket: Socket, io: Server) {
 			case IpcOperationType.Delete:
 				{
 					const { result, error } = await handleDeleteSegment(payload)
+					if (!error) io.emit('segments:update', { action: 'update', segments: [] })
 					callback(result || error)
 				}
 				break
