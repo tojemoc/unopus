@@ -30,13 +30,20 @@ export function RundownPropertiesForm({ rundown }: { rundown: Rundown }) {
 	const form = useForm({
 		defaultValues: liveRundown,
 		onSubmit: async (values) => {
-			const updatedRundown = await dispatch(updateRundown({ rundown: values.value })).unwrap()
-			if (!updatedRundown || typeof updatedRundown !== 'object' || !updatedRundown.id) {
-				throw new Error('Update was rejected by the server')
-			}
+			try {
+				const updatedRundown = await dispatch(
+					updateRundown({ rundown: values.value })
+				).unwrap()
+				if (!updatedRundown || typeof updatedRundown !== 'object' || !updatedRundown.id) {
+					throw new Error('Update was rejected by the server')
+				}
 
-			// Mark as pristine
-			form.reset(updatedRundown)
+				// Mark as pristine
+				form.reset(updatedRundown)
+			} catch (e) {
+				console.error(e)
+				toasts.show({ headerContent: 'Saving rundown', bodyContent: 'Unexpected error' })
+			}
 		}
 	})
 

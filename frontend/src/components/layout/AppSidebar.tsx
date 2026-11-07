@@ -377,7 +377,7 @@ function SidebarLink({ item, collapsed }: { item: NavItem; collapsed: boolean })
 				className={className}
 				title={item.title ?? item.label}
 				onClick={item.onClick}
-				aria-expanded={item.children ? item.expanded : undefined}
+				aria-expanded={item.children ? item.expanded && !collapsed : undefined}
 			>
 				{content}
 			</button>

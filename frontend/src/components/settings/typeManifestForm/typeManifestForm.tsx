@@ -33,6 +33,9 @@ export function TypeManifestForm({
 					void maxLength
 					return rest
 				})
+				if (!values.value.id) {
+					throw new Error('Type id must not be empty')
+				}
 				const updatedManifest = await dispatch(
 					updateTypeManifest({
 						originalId: manifest.id,

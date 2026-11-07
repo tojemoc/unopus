@@ -75,12 +75,19 @@ export function RundownListGrouped({ rundowns }: RundownListGroupedProps) {
 
 	useEffect(() => {
 		let cancelled = false
-		let latestSeq = 0
+		let nextSeq = 0
+		let appliedSeq = 0
 		const refresh = () => {
-			const seq = ++latestSeq
+			const seq = ++nextSeq
 			fetchRundownStats()
 				.then((next) => {
-					if (!cancelled && seq === latestSeq) setStats(next)
+					// Apply the latest successful response: a failed newer request must not
+					// discard an earlier success, and an older success must not overwrite a
+					// newer one.
+					if (!cancelled && seq > appliedSeq) {
+						appliedSeq = seq
+						setStats(next)
+					}
 				})
 				.catch((error) => console.error(error))
 		}

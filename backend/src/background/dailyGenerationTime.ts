@@ -126,25 +126,6 @@ export function retimeTimestampToDate(
 	const naiveUtc = Date.parse(
 		`${targetDate}T${pad2(hours)}:${pad2(minutes)}:${pad2(seconds)}.${String(ms).padStart(3, '0')}Z`
 	)
-	const zoneParts = new Intl.DateTimeFormat('en-US', {
-		timeZone,
-		year: 'numeric',
-		month: '2-digit',
-		day: '2-digit',
-		hour: '2-digit',
-		minute: '2-digit',
-		second: '2-digit',
-		hourCycle: 'h23'
-	}).formatToParts(new Date(naiveUtc))
-	const get = (type: string) => Number(zoneParts.find((p) => p.type === type)?.value ?? '0')
-	const wallAsUtc = Date.UTC(
-		get('year'),
-		get('month') - 1,
-		get('day'),
-		get('hour'),
-		get('minute'),
-		get('second')
-	)
 	const zoneOffsetMs = (ts: number): number => {
 		const zp = new Intl.DateTimeFormat('en-US', {
 			timeZone,
@@ -165,7 +146,7 @@ export function retimeTimestampToDate(
 
 	// Second pass: the first guess may sit on the other side of a DST transition
 	// from naiveUtc, so remeasure the offset at the guess before returning.
-	const offsetMs = wallAsUtc - Math.floor(naiveUtc / 1000) * 1000
+	const offsetMs = zoneOffsetMs(naiveUtc)
 	let result = naiveUtc - offsetMs
 	const refinedOffset = zoneOffsetMs(result)
 	if (refinedOffset !== offsetMs) result = naiveUtc - refinedOffset

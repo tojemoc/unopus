@@ -21,7 +21,7 @@ import { Server, Socket } from 'socket.io'
 import type { AuthenticatedSocket } from '../auth/socketAuth'
 import { forbidRundownMutation } from '../auth/roles'
 import { recordPartIngestForAutoNext } from '../autoNextState'
-import { retimeTimestampToDate } from '../dailyGenerationTime'
+import { isValidIanaTimeZone, retimeTimestampToDate } from '../dailyGenerationTime'
 
 async function recordRundownPartsIngested(rundownId: string): Promise<void> {
 	const { result, error } = await partMutations.read({ rundownId })
@@ -117,6 +117,15 @@ export const mutations = {
 			if (rundownReadError || !sourceRundown) returnedError = rundownReadError
 			else {
 				try {
+					if (payload.targetDate !== undefined && !isValidYyyyMmDd(payload.targetDate)) {
+						throw new Error(`Invalid targetDate "${payload.targetDate}"`)
+					}
+					const trimmedZone = payload.targetTimeZone?.trim()
+					if (trimmedZone !== undefined && trimmedZone !== '' && !isValidIanaTimeZone(trimmedZone)) {
+						throw new Error(`Invalid targetTimeZone "${payload.targetTimeZone}"`)
+					}
+					const targetTimeZone = trimmedZone || undefined
+
 					const now = new Date()
 					const targetDate =
 						payload.targetDate ??
@@ -145,7 +154,7 @@ export const mutations = {
 							createArgs.expectedStartTime = retimeTimestampToDate(
 								sourceRundown.expectedStartTime,
 								targetDate,
-								payload.targetTimeZone
+								targetTimeZone
 							)
 						}
 						if (sourceRundown.expectedEndTime !== undefined) {
@@ -159,7 +168,7 @@ export const mutations = {
 									: retimeTimestampToDate(
 											sourceRundown.expectedEndTime,
 											targetDate,
-											payload.targetTimeZone
+											targetTimeZone
 										)
 						}
 					}
@@ -440,6 +449,13 @@ async function handleDeleteRundown(payload: MutationRundownDelete) {
 
 		return { result: returnedError === undefined ? true : undefined, error: returnedError }
 	}
+}
+
+/** True when `value` is a real calendar date in strict YYYY-MM-DD form. */
+function isValidYyyyMmDd(value: string): boolean {
+	if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+	const parsed = new Date(`${value}T00:00:00Z`)
+	return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value
 }
 
 function getNewRundownName(
