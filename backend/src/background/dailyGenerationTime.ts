@@ -82,6 +82,77 @@ export function getDailyGeneratedDate(
 	return getLocalWallClockParts(now, timeZone).date
 }
 
+const pad2 = (n: number): string => String(n).padStart(2, '0')
+
+/**
+ * Returns the timestamp for `targetDate` (YYYY-MM-DD) at `timestamp`'s wall-clock
+ * time-of-day in `timeZone` (server-local when omitted). A naive +N-days shift
+ * would land the wrong wall-clock time across a DST boundary, so the instant is
+ * rebuilt from the target date + extracted time-of-day instead.
+ */
+export function retimeTimestampToDate(
+	timestamp: number,
+	targetDate: string,
+	timeZone?: string
+): number {
+	const source = new Date(timestamp)
+	let hours: number, minutes: number, seconds: number
+	if (timeZone) {
+		const parts = new Intl.DateTimeFormat('en-US', {
+			timeZone,
+			hourCycle: 'h23',
+			hour: '2-digit',
+			minute: '2-digit',
+			second: '2-digit'
+		}).formatToParts(source)
+		const get = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? '0')
+		hours = get('hour')
+		minutes = get('minute')
+		seconds = get('second')
+	} else {
+		hours = source.getHours()
+		minutes = source.getMinutes()
+		seconds = source.getSeconds()
+	}
+	const ms = source.getMilliseconds()
+
+	if (!timeZone) {
+		const [y, mo, d] = targetDate.split('-').map(Number)
+		return new Date(y, mo - 1, d, hours, minutes, seconds, ms).getTime()
+	}
+
+	// Interpret the target date+time as UTC first, then subtract the zone's
+	// offset measured at that instant.
+	const naiveUtc = Date.parse(
+		`${targetDate}T${pad2(hours)}:${pad2(minutes)}:${pad2(seconds)}.${String(ms).padStart(3, '0')}Z`
+	)
+	const zoneOffsetMs = (ts: number): number => {
+		const zp = new Intl.DateTimeFormat('en-US', {
+			timeZone,
+			year: 'numeric',
+			month: '2-digit',
+			day: '2-digit',
+			hour: '2-digit',
+			minute: '2-digit',
+			second: '2-digit',
+			hourCycle: 'h23'
+		}).formatToParts(new Date(ts))
+		const g = (type: string) => Number(zp.find((p) => p.type === type)?.value ?? '0')
+		return (
+			Date.UTC(g('year'), g('month') - 1, g('day'), g('hour'), g('minute'), g('second')) -
+			Math.floor(ts / 1000) * 1000
+		)
+	}
+
+	// Second pass: the first guess may sit on the other side of a DST transition
+	// from naiveUtc, so remeasure the offset at the guess before returning.
+	const offsetMs = zoneOffsetMs(naiveUtc)
+	let result = naiveUtc - offsetMs
+	const refinedOffset = zoneOffsetMs(result)
+	if (refinedOffset !== offsetMs) result = naiveUtc - refinedOffset
+	return result
+}
+
 /**
  * True when the configured `HH:mm` has already passed (or is equal) on the current
  * local calendar day in `timeZone`.

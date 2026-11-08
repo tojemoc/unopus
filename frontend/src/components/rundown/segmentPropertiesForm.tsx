@@ -25,10 +25,15 @@ export function SegmentPropertiesForm({
 			console.log('submit', values)
 
 			try {
-				await dispatch(updateSegment({ segment: values.value })).unwrap()
+				const updatedSegment = await dispatch(updateSegment({ segment: values.value })).unwrap()
+				// Error acknowledgements resolve (not reject) — reject them here so the
+				// catch path shows the toast and the form keeps its values.
+				if (!updatedSegment || typeof updatedSegment !== 'object' || !updatedSegment.id) {
+					throw new Error('Update was rejected by the server')
+				}
 
 				// Mark as pristine
-				form.reset()
+				form.reset(updatedSegment)
 			} catch (e) {
 				console.error(e)
 				toasts.show({

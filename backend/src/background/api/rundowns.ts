@@ -21,6 +21,7 @@ import { Server, Socket } from 'socket.io'
 import type { AuthenticatedSocket } from '../auth/socketAuth'
 import { forbidRundownMutation } from '../auth/roles'
 import { recordPartIngestForAutoNext } from '../autoNextState'
+import { isValidIanaTimeZone, retimeTimestampToDate } from '../dailyGenerationTime'
 
 async function recordRundownPartsIngested(rundownId: string): Promise<void> {
 	const { result, error } = await partMutations.read({ rundownId })
@@ -116,11 +117,27 @@ export const mutations = {
 			if (rundownReadError || !sourceRundown) returnedError = rundownReadError
 			else {
 				try {
+					if (payload.targetDate !== undefined && !isValidYyyyMmDd(payload.targetDate)) {
+						throw new Error(`Invalid targetDate "${payload.targetDate}"`)
+					}
+					const trimmedZone = payload.targetTimeZone?.trim()
+					if (trimmedZone !== undefined && trimmedZone !== '' && !isValidIanaTimeZone(trimmedZone)) {
+						throw new Error(`Invalid targetTimeZone "${payload.targetTimeZone}"`)
+					}
+					const targetTimeZone = trimmedZone || undefined
+
+					const now = new Date()
+					const targetDate =
+						payload.targetDate ??
+						`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
+							now.getDate()
+						).padStart(2, '0')}`
 					const createArgs = {
 						...sourceRundown,
 						name: getNewRundownName(sourceRundown, {
 							preserveName: false,
-							fromTemplate: sourceRundown.isTemplate
+							fromTemplate: sourceRundown.isTemplate,
+							targetDate
 						}),
 						isTemplate: sourceRundown.isTemplate && (payload.preserveTemplate ?? false),
 						id: undefined,
@@ -129,6 +146,32 @@ export const mutations = {
 					}
 					if (!payload.attemptId) delete createArgs.attemptId
 					if (!payload.idempotencyKey) delete createArgs.idempotencyKey
+
+					if (sourceRundown.isTemplate) {
+						// Generating from a template lands on the generation date (server-local
+						// today for manual copies), keeping the template's time-of-day.
+						if (sourceRundown.expectedStartTime !== undefined) {
+							createArgs.expectedStartTime = retimeTimestampToDate(
+								sourceRundown.expectedStartTime,
+								targetDate,
+								targetTimeZone
+							)
+						}
+						if (sourceRundown.expectedEndTime !== undefined) {
+							// Preserve the template's duration rather than dumping the end on
+							// the same date — a show ending after midnight keeps ending next day.
+							createArgs.expectedEndTime =
+								sourceRundown.expectedStartTime !== undefined &&
+								createArgs.expectedStartTime !== undefined
+									? createArgs.expectedStartTime +
+										(sourceRundown.expectedEndTime - sourceRundown.expectedStartTime)
+									: retimeTimestampToDate(
+											sourceRundown.expectedEndTime,
+											targetDate,
+											targetTimeZone
+										)
+						}
+					}
 
 					const { result: newRundown, error: createError } = await mutations.create(createArgs)
 
@@ -263,6 +306,9 @@ export const mutations = {
 			db.prepare('DELETE FROM pieces WHERE rundownId = ?').run(payload.id)
 			db.prepare('DELETE FROM parts WHERE rundownId = ?').run(payload.id)
 			db.prepare('DELETE FROM segments WHERE rundownId = ?').run(payload.id)
+			// Clear daily-generation reservations pointing at this rundown so the
+			// template is treated as not-generated for the day again.
+			db.prepare('DELETE FROM dailyGenerations WHERE rundownId = ?').run(payload.id)
 			db.prepare('DELETE FROM rundowns WHERE id = ?').run(payload.id)
 
 			db.exec('COMMIT')
@@ -318,7 +364,16 @@ export function registerRundownsHandlers(socket: Socket, io: Server) {
 			case IpcOperationType.Update:
 				{
 					const { result, error } = await handleUpdateRundown(payload)
-					callback(result || error)
+					// Errors must be serialized explicitly: Error.message is not enumerable.
+					callback({
+						result,
+						error:
+							error === undefined
+								? undefined
+								: error instanceof Error
+									? error.message
+									: String(error)
+					})
 				}
 				break
 			case IpcOperationType.Delete:
@@ -405,20 +460,29 @@ async function handleDeleteRundown(payload: MutationRundownDelete) {
 	}
 }
 
+/** True when `value` is a real calendar date in strict YYYY-MM-DD form. */
+function isValidYyyyMmDd(value: string): boolean {
+	if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+	const parsed = new Date(`${value}T00:00:00Z`)
+	return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value
+}
+
 function getNewRundownName(
 	sourceRundown: Rundown,
-	payload: { preserveName?: boolean; fromTemplate?: boolean }
+	payload: { preserveName?: boolean; fromTemplate?: boolean; targetDate?: string }
 ) {
-	const now = new Date()
-	const dateSuffix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
-		now.getDate()
-	).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(
-		now.getMinutes()
-	).padStart(2, '0')}`
-
 	if (payload.fromTemplate) {
-		// From template → append date/time
-		return `${sourceRundown.name} ${dateSuffix}`
+		// From template → append date (dd.mm.yy), sliced from the YYYY-MM-DD
+		// generation date so daily clones name the day in dailyCloneTimezone.
+		const date =
+			payload.targetDate ??
+			(() => {
+				const now = new Date()
+				return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
+					now.getDate()
+				).padStart(2, '0')}`
+			})()
+		return `${sourceRundown.name} ${date.slice(8, 10)}.${date.slice(5, 7)}.${date.slice(2, 4)}`
 	}
 
 	if (!payload.preserveName) {

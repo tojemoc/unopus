@@ -1,22 +1,25 @@
 import { Link, useMatchRoute, useNavigate, useParams } from '@tanstack/react-router'
 import classNames from 'classnames'
 import { useEffect, useState } from 'react'
+import { BsChevronDown, BsChevronRight } from 'react-icons/bs'
 import {
 	IconAllRundowns,
 	IconCalendarShow,
 	IconCollapseSidebar,
 	IconExpandSidebar,
+	IconImport,
 	IconIntegrations,
 	IconPlusRundown,
-	IconScripts,
 	IconSettingsGear,
 	IconTemplates,
 	IconUsers
 } from '~/components/icons/broadcastIcons'
 import { useToasts } from '~/components/toasts/useToasts'
+import { ipcAPI } from '~/lib/IPC'
 import { useAppDispatch, useAppSelector } from '~/store/app'
-import { addNewRundown } from '~/store/rundowns'
+import { addNewRundown, importRundown } from '~/store/rundowns'
 import { canEditRundown } from '~/util/roles'
+import { verifyImportIsRundown } from '~/util/verifyImport'
 import { HOME_TAB_KEY } from '~/util/homeTab'
 import { useAppChrome } from './AppChromeContext'
 import './appSidebar.scss'
@@ -24,13 +27,15 @@ import './appSidebar.scss'
 type NavItem = {
 	id: string
 	label: string
-	icon: React.ReactNode
+	icon?: React.ReactNode
 	to?: string
 	params?: Record<string, string>
 	onClick?: () => void
 	active?: boolean
 	disabled?: boolean
 	title?: string
+	expanded?: boolean
+	children?: NavItem[]
 }
 
 function readHomeTab(): string {
@@ -73,21 +78,30 @@ export function AppSidebar() {
 	const isSettings = Boolean(matchRoute({ to: '/settings', fuzzy: true }))
 	const isUsers = Boolean(matchRoute({ to: '/settings/users' }))
 	const isConnection = Boolean(matchRoute({ to: '/settings/connection' }))
-	const isRewrite = Boolean(
-		currentRundownId &&
-			matchRoute({
-				to: '/rundown/$rundownId/rewrite',
-				params: { rundownId: currentRundownId }
-			})
+	const isSettingsProfile = Boolean(matchRoute({ to: '/settings/profile' }))
+	const isSettingsDiagnostics = Boolean(matchRoute({ to: '/settings/diagnostics' }))
+	const isSettingsRundown = Boolean(matchRoute({ to: '/settings/rundown' }))
+	const isPieceTypes = Boolean(
+		matchRoute({ to: '/settings/type/$type', params: { type: 'piece' } })
 	)
+	const isPartTypes = Boolean(matchRoute({ to: '/settings/type/$type', params: { type: 'part' } }))
+	const isSegmentTypes = Boolean(
+		matchRoute({ to: '/settings/type/$type', params: { type: 'segment' } })
+	)
+	// On a settings page covered by the Nastavenia submenu (users/connection are
+	// separate top-level items).
+	const isSettingsSub = isSettings && !isUsers && !isConnection
+	const [settingsOpen, setSettingsOpen] = useState(isSettingsSub)
+	useEffect(() => {
+		if (isSettingsSub) setSettingsOpen(true)
+	}, [isSettingsSub])
 	const isRundownEditor = Boolean(
 		currentRundownId &&
 			matchRoute({
 				to: '/rundown/$rundownId',
 				params: { rundownId: currentRundownId },
 				fuzzy: true
-			}) &&
-			!isRewrite
+			})
 	)
 	const isTemplatesTab = isHome && homeTab === 'templates'
 
@@ -100,6 +114,51 @@ export function AppSidebar() {
 				console.error(e)
 				toasts.show({
 					headerContent: 'Adding rundown',
+					bodyContent: 'Encountered an unexpected error'
+				})
+			})
+	}
+
+	const importRundownFile = () => {
+		if (!canEdit) return
+		ipcAPI
+			.openFromFile({ title: 'Import rundown' })
+			.then(async (serializedRundown) => {
+				if (verifyImportIsRundown(serializedRundown)) {
+					const existing = rundowns.find((rd) => rd.id === serializedRundown.rundown.id)
+					if (existing) {
+						toasts.show({
+							headerContent: 'Importing rundown',
+							bodyContent: 'Rundown already exists'
+						})
+					} else {
+						try {
+							await dispatch(
+								importRundown({
+									...serializedRundown,
+									isTemplate: isTemplatesTab
+								})
+							).unwrap()
+							await navigate({ to: `/rundown/${serializedRundown.rundown.id}` })
+						} catch (e) {
+							console.error(e)
+							toasts.show({
+								headerContent: 'Importing rundown',
+								bodyContent: 'Encountered an unexpected error'
+							})
+						}
+					}
+				} else {
+					toasts.show({
+						headerContent: 'Importing rundown',
+						bodyContent: 'Imported file is not a valid rundown'
+					})
+				}
+			})
+			.catch((e) => {
+				console.error(e)
+				toasts.show({
+					headerContent: 'Importing rundown',
 					bodyContent: 'Encountered an unexpected error'
 				})
 			})
@@ -125,6 +184,14 @@ export function AppSidebar() {
 			disabled: !canEdit,
 			title: canEdit ? 'Create a new rundown' : 'Viewer role — read-only'
 		},
+		{
+			id: 'import',
+			label: 'Import',
+			icon: <IconImport size={16} />,
+			onClick: importRundownFile,
+			disabled: !canEdit,
+			title: canEdit ? 'Import rundown from a JSON file' : 'Viewer role — read-only'
+		},
 		...(currentRundown
 			? [
 					{
@@ -134,21 +201,12 @@ export function AppSidebar() {
 						to: '/rundown/$rundownId',
 						params: { rundownId: currentRundown.id },
 						active: isRundownEditor
-					} satisfies NavItem,
-					{
-						id: 'scripts',
-						label: 'Skripty',
-						icon: <IconScripts size={16} />,
-						to: '/rundown/$rundownId/rewrite',
-						params: { rundownId: currentRundown.id },
-						active: isRewrite,
-						title: 'Daily rewrite / scripts'
 					} satisfies NavItem
 				]
 			: []),
 		{
 			id: 'all',
-			label: 'Všetky rundowns',
+			label: 'Všetky rundowny',
 			icon: <IconAllRundowns size={16} />,
 			onClick: () => goHomeTab('rundowns'),
 			active: isHome && !isTemplatesTab
@@ -168,8 +226,50 @@ export function AppSidebar() {
 			id: 'settings',
 			label: 'Nastavenia',
 			icon: <IconSettingsGear size={16} />,
-			to: '/settings/profile',
-			active: isSettings && !isUsers && !isConnection
+			onClick: () => {
+				if (sidebarCollapsed) toggleSidebar()
+				setSettingsOpen((open) => !open)
+			},
+			active: isSettingsSub,
+			expanded: settingsOpen,
+			children: [
+				{
+					id: 'settings-profile',
+					label: 'Profil',
+					to: '/settings/profile',
+					active: isSettingsProfile
+				},
+				{
+					id: 'settings-diagnostics',
+					label: 'Diagnostika',
+					to: '/settings/diagnostics',
+					active: isSettingsDiagnostics
+				},
+				{
+					id: 'settings-piece',
+					label: 'Piece Types',
+					to: '/settings/type/piece',
+					active: isPieceTypes
+				},
+				{
+					id: 'settings-part',
+					label: 'Part Types',
+					to: '/settings/type/part',
+					active: isPartTypes
+				},
+				{
+					id: 'settings-segment',
+					label: 'Segment Types',
+					to: '/settings/type/segment',
+					active: isSegmentTypes
+				},
+				{
+					id: 'settings-rundown',
+					label: 'Rundown Metadata',
+					to: '/settings/rundown',
+					active: isSettingsRundown
+				}
+			]
 		},
 		{
 			id: 'users',
@@ -228,6 +328,15 @@ function SidebarSection({
 				{items.map((item) => (
 					<li key={item.id}>
 						<SidebarLink item={item} collapsed={collapsed} />
+						{item.children && item.expanded && !collapsed ? (
+							<ul className="app-sidebar__sublist">
+								{item.children.map((child) => (
+									<li key={child.id}>
+										<SidebarLink item={child} collapsed={collapsed} />
+									</li>
+								))}
+							</ul>
+						) : null}
 					</li>
 				))}
 			</ul>
@@ -243,8 +352,13 @@ function SidebarLink({ item, collapsed }: { item: NavItem; collapsed: boolean })
 
 	const content = (
 		<>
-			<span className="app-sidebar__icon">{item.icon}</span>
+			{item.icon ? <span className="app-sidebar__icon">{item.icon}</span> : null}
 			{!collapsed ? <span className="app-sidebar__label">{item.label}</span> : null}
+			{!collapsed && item.children ? (
+				<span className="app-sidebar__chevron" aria-hidden>
+					{item.expanded ? <BsChevronDown /> : <BsChevronRight />}
+				</span>
+			) : null}
 		</>
 	)
 
@@ -263,6 +377,7 @@ function SidebarLink({ item, collapsed }: { item: NavItem; collapsed: boolean })
 				className={className}
 				title={item.title ?? item.label}
 				onClick={item.onClick}
+				aria-expanded={item.children ? item.expanded && !collapsed : undefined}
 			>
 				{content}
 			</button>

@@ -236,6 +236,33 @@ function updateDailyGenerationRow(
 }
 
 /**
+ * Returns the rundown a completed reservation points at. When that rundown no
+ * longer exists (deleted after generation), the reservation is dangling — its
+ * row is deleted so the day is treated as not-generated and a new attempt may run.
+ */
+async function rundownForCompletedReservation(
+	row: DailyGenerationRow
+): Promise<Rundown | undefined> {
+	if (row.status !== 'completed' || !row.rundownId) return undefined
+	const { result, error } = await rundownMutations.readOne(row.rundownId)
+	if (result) return result
+	if (!error || !/not found/i.test(error.message)) {
+		throw error ?? new Error(`Failed to read rundown ${row.rundownId}`)
+	}
+	// Read confirmed the rundown row is gone — the reservation is dangling.
+	db.prepare(
+		`
+		DELETE FROM dailyGenerations
+		WHERE sourceTemplateId = ?
+			AND generatedDate = ?
+			AND generatingTimezone = ?
+			AND status = 'completed'
+	`
+	).run(row.sourceTemplateId, row.generatedDate, row.generatingTimezone)
+	return undefined
+}
+
+/**
  * Reconcile an in_progress (or failed-with-unknown-outcome) reservation by looking
  * up a rundown stamped with the reservation's idempotencyKey.
  * Never transitions to failed while the lease is still live and no rundown is found.
@@ -333,7 +360,12 @@ async function waitForExistingAttempt(
 
 		const reconciled = reconcileDailyGenerationReservation(row, new Date())
 		if (reconciled.status === 'completed' && reconciled.rundownId) {
-			const { result: rundown } = await rundownMutations.readOne(reconciled.rundownId)
+			const rundown = await rundownForCompletedReservation(reconciled)
+			if (!rundown) {
+				// Rundown deleted after generation — reservation healed; let the
+				// caller fall through to a fresh attempt.
+				return null
+			}
 			logger.info('Joined completed daily generation', {
 				attemptId: reconciled.attemptId,
 				idempotencyKey: reconciled.idempotencyKey,
@@ -455,7 +487,9 @@ async function runCloneAttempt(params: {
 			id: templateId,
 			preserveTemplate: false,
 			attemptId,
-			idempotencyKey
+			idempotencyKey,
+			targetDate: generatedDate,
+			targetTimeZone: generatingTimezone
 		})
 
 		if (error || !result?.rundown) {
@@ -509,24 +543,27 @@ async function runCloneAttempt(params: {
 		if (current) {
 			const reconciled = reconcileDailyGenerationReservation(current, new Date())
 			if (reconciled.status === 'completed' && reconciled.rundownId) {
-				logger.info('Reconciled daily clone after error to completed', {
-					attemptId: reconciled.attemptId,
-					idempotencyKey: reconciled.idempotencyKey,
-					rundownId: reconciled.rundownId,
-					generatedDate,
-					sourceTemplateId: templateId
-				})
-				const { result: rundown } = await rundownMutations.readOne(reconciled.rundownId)
-				return {
-					generatedDate,
-					timezone: generatingTimezone,
-					status: 'completed',
-					rundownId: reconciled.rundownId,
-					rundown,
-					attemptId: reconciled.attemptId,
-					idempotencyKey: reconciled.idempotencyKey,
-					created: false
+				const rundown = await rundownForCompletedReservation(reconciled)
+				if (rundown) {
+					logger.info('Reconciled daily clone after error to completed', {
+						attemptId: reconciled.attemptId,
+						idempotencyKey: reconciled.idempotencyKey,
+						rundownId: reconciled.rundownId,
+						generatedDate,
+						sourceTemplateId: templateId
+					})
+					return {
+						generatedDate,
+						timezone: generatingTimezone,
+						status: 'completed',
+						rundownId: reconciled.rundownId,
+						rundown,
+						attemptId: reconciled.attemptId,
+						idempotencyKey: reconciled.idempotencyKey,
+						created: false
+					}
 				}
+				// Dangling reservation healed (row removed); fall through to error path.
 			}
 
 			if (
@@ -641,17 +678,20 @@ export async function generateDailyRundownIfNeeded(
 	if (existing) {
 		const reconciled = reconcileDailyGenerationReservation(existing, now)
 		if (reconciled.status === 'completed' && reconciled.rundownId) {
-			const { result: rundown } = await rundownMutations.readOne(reconciled.rundownId)
-			return {
-				generatedDate,
-				timezone,
-				status: 'completed',
-				rundownId: reconciled.rundownId,
-				rundown,
-				attemptId: reconciled.attemptId,
-				idempotencyKey: reconciled.idempotencyKey,
-				created: false
+			const rundown = await rundownForCompletedReservation(reconciled)
+			if (rundown) {
+				return {
+					generatedDate,
+					timezone,
+					status: 'completed',
+					rundownId: reconciled.rundownId,
+					rundown,
+					attemptId: reconciled.attemptId,
+					idempotencyKey: reconciled.idempotencyKey,
+					created: false
+				}
 			}
+			// Dangling reservation healed (row removed); fall through to a fresh attempt.
 		}
 
 		if (reconciled.status === 'in_progress') {
@@ -671,16 +711,18 @@ export async function generateDailyRundownIfNeeded(
 
 		const afterWait = readDailyGenerationRow(templateId, generatedDate, timezone)
 		if (afterWait?.status === 'completed' && afterWait.rundownId) {
-			const { result: rundown } = await rundownMutations.readOne(afterWait.rundownId)
-			return {
-				generatedDate,
-				timezone,
-				status: 'completed',
-				rundownId: afterWait.rundownId,
-				rundown,
-				attemptId: afterWait.attemptId,
-				idempotencyKey: afterWait.idempotencyKey,
-				created: false
+			const rundown = await rundownForCompletedReservation(afterWait)
+			if (rundown) {
+				return {
+					generatedDate,
+					timezone,
+					status: 'completed',
+					rundownId: afterWait.rundownId,
+					rundown,
+					attemptId: afterWait.attemptId,
+					idempotencyKey: afterWait.idempotencyKey,
+					created: false
+				}
 			}
 		}
 
@@ -751,16 +793,18 @@ export async function generateDailyRundownIfNeeded(
 	if (!insert.inserted) {
 		// Race: another caller inserted first.
 		if (insert.existing?.status === 'completed' && insert.existing.rundownId) {
-			const { result: rundown } = await rundownMutations.readOne(insert.existing.rundownId)
-			return {
-				generatedDate,
-				timezone,
-				status: 'completed',
-				rundownId: insert.existing.rundownId,
-				rundown,
-				attemptId: insert.existing.attemptId,
-				idempotencyKey: insert.existing.idempotencyKey,
-				created: false
+			const rundown = await rundownForCompletedReservation(insert.existing)
+			if (rundown) {
+				return {
+					generatedDate,
+					timezone,
+					status: 'completed',
+					rundownId: insert.existing.rundownId,
+					rundown,
+					attemptId: insert.existing.attemptId,
+					idempotencyKey: insert.existing.idempotencyKey,
+					created: false
+				}
 			}
 		}
 		if (insert.existing?.status === 'in_progress') {
@@ -818,13 +862,22 @@ export async function getDailyGenerationStatusForTemplate(
 		}
 	}
 
-	const { result: rundown } = await rundownMutations.readOne(row.rundownId)
+	const rundown = await rundownForCompletedReservation(row)
+	if (!rundown) {
+		// Generated rundown was deleted — reservation healed, so report not-generated.
+		return {
+			generatedDate,
+			timezone,
+			status: null,
+			rundownId: null
+		}
+	}
 	return {
 		generatedDate,
 		timezone,
 		status: 'completed',
 		rundownId: row.rundownId,
-		rundownName: rundown?.name
+		rundownName: rundown.name
 	}
 }
 

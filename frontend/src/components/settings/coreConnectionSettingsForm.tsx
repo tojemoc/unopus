@@ -37,9 +37,18 @@ export function CoreConnectionSettingsForm({ settings }: { settings: Application
 					ingestMediaRoot: values.value.ingestMediaRoot?.trim() || '',
 					previewBaseUrl: normalizeOptionalUrl(values.value.previewBaseUrl)
 				}
-				await dispatch(updateSettings({ settings: nextSettings })).unwrap()
+				const updatedSettings = await dispatch(
+					updateSettings({ settings: nextSettings })
+				).unwrap()
+				if (
+					!updatedSettings ||
+					typeof updatedSettings !== 'object' ||
+					Object.keys(updatedSettings).length === 0
+				) {
+					throw new Error('Update was rejected by the server')
+				}
 				clearPreviewBaseUrlCache()
-				form.reset()
+				form.reset(updatedSettings)
 			} catch (e) {
 				console.error(e)
 				toasts.show({

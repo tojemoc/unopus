@@ -132,6 +132,9 @@ export const mutations = {
 		}
 
 		const nextId = update.id ?? payload.id
+		if (!nextId) {
+			return { error: new Error('TypeManifest id must not be empty') }
+		}
 		const nextEntityType = update.entityType ?? currentEntityType
 		// Full replace (not json_patch) so removed fields / payload entries actually disappear.
 		const document: TypeManifest = {

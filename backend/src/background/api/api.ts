@@ -57,7 +57,7 @@ export interface BackendApi {
 	getRundowns: () => Promise<Rundown[]>
 	addNewRundown: (rundown: MutationRundownCreate) => Promise<Rundown>
 	copyRundown: (payload: MutationRundownCopy) => Promise<Rundown>
-	updateRundown: (rundown: MutationRundownUpdate) => Promise<Rundown>
+	updateRundown: (rundown: MutationRundownUpdate) => Promise<{ result?: Rundown; error?: string }>
 	deleteRundown: (rundownId: string) => Promise<void>
 
 	getSegments: (payload: MutationSegmentsRead) => Promise<Segment[]>

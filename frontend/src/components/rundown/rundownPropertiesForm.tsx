@@ -19,60 +19,93 @@ export function RundownPropertiesForm({ rundown }: { rundown: Rundown }) {
 		state.typeManifests.manifests?.find((manifest) => manifest.id === 'rundown')
 	)?.payload
 
-	const form = useForm({
-		defaultValues: rundown,
-		onSubmit: async (values) => {
-			await dispatch(updateRundown({ rundown: values.value })).unwrap()
+	// `rundown` can be a stale snapshot (e.g. the list modal captures it when the
+	// gear is clicked), so feed the form the live store document — the form API
+	// re-applies `defaultValues` on every render and would otherwise reset the
+	// fields back to the pre-save values after a successful save.
+	const liveRundown = useAppSelector(
+		(state) => state.rundowns.find((r) => r.id === rundown.id) ?? rundown
+	)
 
-			// Mark as pristine
-			form.reset()
+	const form = useForm({
+		defaultValues: liveRundown,
+		onSubmit: async (values) => {
+			try {
+				const updatedRundown = await dispatch(
+					updateRundown({ rundown: values.value })
+				).unwrap()
+				if (!updatedRundown || typeof updatedRundown !== 'object' || !updatedRundown.id) {
+					throw new Error('Update was rejected by the server')
+				}
+
+				// Mark as pristine
+				form.reset(updatedRundown)
+			} catch (e) {
+				console.error(e)
+				toasts.show({
+					headerContent: 'Saving rundown',
+					bodyContent:
+						e && typeof e === 'object' && 'result' in e && e.result
+							? 'Rundown saved, but syncing with Core failed.'
+							: 'Unexpected error'
+				})
+			}
 		}
 	})
 
-	const buildSerializedRundown = (): SerializedRundown | null => {
+	// Fetch fresh data from the backend rather than the store: the segments/parts/pieces
+	// slices only hold the currently open rundown, so exporting an unopened rundown
+	// would otherwise produce an empty document.
+	const buildSerializedRundown = async (): Promise<SerializedRundown | null> => {
 		const state = store.getState()
 
-		const serializedRundown: SerializedRundown = {
-			rundown: state.rundowns.find((r) => r.id === rundown.id) as Rundown,
-			segments: state.segments.segments.filter((segment) => segment.rundownId === rundown.id),
-			parts: state.parts.parts.filter((part) => part.rundownId === rundown.id),
-			pieces: state.pieces.pieces.filter((piece) => piece.rundownId === rundown.id)
+		const rundownDoc = state.rundowns.find((r) => r.id === rundown.id)
+		if (!rundownDoc) return null
+
+		const [segments, parts, pieces] = await Promise.all([
+			ipcAPI.getSegments({ rundownId: rundown.id }),
+			ipcAPI.getParts(rundown.id),
+			ipcAPI.getPieces(rundown.id)
+		])
+
+		return {
+			rundown: rundownDoc,
+			segments,
+			parts,
+			pieces,
+			isTemplate: rundownDoc.isTemplate
 		}
-
-		if (!serializedRundown.rundown) return null
-
-		return serializedRundown
 	}
 
-	const exportRundown = (e: React.MouseEvent) => {
+	const exportRundown = async (e: React.MouseEvent) => {
 		e.preventDefault()
 		e.stopPropagation()
 
-		const serializedRundown = buildSerializedRundown()
-		if (!serializedRundown) return
+		try {
+			const serializedRundown = await buildSerializedRundown()
+			if (!serializedRundown) return
 
-		ipcAPI
-			.saveToFile({
+			await ipcAPI.saveToFile({
 				title: 'Export rundown',
 				document: serializedRundown
 			})
-			.catch((e) => {
-				console.error(e)
-				toasts.show({
-					headerContent: 'Exporting rundown',
-					bodyContent: 'Encountered an unexpected error'
-				})
+		} catch (e) {
+			console.error(e)
+			toasts.show({
+				headerContent: 'Exporting rundown',
+				bodyContent: 'Encountered an unexpected error'
 			})
+		}
 	}
 
 	const exportRundownCsv = async (e: React.MouseEvent) => {
 		e.preventDefault()
 		e.stopPropagation()
 
-		const serializedRundown = buildSerializedRundown()
-		if (!serializedRundown) return
-
 		try {
+			const serializedRundown = await buildSerializedRundown()
+			if (!serializedRundown) return
+
 			const csv = serializedRundownToCsv(serializedRundown)
 			const filename = sanitizeRundownFilename(serializedRundown.rundown.name)
 

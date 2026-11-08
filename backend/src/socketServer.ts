@@ -14,6 +14,7 @@ import { registerCoreConnectionInfoHandlers } from './background/api/coreConnect
 import { attachSocketAuth, type AuthenticatedSocket } from './background/auth/socketAuth'
 import { getUserFromSession, parseSessionCookie } from './background/auth/authStore'
 import { registerAuthRoutes } from './routes/auth'
+import { registerRundownsRoutes } from './routes/rundowns'
 import { registerEditsRoutes } from './routes/edits'
 import { registerMediaRoutes } from './routes/media'
 import { registerReadinessRoutes } from './routes/readiness'
@@ -87,6 +88,7 @@ export async function initSocketServer(port: number = 3010) {
 	})
 
 	registerAuthRoutes(app)
+	registerRundownsRoutes(app)
 	registerEditsRoutes(app)
 	registerMediaRoutes(app)
 	registerReadinessRoutes(app)

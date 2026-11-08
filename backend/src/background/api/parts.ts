@@ -773,7 +773,7 @@ export function registerPartsHandlers(socket: Socket, io: Server) {
 				break
 			case IpcOperationType.Delete:
 				{
-					const { result, error } = await handlePartDelete(payload)
+					const { result, error } = await handlePartDelete(payload, io)
 					callback(result || error)
 				}
 				break
@@ -953,13 +953,18 @@ async function handlePartReorder(payload: MutationReorder<MutationPartUpdate>) {
 
 	return { result: returnedError === undefined ? reorderedParts : undefined, error: returnedError }
 }
-async function handlePartDelete(payload: MutationRundownDelete) {
+async function handlePartDelete(payload: MutationRundownDelete, io?: Server) {
 	let returnedError: unknown | Error | undefined
 
 	const { result: document } = await mutations.read({ id: payload.id })
 	const { error: deleteError } = await mutations.delete(payload)
 
-	if (deleteError) returnedError = deleteError
+	if (deleteError) {
+		returnedError = deleteError
+	} else {
+		// Invalidate list stats once the row is gone, even if the Core call below fails.
+		io?.emit('parts:update', { action: 'update', parts: [] })
+	}
 
 	if (!deleteError && document && !Array.isArray(document) && !partExcludedFromSofie(document)) {
 		const { result: rundown } = await rundownMutations.read({ id: document.rundownId })
