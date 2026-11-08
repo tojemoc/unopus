@@ -47,10 +47,21 @@ export const copyRundown = createAppAsyncThunk(
 		return rundownResult
 	}
 )
-export const updateRundown = createAppAsyncThunk(
+export const updateRundown = createAppAsyncThunk<
+	Rundown,
+	UpdateRundownPayload,
+	{ rejectValue: { result?: Rundown; error: string } }
+>(
 	'rundowns/updateRundown',
-	async (payload: UpdateRundownPayload) => {
-		return ipcAPI.updateRundown(payload.rundown)
+	async (payload: UpdateRundownPayload, { rejectWithValue }) => {
+		const response = await ipcAPI.updateRundown(payload.rundown)
+		if (response.error !== undefined || !response.result?.id) {
+			return rejectWithValue({
+				result: response.result,
+				error: response.error ?? 'Update was rejected by the server'
+			})
+		}
+		return response.result
 	}
 )
 export const removeRundown = createAppAsyncThunk(
@@ -140,6 +151,13 @@ const rundownsSlice = createSlice({
 				if (index !== -1) {
 					state[index] = action.payload
 				}
+			})
+			.addCase(updateRundown.rejected, (state, action) => {
+				// A Core failure does not roll back the successful database update.
+				const saved = action.payload?.result
+				if (!saved) return
+				const index = state.findIndex((rundown) => rundown.id === saved.id)
+				if (index !== -1) state[index] = saved
 			})
 			.addCase(removeRundown.fulfilled, (state, action) => {
 				const index = state.findIndex((rundown) => rundown.id === action.payload.id)

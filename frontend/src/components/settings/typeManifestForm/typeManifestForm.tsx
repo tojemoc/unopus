@@ -34,7 +34,8 @@ export function TypeManifestForm({
 					return rest
 				})
 				if (!values.value.id) {
-					throw new Error('Type id must not be empty')
+					toasts.show({ headerContent: 'Saving type', bodyContent: 'Type id must not be empty' })
+					return
 				}
 				const updatedManifest = await dispatch(
 					updateTypeManifest({

@@ -364,7 +364,16 @@ export function registerRundownsHandlers(socket: Socket, io: Server) {
 			case IpcOperationType.Update:
 				{
 					const { result, error } = await handleUpdateRundown(payload)
-					callback(result || error)
+					// Errors must be serialized explicitly: Error.message is not enumerable.
+					callback({
+						result,
+						error:
+							error === undefined
+								? undefined
+								: error instanceof Error
+									? error.message
+									: String(error)
+					})
 				}
 				break
 			case IpcOperationType.Delete:

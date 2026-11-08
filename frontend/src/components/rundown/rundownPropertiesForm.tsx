@@ -42,7 +42,13 @@ export function RundownPropertiesForm({ rundown }: { rundown: Rundown }) {
 				form.reset(updatedRundown)
 			} catch (e) {
 				console.error(e)
-				toasts.show({ headerContent: 'Saving rundown', bodyContent: 'Unexpected error' })
+				toasts.show({
+					headerContent: 'Saving rundown',
+					bodyContent:
+						e && typeof e === 'object' && 'result' in e && e.result
+							? 'Rundown saved, but syncing with Core failed.'
+							: 'Unexpected error'
+				})
 			}
 		}
 	})
