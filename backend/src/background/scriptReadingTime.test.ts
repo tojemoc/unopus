@@ -5,6 +5,8 @@ import {
 	estimateScriptReadingSeconds,
 	formatReadingClock,
 	normalizeScriptCps,
+	partSupportsAutoNext,
+	partUsesMediaDuration,
 	partUsesScriptDuration,
 	resolveEffectiveScriptCps
 } from './scriptReadingTime.js'
@@ -29,16 +31,33 @@ describe('scriptReadingTime', () => {
 		assert.equal(formatReadingClock(0), '00:00')
 	})
 
-	it('identifies ILU family, SJV/ŠPORT, and SYN as script-duration part types', () => {
+	it('identifies script-duration and media-duration part types', () => {
 		assert.equal(partUsesScriptDuration('ilu'), true)
 		assert.equal(partUsesScriptDuration('doublebox'), true)
 		assert.equal(partUsesScriptDuration('sjv'), true)
 		assert.equal(partUsesScriptDuration('sport'), true)
-		assert.equal(partUsesScriptDuration('syn'), true)
+		assert.equal(partUsesScriptDuration('syn'), false)
 		assert.equal(partUsesScriptDuration('syn', ['l3d-sjv']), true)
-		assert.equal(partUsesScriptDuration('syn', ['video']), true)
+		assert.equal(partUsesScriptDuration('syn', ['l3d-sport']), true)
+		assert.equal(partUsesScriptDuration('syn', ['video']), false)
 		assert.equal(partUsesScriptDuration('vo'), false)
 		assert.equal(partUsesScriptDuration('cam'), false)
+
+		assert.equal(partUsesMediaDuration('syn', ['video']), true)
+		assert.equal(partUsesMediaDuration('syn', ['l3d-sjv']), false)
+		assert.equal(partUsesMediaDuration('vo'), true)
+		assert.equal(partUsesMediaDuration('vt'), true)
+		assert.equal(partUsesMediaDuration('ilu'), false)
+	})
+
+	it('separates AUTO capability from script duration', () => {
+		assert.equal(partSupportsAutoNext('syn'), true)
+		assert.equal(partSupportsAutoNext('sjv'), true)
+		assert.equal(partSupportsAutoNext('sport'), true)
+		assert.equal(partSupportsAutoNext('ilu'), false)
+		assert.equal(partSupportsAutoNext('doublebox'), false)
+		assert.equal(partSupportsAutoNext('vo'), false)
+		assert.equal(partSupportsAutoNext('vt'), false)
 	})
 
 	it('resolves effective CPS from user profile then site default', () => {
