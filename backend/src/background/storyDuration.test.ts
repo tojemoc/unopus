@@ -86,16 +86,18 @@ describe('storyDuration', () => {
 		assert.deepEqual(plan.pieceUpdates, [])
 	})
 
-	it('derives ILU part duration from script reading time', () => {
+	it('derives ILU and DoubleBox part duration from script reading time', () => {
 		const script = 'a'.repeat(30) // 30 chars @ 15 CPS = 2s
-		assert.equal(
-			resolvePartOnAirDuration(
-				{ partType: 'ilu', script, duration: undefined },
-				[{ pieceType: 'headline', duration: undefined }],
-				{ scriptCps: 15 }
-			),
-			2
-		)
+		for (const partType of ['ilu', 'doublebox']) {
+			assert.equal(
+				resolvePartOnAirDuration(
+					{ partType, script, duration: undefined },
+					[{ pieceType: 'headline', duration: undefined }],
+					{ scriptCps: 15 }
+				),
+				2
+			)
+		}
 	})
 
 	it('plans ILU script sync onto headline only (not L3D inherit fill)', () => {
@@ -115,7 +117,7 @@ describe('storyDuration', () => {
 		assert.deepEqual(plan.pieceUpdates, [{ id: 'il', duration: 2, force: true }])
 	})
 
-	it('manual / until-next-take keeps stored On air and does not force CPS overwrite', () => {
+	it('ILU stays manual but script still drives On air', () => {
 		const script = 'a'.repeat(30) // 2s @ 15 CPS
 		assert.equal(
 			resolvePartOnAirDuration(
@@ -123,7 +125,7 @@ describe('storyDuration', () => {
 				[{ pieceType: 'headline', duration: 99 }],
 				{ scriptCps: 15 }
 			),
-			99
+			2
 		)
 
 		const plan = planStoryDurationSync(
@@ -135,12 +137,12 @@ describe('storyDuration', () => {
 			{ scriptCps: 15 }
 		)
 
-		assert.equal(plan.partDuration, undefined)
-		assert.equal(plan.forcePartDuration, undefined)
-		assert.deepEqual(plan.pieceUpdates, [{ id: 'il', duration: 99, force: true }])
+		assert.equal(plan.partDuration, 2)
+		assert.equal(plan.forcePartDuration, true)
+		assert.deepEqual(plan.pieceUpdates, [])
 	})
 
-	it('manual mode falls back to script estimate when On air is unset', () => {
+	it('script duration fills an unset ILU On air and headline', () => {
 		const script = 'a'.repeat(30)
 		assert.equal(
 			resolvePartOnAirDuration(
@@ -156,30 +158,32 @@ describe('storyDuration', () => {
 			[{ id: 'il', pieceType: 'headline', duration: undefined }],
 			{ scriptCps: 15 }
 		)
-		assert.equal(plan.partDuration, undefined)
+		assert.equal(plan.partDuration, 2)
+		assert.equal(plan.forcePartDuration, true)
 		assert.deepEqual(plan.pieceUpdates, [{ id: 'il', duration: 2, force: true }])
 	})
 
-	it('site defaultDurationMode manual applies when part has no override', () => {
+	it('site defaultDurationMode manual does not change script timing', () => {
 		const script = 'a'.repeat(30)
 		const plan = planStoryDurationSync(
 			{ partType: 'ilu', script, duration: 45 },
 			[{ id: 'il', pieceType: 'headline', duration: 2 }],
 			{ scriptCps: 15, defaultDurationMode: 'manual' }
 		)
-		assert.equal(plan.partDuration, undefined)
-		assert.deepEqual(plan.pieceUpdates, [{ id: 'il', duration: 45, force: true }])
+		assert.equal(plan.partDuration, 2)
+		assert.equal(plan.forcePartDuration, true)
+		assert.deepEqual(plan.pieceUpdates, [])
 	})
 
-	it('SYN AUTO derives On air from script CPS like ILU', () => {
-		const script = 'a'.repeat(30) // 2s @ 15 CPS
+	it('plain SYN AUTO uses clip duration instead of script or stale On air', () => {
+		const script = 'a'.repeat(30) // 2s @ 15 CPS — must not be used
 		assert.equal(
 			resolvePartOnAirDuration(
 				{ partType: 'syn', script, duration: 99, durationMode: 'auto' },
 				[{ pieceType: 'video', duration: 40 }],
 				{ scriptCps: 15 }
 			),
-			2
+			40
 		)
 		assert.equal(
 			resolvePartOnAirDuration(
@@ -188,6 +192,74 @@ describe('storyDuration', () => {
 				{ scriptCps: 15 }
 			),
 			99
+		)
+	})
+
+	it('plain SYN AUTO prefers trimmed sourceDuration over stale durations', () => {
+		const pieces = [
+			{
+				pieceType: 'video',
+				duration: 40,
+				payload: { sourceDuration: 20_000, trimIn: 2, trimOut: 1 }
+			}
+		]
+		assert.equal(
+			resolvePartOnAirDuration(
+				{ partType: 'syn', duration: 99, durationMode: 'auto' },
+				pieces,
+				{ scriptCps: 15 }
+			),
+			17
+		)
+
+		const plan = planStoryDurationSync(
+			{ partType: 'syn', duration: 99, durationMode: 'auto' },
+			[{ id: 'syn', ...pieces[0] }],
+			{ scriptCps: 15 }
+		)
+		assert.equal(plan.partDuration, 17)
+		assert.equal(plan.forcePartDuration, true)
+		assert.deepEqual(plan.pieceUpdates, [])
+	})
+
+	it('trims the piece-duration fallback when sourceDuration is missing', () => {
+		const pieces = [
+			{
+				pieceType: 'video',
+				duration: 40,
+				payload: { trimIn: 2, trimOut: 1 }
+			}
+		]
+		assert.equal(
+			resolvePartOnAirDuration({ partType: 'syn', duration: 99, durationMode: 'auto' }, pieces),
+			37
+		)
+		assert.equal(
+			resolvePartOnAirDuration({ partType: 'vt', duration: undefined, durationMode: 'manual' }, pieces),
+			37
+		)
+	})
+
+	it('marker-qualified SYN and SJV/ŠPORT keep script timing', () => {
+		const script = 'a'.repeat(30)
+		assert.equal(
+			resolvePartOnAirDuration(
+				{ partType: 'syn', script, duration: 99, durationMode: 'auto' },
+				[
+					{ pieceType: 'video', duration: 40 },
+					{ pieceType: 'l3d-sjv', duration: undefined }
+				],
+				{ scriptCps: 15 }
+			),
+			2
+		)
+		assert.equal(
+			resolvePartOnAirDuration(
+				{ partType: 'sport', script, duration: 99, durationMode: 'auto' },
+				[{ pieceType: 'l3d-sport', duration: undefined }],
+				{ scriptCps: 15 }
+			),
+			2
 		)
 	})
 
@@ -232,7 +304,7 @@ describe('storyDuration', () => {
 		assert.equal(total, 10)
 	})
 
-	it('does not force-overwrite editorial On air from trimmed sourceDuration', () => {
+	it('AUTO SYN uses trimmed sourceDuration for part without changing piece On air', () => {
 		assert.equal(
 			resolveTrimmedSourceDurationSeconds({
 				pieceType: 'video',
@@ -249,7 +321,20 @@ describe('storyDuration', () => {
 				payload: { sourceDuration: 12000, trimIn: 2, trimOut: 1 }
 			}
 		])
-		assert.equal(plan.partDuration, 18)
+		assert.equal(plan.partDuration, 9)
+		assert.deepEqual(plan.pieceUpdates, [])
+	})
+
+	it('VO/VT fallback keeps editorial duration as the playable cap', () => {
+		const plan = planStoryDurationSync({ duration: 0, partType: 'vt' }, [
+			{
+				id: 'vt',
+				pieceType: 'video',
+				duration: 18,
+				payload: { sourceDuration: 12000, trimIn: 2, trimOut: 1 }
+			}
+		])
+		assert.equal(plan.partDuration, 9)
 		assert.deepEqual(plan.pieceUpdates, [])
 	})
 

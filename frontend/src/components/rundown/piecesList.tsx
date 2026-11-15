@@ -89,7 +89,8 @@ export function PiecesList({ part }: { part: Part }) {
 				pieces.map((piece: Piece) => ({
 					pieceType: piece.pieceType,
 					duration: piece.duration,
-					skip: piece.skip
+					skip: piece.skip,
+					payload: piece.payload
 				})),
 				durationOpts
 			),

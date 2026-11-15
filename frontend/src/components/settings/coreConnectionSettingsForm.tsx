@@ -279,11 +279,11 @@ export function CoreConnectionSettingsForm({ settings }: { settings: Application
 				<hr className="my-4" />
 				<h3 className="h5">Script timing &amp; editorial</h3>
 				<p className="text-muted small">
-					Reading-time estimates drive story length when AUTO is on for ILU, DoubleBox, SJV,
-					ŠPORT, and SYN. VO / VT length still comes from ffprobe on the linked clip. AUTO off
-					means until next take (duration is kept for planning; Sofie does not auto-take). Each
-					user can set their own CPS under Settings → Profile; when unset, this site default
-					applies.
+					Reading-time estimates drive story length for ILU, DoubleBox, SJV, and ŠPORT.
+					ILU / DoubleBox are always manual. SYN AUTO uses the linked clip's trimmed
+					file duration; SJV / ŠPORT AUTO uses script time. AUTO off means until next take
+					(duration is kept for planning; Sofie does not auto-take). Each user can set
+					their own CPS under Settings → Profile; when unset, this site default applies.
 				</p>
 
 				<form.Field
@@ -327,14 +327,14 @@ export function CoreConnectionSettingsForm({ settings }: { settings: Application
 										field.handleChange(e.target.value === 'manual' ? 'manual' : 'auto')
 									}
 								>
-									<option value="auto">Auto — Sofie may take after reading time</option>
+									<option value="auto">Auto — Sofie may take after duration</option>
 									<option value="manual">Until next take — wait for take (duration still sent)</option>
 								</Form.Select>
 								<Form.Text className="text-muted">
-									Site default for ILU, DoubleBox, SJV, ŠPORT, and SYN. Auto exports{' '}
-									<code>autoNext: true</code> so Sofie can take after the script duration. Until
-									next take keeps the duration but does not request auto-take. Each story can
-									override this with the AUTO toggle on the story row.
+									Site default for SYN, SJV, and ŠPORT. Auto exports{' '}
+									<code>autoNext: true</code> so Sofie can take after the clip duration
+									for SYN or script duration for SJV / ŠPORT. ILU / DoubleBox are always
+									manual. Each AUTO-capable story can override this on the story row.
 								</Form.Text>
 							</Form.Group>
 							<FieldInfo field={field} />

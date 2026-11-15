@@ -14,7 +14,11 @@ import { findTypeManifest } from '~/util/typeManifest'
 import { ReadinessBadge, getPieceReadinessTooltip } from '../readinessBadge'
 import { EditorialStatusBadge } from '../editorialStatusBadge'
 import { formatPartOnAirDuration, resolvePartOnAirDuration } from '~/util/pieceDuration'
-import { partUsesScriptDuration, resolveEffectiveScriptCps } from '~/util/scriptReadingTime'
+import {
+	partSupportsAutoNext,
+	partUsesScriptDuration,
+	resolveEffectiveScriptCps
+} from '~/util/scriptReadingTime'
 import { resolveEffectiveIluDurationMode } from '~backend/background/storyDuration'
 import { firstScriptLine } from '~/util/scriptPreview'
 import { resolveShowPartScriptExcerpt } from '~/util/scriptExcerptPreference'
@@ -148,19 +152,22 @@ export function SidebarPartRow({ part }: { part: Part }) {
 		livePart.partType,
 		partPieces.filter((piece) => !piece.skip).map((piece) => piece.pieceType)
 	)
+	const autoCapable = partSupportsAutoNext(livePart.partType)
 	const effectiveDurationMode = resolveEffectiveIluDurationMode(
 		livePart.durationMode,
 		siteDurationMode
 	)
-	const autoOn = effectiveDurationMode === 'auto'
+	const autoOn = !livePart.skip && !livePart.float && autoCapable && effectiveDurationMode === 'auto'
 	const autoNextStatus = getAutoNextPartStatus(livePart.id, autoOn)
+	const autoSourceLabel = scriptDriven ? 'script/CPS' : 'clip duration'
 	const displayedDuration =
 		formatPartOnAirDuration(
 			livePart,
 			partPieces.map((piece) => ({
 				pieceType: piece.pieceType,
 				duration: piece.duration,
-				skip: piece.skip
+				skip: piece.skip,
+				payload: piece.payload
 			})),
 			durationOpts
 		) || '--:--'
@@ -178,7 +185,7 @@ export function SidebarPartRow({ part }: { part: Part }) {
 		event.stopPropagation()
 		// Same foreign-lock gate as handleActivate: do not overwrite another editor's
 		// durationMode (or race their later save) without takeover confirmation.
-		if (autoBusy || locks.length > 0 || !scriptDriven || !canEditRundown(userRole)) {
+		if (autoBusy || locks.length > 0 || !autoCapable || !canEditRundown(userRole)) {
 			return
 		}
 		setAutoBusy(true)
@@ -187,7 +194,7 @@ export function SidebarPartRow({ part }: { part: Part }) {
 				updatePart({
 					part: {
 						...livePart,
-						// Explicit override: AUTO on = script/CPS + autoNext; off = until next take.
+						// Explicit override: AUTO on may autoNext; off = until next take.
 						durationMode: autoOn ? 'manual' : 'auto'
 					}
 				})
@@ -399,7 +406,7 @@ export function SidebarPartRow({ part }: { part: Part }) {
 					<span
 						className="story-row__time"
 						title={
-							scriptDriven
+							scriptDriven || autoCapable
 								? autoOn
 									? 'On air (AUTO)'
 									: 'On air (until next take)'
@@ -411,7 +418,7 @@ export function SidebarPartRow({ part }: { part: Part }) {
 					{forcedAuto.forced ? (
 						<ForcedAutoBadge missingDuration={forcedAuto.missingDuration} />
 					) : null}
-					{scriptDriven ? (
+					{autoCapable ? (
 						<>
 							<button
 								type="button"
@@ -426,7 +433,7 @@ export function SidebarPartRow({ part }: { part: Part }) {
 												? 'AUTO unavailable while System holds this story'
 												: `AUTO unavailable while ${lockNames || 'another user'} is editing`
 											: autoOn
-												? 'AUTO on — script/CPS drives On air; Sofie may auto-take. Click for until next take.'
+												? `AUTO on — ${autoSourceLabel} drives On air; Sofie may auto-take. Click for until next take.`
 												: 'AUTO off — until next take (no autoNext). Click to enable AUTO.'
 								}
 								onClick={(event) => {
