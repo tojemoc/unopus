@@ -19,7 +19,7 @@ import { useScriptExpand } from '~/hooks/ScriptExpandContext'
 import { StoryFilterProvider } from '~/hooks/StoryFilterContext'
 import { canEditRundown } from '~/util/roles'
 import { resolveEffectiveIluDurationMode } from '~backend/background/storyDuration'
-import { partUsesScriptDuration } from '~backend/background/scriptReadingTime'
+import { partSupportsAutoNext } from '~backend/background/scriptReadingTime'
 
 /** Stable DnD row type — must not change identity when expand/readiness updates. */
 const SegmentComponent: DraggableWrappedComponent<Segment> = ({ data: segment }) => (
@@ -41,7 +41,6 @@ export function RundownSidebar({
 
 	const segments = useAppSelector((state) => state.segments.segments)
 	const parts = useAppSelector((state) => state.parts.parts)
-	const pieces = useAppSelector((state) => state.pieces.pieces)
 	const settings = useAppSelector((state) => state.settings.settings)
 	const userRole = useAppSelector((s) => s.auth.user?.role)
 	const canEdit = canEditRundown(userRole)
@@ -88,11 +87,10 @@ export function RundownSidebar({
 			: `${readyCount}/${totalCount} media items ready`
 	const autoMismatchCount = parts.filter((part) => {
 		if (part.rundownId !== rundownId) return false
-		const partPieces = pieces
-			.filter((piece) => piece.partId === part.id && !piece.skip)
-			.map((piece) => ({ pieceType: piece.pieceType }))
 		const intentOn =
-			partUsesScriptDuration(part.partType, partPieces.map((piece) => piece.pieceType)) &&
+			!part.skip &&
+			!part.float &&
+			partSupportsAutoNext(part.partType) &&
 			resolveEffectiveIluDurationMode(part.durationMode, settings?.iluDurationMode ?? 'auto') === 'auto'
 		return getAutoNextPartStatus(part.id, intentOn).status === 'mismatch'
 	}).length

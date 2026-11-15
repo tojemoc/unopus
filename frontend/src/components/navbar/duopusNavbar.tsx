@@ -163,7 +163,8 @@ function RundownTimingCenter({ rundown }: { rundown: Rundown }) {
 					.map((piece) => ({
 						pieceType: piece.pieceType,
 						duration: piece.duration,
-						skip: piece.skip
+						skip: piece.skip,
+						payload: piece.payload
 					}))
 				return resolvePartOnAirDuration(part, partPieces, durationOpts) ?? 0
 			})
