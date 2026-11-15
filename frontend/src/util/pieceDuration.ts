@@ -88,7 +88,12 @@ export function formatPartOnAirDuration(
 		skip?: boolean
 		durationMode?: 'auto' | 'manual' | null
 	},
-	pieces: Array<{ pieceType: string; duration?: number | null; skip?: boolean }>,
+	pieces: Array<{
+		pieceType: string
+		duration?: number | null
+		skip?: boolean
+		payload?: Record<string, unknown> | null
+	}>,
 	options?: StoryDurationOptions
 ): string {
 	const effective = resolvePartOnAirDuration(part, pieces, options)
