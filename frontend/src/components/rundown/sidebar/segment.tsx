@@ -87,7 +87,8 @@ export function SidebarSegment({ segment }: { segment: Segment }) {
 			.map((piece) => ({
 				pieceType: piece.pieceType,
 				duration: piece.duration,
-				skip: piece.skip
+				skip: piece.skip,
+				payload: piece.payload
 			}))
 		return acc + (resolvePartOnAirDuration(part, partPieces, durationOpts) ?? 0)
 	}, 0)

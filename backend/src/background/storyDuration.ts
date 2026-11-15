@@ -4,9 +4,10 @@
  * Single source of truth for what Rundown Editor displays and exports to Sofie ingest.
  *
  * Duration sources:
- * - ILU / DoubleBox / SJV / ŠPORT / SYN parts in `auto` mode → part script reading time (CPS)
- *   → script-receiving pieces (force); Sofie may `autoNext`
- * - Same types in `manual` (until next take) → explicit On air sticks; no autoNext
+ * - ILU / DoubleBox / SJV / ŠPORT / marker-qualified SYN parts → part script reading
+ *   time (CPS). ILU / DoubleBox are manual-only; SJV / ŠPORT may `autoNext`.
+ * - Plain SYN in `auto` mode → linked media file length (minus trims); Sofie may `autoNext`.
+ * - Same media parts in `manual` (until next take) → explicit On air sticks; no autoNext
  * - VO / VT: media picker seeds On air + sourceDuration from ffprobe; editorial On air
  *   is never force-overwritten by source length (operators may trim timing or clear it)
  * - L3D / inheriting graphics: empty On air is intentional → Sofie enable without duration
@@ -16,6 +17,8 @@
 import type { IluDurationMode } from './interfaces.js'
 import {
 	estimateScriptReadingSeconds,
+	partSupportsAutoNext,
+	partUsesMediaDuration,
 	partUsesScriptDuration,
 	pieceReceivesScriptDuration
 } from './scriptReadingTime.js'
@@ -85,12 +88,35 @@ export function resolveTrimmedSourceDurationSeconds(piece: {
 	}
 	const trimIn = positiveNumber(piece.payload?.trimIn) ?? 0
 	const trimOut = positiveNumber(piece.payload?.trimOut) ?? 0
-	const seconds = sourceMs / 1000 - trimIn - trimOut
+	return roundedPositiveSeconds(sourceMs / 1000 - trimIn - trimOut)
+}
+
+function roundedPositiveSeconds(seconds: number): number | undefined {
 	if (!Number.isFinite(seconds) || seconds <= 0) {
 		return undefined
 	}
 	const rounded = Math.round(seconds * 10) / 10
 	return rounded > 0 ? rounded : undefined
+}
+
+function resolveTrimmedEditorialDurationSeconds(
+	piece: Pick<StoryDurationPiece, 'duration' | 'pieceType' | 'payload'>
+): number | undefined {
+	if (!isMediaVideoPieceType(piece.pieceType) || !isPositiveDurationSeconds(piece.duration)) {
+		return undefined
+	}
+	const trimIn = positiveNumber(piece.payload?.trimIn) ?? 0
+	const trimOut = positiveNumber(piece.payload?.trimOut) ?? 0
+	return roundedPositiveSeconds(piece.duration - trimIn - trimOut)
+}
+
+function hasSourceDurationMetadata(
+	piece: Pick<StoryDurationPiece, 'pieceType' | 'payload'>
+): boolean {
+	return (
+		isMediaVideoPieceType(piece.pieceType) &&
+		positiveNumber(piece.payload?.sourceDuration) !== undefined
+	)
 }
 
 export type StoryDurationPiece = {
@@ -111,14 +137,14 @@ export type StoryDurationPart = {
 }
 
 export type StoryDurationOptions = {
-	/** Characters per second for script → ILU duration. */
+	/** Characters per second for script-derived durations. */
 	scriptCps?: number
 	/** Site default when part.durationMode is unset (ApplicationSettings.iluDurationMode). */
 	defaultDurationMode?: IluDurationMode
 }
 
 /**
- * Effective ILU take mode: part override → site default → auto.
+ * Effective AUTO-capable take mode: part override → site default → auto.
  */
 export function resolveEffectiveIluDurationMode(
 	partMode: IluDurationMode | undefined | null,
@@ -179,21 +205,66 @@ export function resolvePieceOnAirDuration(
 }
 
 /**
+ * Longest trimmed source duration (seconds) for SYN AUTO. Source metadata wins;
+ * trimmed piece On air is the fallback when ffprobe data is missing.
+ */
+function resolveMediaSourcePartDuration(
+	pieces: Array<Pick<StoryDurationPiece, 'duration' | 'pieceType' | 'skip' | 'payload'>>
+): number | undefined {
+	let maxMedia = 0
+	for (const piece of activePieces(pieces)) {
+		if (!isMediaVideoPieceType(piece.pieceType)) {
+			continue
+		}
+		const mediaDuration = hasSourceDurationMetadata(piece)
+			? resolveTrimmedSourceDurationSeconds(piece)
+			: resolveTrimmedEditorialDurationSeconds(piece)
+		if (mediaDuration) {
+			maxMedia = Math.max(maxMedia, mediaDuration)
+		}
+	}
+	return maxMedia > 0 ? maxMedia : undefined
+}
+
+/**
+ * Longest blueprint-playable media duration (seconds): trimmed source capped by
+ * explicit editorial On air, matching resolveClipPlayback.
+ */
+function resolvePlayableMediaPartDuration(
+	pieces: Array<Pick<StoryDurationPiece, 'duration' | 'pieceType' | 'skip' | 'payload'>>
+): number | undefined {
+	let maxMedia = 0
+	for (const piece of activePieces(pieces)) {
+		if (!isMediaVideoPieceType(piece.pieceType)) {
+			continue
+		}
+		const hasSource = hasSourceDurationMetadata(piece)
+		const trimmedSource = resolveTrimmedSourceDurationSeconds(piece)
+		const editorial = isPositiveDurationSeconds(piece.duration) ? piece.duration : undefined
+		const trimmedEditorial = resolveTrimmedEditorialDurationSeconds(piece)
+		const mediaDuration = hasSource
+			? editorial !== undefined
+				? Math.min(trimmedSource ?? 0, editorial)
+				: trimmedSource
+			: trimmedEditorial
+		if (mediaDuration) {
+			maxMedia = Math.max(maxMedia, mediaDuration)
+		}
+	}
+	return maxMedia > 0 ? maxMedia : undefined
+}
+
+/**
  * Effective story on-air duration (seconds).
  *
- * Auto (default for ILU-family):
- * 1. Script reading time
- * 2. Explicit positive part.duration
- * 3. Longest non-skipped child piece duration
- *
- * Manual / until next take:
- * 1. Explicit positive part.duration (sticks; not overwritten by CPS)
- * 2. Script reading time (estimate when On air unset)
- * 3. Longest child piece duration
+ * 1. Script reading time for ILU / DoubleBox / SJV / ŠPORT / marker-qualified SYN
+ * 2. Linked media length for AUTO-capable plain SYN
+ * 3. Explicit positive part.duration
+ * 4. Longest non-skipped child piece duration
  */
 export function resolvePartOnAirDuration(
 	part: StoryDurationPart,
-	pieces: Array<Pick<StoryDurationPiece, 'duration' | 'pieceType' | 'skip'>>,
+	pieces: Array<Pick<StoryDurationPiece, 'duration' | 'pieceType' | 'skip' | 'payload'>>,
 	options?: StoryDurationOptions
 ): number | undefined {
 	if (part.skip) {
@@ -203,26 +274,41 @@ export function resolvePartOnAirDuration(
 	const scriptDuration = resolveScriptDerivedPartDuration(part, options, pieces)
 	const mode = resolveEffectiveIluDurationMode(part.durationMode, options?.defaultDurationMode)
 	const pieceTypes = activePieces(pieces).map((piece) => piece.pieceType)
-	const preferStored =
-		partUsesScriptDuration(part.partType, pieceTypes) && mode === 'manual'
+	const usesMediaDuration = partUsesMediaDuration(part.partType, pieceTypes)
+	const mediaSourceDuration = resolveMediaSourcePartDuration(pieces)
+	const playableMediaDuration = resolvePlayableMediaPartDuration(pieces)
+	const hasMediaSourceMetadata = activePieces(pieces).some(hasSourceDurationMetadata)
 
-	if (preferStored) {
-		if (isPositiveDurationSeconds(part.duration)) {
-			return part.duration
-		}
-		if (isPositiveDurationSeconds(scriptDuration)) {
-			return scriptDuration
-		}
-	} else if (isPositiveDurationSeconds(scriptDuration)) {
+	if (isPositiveDurationSeconds(scriptDuration)) {
 		return scriptDuration
-	} else if (isPositiveDurationSeconds(part.duration)) {
+	}
+	if (mode === 'auto' && partSupportsAutoNext(part.partType) && usesMediaDuration) {
+		if (mediaSourceDuration) {
+			return mediaSourceDuration
+		}
+		if (hasMediaSourceMetadata) {
+			return undefined
+		}
+	}
+	if (isPositiveDurationSeconds(part.duration)) {
 		return part.duration
+	}
+	if (usesMediaDuration && playableMediaDuration) {
+		return playableMediaDuration
 	}
 
 	let maxChild = 0
 	for (const piece of activePieces(pieces)) {
+		if (usesMediaDuration && hasSourceDurationMetadata(piece)) {
+			continue
+		}
 		if (isPositiveDurationSeconds(piece.duration)) {
 			maxChild = Math.max(maxChild, piece.duration)
+			continue
+		}
+		const trimmed = resolveTrimmedSourceDurationSeconds(piece)
+		if (trimmed) {
+			maxChild = Math.max(maxChild, trimmed)
 		}
 	}
 
@@ -236,7 +322,7 @@ export function resolvePartOnAirDuration(
 export function sumPartsOnAirDuration(
 	parts: Array<{
 		part: StoryDurationPart
-		pieces: Array<Pick<StoryDurationPiece, 'duration' | 'pieceType' | 'skip'>>
+		pieces: Array<Pick<StoryDurationPiece, 'duration' | 'pieceType' | 'skip' | 'payload'>>
 	}>,
 	options?: StoryDurationOptions
 ): number {
@@ -260,11 +346,11 @@ export type StoryDurationSyncPlan = {
 /**
  * Compute DB updates so stored part/piece durations match what we export to Sofie.
  *
- * 1. ILU-family + script + auto → force part + script-receiving pieces to reading time
- * 2. ILU-family + script + manual → never force part On air; sync pieces to stored or script
+ * 1. Script-driven parts + script → force part + script-receiving pieces to reading time
+ * 2. AUTO-capable media parts → force part On air to linked media length
  * 3. Never overwrite editorial piece On air from ffprobe source length
  * 4. Never auto-fill L3D / inheriting graphics from part (empty = hold until Take)
- * 5. When part duration is empty → set from longest explicit child On air, else trimmed source
+ * 5. When part duration is empty → set from playable media, else longest child On air
  * 6. Skipped pieces are never updated / never contribute
  */
 export function planStoryDurationSync(
@@ -281,28 +367,9 @@ export function planStoryDurationSync(
 
 	const scriptDuration = resolveScriptDerivedPartDuration(part, options, pieces)
 	if (isPositiveDurationSeconds(scriptDuration)) {
-		const mode = resolveEffectiveIluDurationMode(part.durationMode, options?.defaultDurationMode)
-
-		if (mode === 'manual') {
-			// Until next take: leave part.duration alone so manual On air sticks.
-			const targetForPieces = isPositiveDurationSeconds(part.duration)
-				? part.duration
-				: scriptDuration
-			for (const piece of livePieces) {
-				if (pieceReceivesScriptDuration(piece.pieceType)) {
-					if (piece.duration !== targetForPieces) {
-						pieceUpdates.push({ id: piece.id, duration: targetForPieces, force: true })
-					}
-				}
-			}
-			return { pieceUpdates }
-		}
-
 		for (const piece of livePieces) {
-			if (pieceReceivesScriptDuration(piece.pieceType)) {
-				if (piece.duration !== scriptDuration) {
-					pieceUpdates.push({ id: piece.id, duration: scriptDuration, force: true })
-				}
+			if (pieceReceivesScriptDuration(piece.pieceType) && piece.duration !== scriptDuration) {
+				pieceUpdates.push({ id: piece.id, duration: scriptDuration, force: true })
 			}
 		}
 
@@ -313,12 +380,45 @@ export function planStoryDurationSync(
 		}
 	}
 
+	const mode = resolveEffectiveIluDurationMode(part.durationMode, options?.defaultDurationMode)
+	const pieceTypes = livePieces.map((piece) => piece.pieceType)
+	const usesMediaDuration = partUsesMediaDuration(part.partType, pieceTypes)
+	const mediaSourceDuration = resolveMediaSourcePartDuration(pieces)
+	const playableMediaDuration = resolvePlayableMediaPartDuration(pieces)
+	const hasMediaSourceMetadata = livePieces.some(hasSourceDurationMetadata)
+	if (mode === 'auto' && partSupportsAutoNext(part.partType) && usesMediaDuration) {
+		if (mediaSourceDuration) {
+			return {
+				partDuration: mediaSourceDuration,
+				forcePartDuration: part.duration !== mediaSourceDuration,
+				pieceUpdates
+			}
+		}
+		if (hasMediaSourceMetadata) {
+			return {
+				partDuration: 0,
+				forcePartDuration: part.duration !== 0,
+				pieceUpdates
+			}
+		}
+	}
+
 	if (isPositiveDurationSeconds(part.duration)) {
 		return { pieceUpdates }
 	}
 
+	if (usesMediaDuration && playableMediaDuration) {
+		return {
+			partDuration: playableMediaDuration,
+			pieceUpdates
+		}
+	}
+
 	let maxChild = 0
 	for (const piece of livePieces) {
+		if (usesMediaDuration && hasSourceDurationMetadata(piece)) {
+			continue
+		}
 		if (isPositiveDurationSeconds(piece.duration)) {
 			maxChild = Math.max(maxChild, piece.duration)
 			continue

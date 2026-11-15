@@ -17,6 +17,7 @@ import { formatPartOnAirDuration, resolvePartOnAirDuration, formatSecondsClock }
 import { ScriptReadingCounter } from './scriptReadingCounter'
 import { ClockDurationInput } from './clockDurationInput'
 import {
+	partSupportsAutoNext,
 	partUsesScriptDuration,
 	resolveEffectiveScriptCps
 } from '~/util/scriptReadingTime'
@@ -49,7 +50,8 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 			childPieces.map((piece) => ({
 				pieceType: piece.pieceType,
 				duration: piece.duration,
-				skip: piece.skip
+				skip: piece.skip,
+				payload: piece.payload
 			})),
 		[childPieces]
 	)
@@ -264,6 +266,7 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 								.filter((piece) => !piece.skip)
 								.map((piece) => piece.pieceType)
 						)
+						const autoCapable = partSupportsAutoNext(draftPartType)
 						const draftEffectiveDurationMode = resolveEffectiveIluDurationMode(
 							draftDurationMode,
 							siteDurationMode
@@ -281,7 +284,7 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 
 						return (
 							<>
-								{scriptDriven ? (
+								{autoCapable ? (
 									<form.Field
 										name="durationMode"
 										children={(field) => {
@@ -380,16 +383,23 @@ export function PartPropertiesForm({ part }: { part: Part }) {
 														onBlur={field.handleBlur}
 														onCommit={(seconds) => field.handleChange(seconds)}
 													/>
-													{scriptDriven && draftEffectiveDurationMode === 'auto' ? (
+													{autoCapable && draftEffectiveDurationMode === 'auto' ? (
 														<Form.Text className="text-muted">
-															AUTO: On air follows script reading time (CPS). Sofie may
-															auto-take.
+															AUTO: On air follows{' '}
+															{scriptDriven ? 'script reading time (CPS)' : 'the linked clip duration'}
+															. Sofie may auto-take.
 														</Form.Text>
 													) : null}
-													{scriptDriven && draftEffectiveDurationMode === 'manual' ? (
+													{autoCapable && draftEffectiveDurationMode === 'manual' ? (
 														<Form.Text className="text-muted">
-															Until next take: On air is kept for planning; Sofie waits for
-															the next take (no autoNext).
+															Until next take: {scriptDriven ? 'script reading time' : 'On air'} is
+															kept for planning; Sofie waits for the next take (no autoNext).
+														</Form.Text>
+													) : null}
+													{scriptDriven && !autoCapable ? (
+														<Form.Text className="text-muted">
+															Manual by design: On air follows script reading time (CPS);
+															Sofie waits for the next take.
 														</Form.Text>
 													) : null}
 													{effectiveHint ? (
