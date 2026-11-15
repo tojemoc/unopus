@@ -110,6 +110,15 @@ function resolveTrimmedEditorialDurationSeconds(
 	return roundedPositiveSeconds(piece.duration - trimIn - trimOut)
 }
 
+function hasSourceDurationMetadata(
+	piece: Pick<StoryDurationPiece, 'pieceType' | 'payload'>
+): boolean {
+	return (
+		isMediaVideoPieceType(piece.pieceType) &&
+		positiveNumber(piece.payload?.sourceDuration) !== undefined
+	)
+}
+
 export type StoryDurationPiece = {
 	id: string
 	pieceType: string
@@ -207,9 +216,9 @@ function resolveMediaSourcePartDuration(
 		if (!isMediaVideoPieceType(piece.pieceType)) {
 			continue
 		}
-		const mediaDuration =
-			resolveTrimmedSourceDurationSeconds(piece) ??
-			resolveTrimmedEditorialDurationSeconds(piece)
+		const mediaDuration = hasSourceDurationMetadata(piece)
+			? resolveTrimmedSourceDurationSeconds(piece)
+			: resolveTrimmedEditorialDurationSeconds(piece)
 		if (mediaDuration) {
 			maxMedia = Math.max(maxMedia, mediaDuration)
 		}
@@ -229,13 +238,15 @@ function resolvePlayableMediaPartDuration(
 		if (!isMediaVideoPieceType(piece.pieceType)) {
 			continue
 		}
+		const hasSource = hasSourceDurationMetadata(piece)
 		const trimmedSource = resolveTrimmedSourceDurationSeconds(piece)
 		const editorial = isPositiveDurationSeconds(piece.duration) ? piece.duration : undefined
 		const trimmedEditorial = resolveTrimmedEditorialDurationSeconds(piece)
-		const mediaDuration =
-			trimmedSource !== undefined && editorial !== undefined
-				? Math.min(trimmedSource, editorial)
-				: (trimmedSource ?? trimmedEditorial)
+		const mediaDuration = hasSource
+			? editorial !== undefined
+				? Math.min(trimmedSource ?? 0, editorial)
+				: trimmedSource
+			: trimmedEditorial
 		if (mediaDuration) {
 			maxMedia = Math.max(maxMedia, mediaDuration)
 		}
@@ -266,17 +277,18 @@ export function resolvePartOnAirDuration(
 	const usesMediaDuration = partUsesMediaDuration(part.partType, pieceTypes)
 	const mediaSourceDuration = resolveMediaSourcePartDuration(pieces)
 	const playableMediaDuration = resolvePlayableMediaPartDuration(pieces)
+	const hasMediaSourceMetadata = activePieces(pieces).some(hasSourceDurationMetadata)
 
 	if (isPositiveDurationSeconds(scriptDuration)) {
 		return scriptDuration
 	}
-	if (
-		mode === 'auto' &&
-		partSupportsAutoNext(part.partType) &&
-		usesMediaDuration &&
-		mediaSourceDuration
-	) {
-		return mediaSourceDuration
+	if (mode === 'auto' && partSupportsAutoNext(part.partType) && usesMediaDuration) {
+		if (mediaSourceDuration) {
+			return mediaSourceDuration
+		}
+		if (hasMediaSourceMetadata) {
+			return undefined
+		}
 	}
 	if (isPositiveDurationSeconds(part.duration)) {
 		return part.duration
@@ -287,6 +299,9 @@ export function resolvePartOnAirDuration(
 
 	let maxChild = 0
 	for (const piece of activePieces(pieces)) {
+		if (usesMediaDuration && hasSourceDurationMetadata(piece)) {
+			continue
+		}
 		if (isPositiveDurationSeconds(piece.duration)) {
 			maxChild = Math.max(maxChild, piece.duration)
 			continue
@@ -370,16 +385,21 @@ export function planStoryDurationSync(
 	const usesMediaDuration = partUsesMediaDuration(part.partType, pieceTypes)
 	const mediaSourceDuration = resolveMediaSourcePartDuration(pieces)
 	const playableMediaDuration = resolvePlayableMediaPartDuration(pieces)
-	if (
-		mode === 'auto' &&
-		partSupportsAutoNext(part.partType) &&
-		usesMediaDuration &&
-		mediaSourceDuration
-	) {
-		return {
-			partDuration: mediaSourceDuration,
-			forcePartDuration: part.duration !== mediaSourceDuration,
-			pieceUpdates
+	const hasMediaSourceMetadata = livePieces.some(hasSourceDurationMetadata)
+	if (mode === 'auto' && partSupportsAutoNext(part.partType) && usesMediaDuration) {
+		if (mediaSourceDuration) {
+			return {
+				partDuration: mediaSourceDuration,
+				forcePartDuration: part.duration !== mediaSourceDuration,
+				pieceUpdates
+			}
+		}
+		if (hasMediaSourceMetadata) {
+			return {
+				partDuration: 0,
+				forcePartDuration: part.duration !== 0,
+				pieceUpdates
+			}
 		}
 	}
 
@@ -396,6 +416,9 @@ export function planStoryDurationSync(
 
 	let maxChild = 0
 	for (const piece of livePieces) {
+		if (usesMediaDuration && hasSourceDurationMetadata(piece)) {
+			continue
+		}
 		if (isPositiveDurationSeconds(piece.duration)) {
 			maxChild = Math.max(maxChild, piece.duration)
 			continue

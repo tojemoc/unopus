@@ -157,7 +157,10 @@ export function SidebarPartRow({ part }: { part: Part }) {
 		livePart.durationMode,
 		siteDurationMode
 	)
-	const autoOn = !livePart.skip && !livePart.float && autoCapable && effectiveDurationMode === 'auto'
+	const autoPreferenceOn = autoCapable && effectiveDurationMode === 'auto'
+	const autoOn = !livePart.skip && !livePart.float && autoPreferenceOn
+	const autoSuppressedBy =
+		autoPreferenceOn && !autoOn ? (livePart.skip ? 'skipped' : 'floated') : undefined
 	const autoNextStatus = getAutoNextPartStatus(livePart.id, autoOn)
 	const autoSourceLabel = scriptDriven ? 'script/CPS' : 'clip duration'
 	const displayedDuration =
@@ -190,16 +193,20 @@ export function SidebarPartRow({ part }: { part: Part }) {
 		}
 		setAutoBusy(true)
 		try {
+			const nextDurationMode = effectiveDurationMode === 'auto' ? 'manual' : 'auto'
 			const updatedPart = await dispatch(
 				updatePart({
 					part: {
 						...livePart,
 						// Explicit override: AUTO on may autoNext; off = until next take.
-						durationMode: autoOn ? 'manual' : 'auto'
+						durationMode: nextDurationMode
 					}
 				})
 			).unwrap()
-			if (!autoOn && !resolvePartOnAirDuration(updatedPart, partPieces, durationOpts)) {
+			if (
+				nextDurationMode === 'auto' &&
+				!resolvePartOnAirDuration(updatedPart, partPieces, durationOpts)
+			) {
 				toasts.show({
 					headerContent: 'AUTO on, but no duration',
 					bodyContent: 'Sofie cannot auto-take this part until it has an expected duration.'
@@ -409,7 +416,9 @@ export function SidebarPartRow({ part }: { part: Part }) {
 							scriptDriven || autoCapable
 								? autoOn
 									? 'On air (AUTO)'
-									: 'On air (until next take)'
+									: autoPreferenceOn
+										? `On air (AUTO saved; inactive while ${autoSuppressedBy})`
+										: 'On air (until next take)'
 								: 'On air'
 						}
 					>
@@ -422,8 +431,8 @@ export function SidebarPartRow({ part }: { part: Part }) {
 						<>
 							<button
 								type="button"
-								className={`story-row__auto${autoOn ? ' story-row__auto--on' : ''}`}
-								aria-pressed={autoOn}
+								className={`story-row__auto${autoPreferenceOn ? ' story-row__auto--on' : ''}`}
+								aria-pressed={autoPreferenceOn}
 								disabled={autoBusy || locks.length > 0 || !canEditRundown(userRole)}
 								title={
 									!canEditRundown(userRole)
@@ -432,9 +441,11 @@ export function SidebarPartRow({ part }: { part: Part }) {
 											? lockedBySystem
 												? 'AUTO unavailable while System holds this story'
 												: `AUTO unavailable while ${lockNames || 'another user'} is editing`
-											: autoOn
-												? `AUTO on — ${autoSourceLabel} drives On air; Sofie may auto-take. Click for until next take.`
-												: 'AUTO off — until next take (no autoNext). Click to enable AUTO.'
+											: autoSuppressedBy
+												? `AUTO saved on — inactive while ${autoSuppressedBy}; ${autoSourceLabel} drives On air when restored. Click for until next take.`
+												: autoPreferenceOn
+													? `AUTO on — ${autoSourceLabel} drives On air; Sofie may auto-take. Click for until next take.`
+													: 'AUTO off — until next take (no autoNext). Click to enable AUTO.'
 								}
 								onClick={(event) => {
 									void toggleAuto(event)

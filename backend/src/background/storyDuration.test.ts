@@ -338,6 +338,35 @@ describe('storyDuration', () => {
 		assert.deepEqual(plan.pieceUpdates, [])
 	})
 
+	it('does not revive stale durations when source metadata is exhausted', () => {
+		const pieces = [
+			{
+				pieceType: 'video',
+				duration: 18,
+				payload: { sourceDuration: 3000, trimIn: 2, trimOut: 1.5 }
+			}
+		]
+		assert.equal(
+			resolvePartOnAirDuration(
+				{ partType: 'syn', duration: 99, durationMode: 'auto' },
+				pieces
+			),
+			undefined
+		)
+		assert.equal(
+			resolvePartOnAirDuration({ partType: 'vt', duration: undefined }, pieces),
+			undefined
+		)
+
+		const plan = planStoryDurationSync(
+			{ partType: 'syn', duration: 99, durationMode: 'auto' },
+			[{ id: 'syn', ...pieces[0] }]
+		)
+		assert.equal(plan.partDuration, 0)
+		assert.equal(plan.forcePartDuration, true)
+		assert.deepEqual(plan.pieceUpdates, [])
+	})
+
 	it('uses trimmed source for part duration when video On air is empty', () => {
 		const plan = planStoryDurationSync({ duration: 0, partType: 'syn' }, [
 			{
