@@ -12,6 +12,7 @@ export {
 	estimateScriptReadingSeconds,
 	formatReadingClock,
 	partUsesScriptDuration,
+	partSupportsAutoNext,
 	pieceReceivesScriptDuration,
 	partUsesMediaDuration
 } from '~backend/background/scriptReadingTime'

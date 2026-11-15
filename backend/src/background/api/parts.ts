@@ -41,7 +41,7 @@ import {
 	resolvePieceOnAirDuration
 } from '../storyDuration'
 import { syncStoryDurationsForPart, broadcastStoryDurationSync } from '../storyDurationSync'
-import { partUsesScriptDuration } from '../scriptReadingTime'
+import { partSupportsAutoNext } from '../scriptReadingTime'
 import { readApplicationSettingsSync } from '../settingsResolver'
 import { recordPartIngestForAutoNext } from '../autoNextState'
 import { encodeJsonMergePatchClears } from '../jsonMergePatch'
@@ -65,14 +65,15 @@ async function mutatePart(part: Part): Promise<MutatedPart> {
 	const durationPieces = rawPieces.map((piece) => ({
 		duration: piece.duration ?? undefined,
 		pieceType: piece.objectType,
-		skip: Boolean(piece.skip)
+		skip: Boolean(piece.skip),
+		payload: piece.attributes
 	}))
 	const durationMode = resolveEffectiveIluDurationMode(
 		part.durationMode,
 		settings?.iluDurationMode
 	)
-	// Always resolve (do not short-circuit on stored duration): Auto mode must
-	// prefer CPS script time even when a stale manual On air is still in the DB.
+	// Always resolve (do not short-circuit on stored duration): script-driven
+	// parts prefer CPS and AUTO SYN prefers linked media over stale On air.
 	// No fallback to raw part.duration — resolver already returns valid stored
 	// values and must leave zero/negative durations as undefined for Sofie.
 	const effectivePartDuration = part.skip
@@ -105,12 +106,7 @@ async function mutatePart(part: Part): Promise<MutatedPart> {
 		}))
 
 	const autoNext =
-		!part.skip &&
-		partUsesScriptDuration(
-			part.partType,
-			durationPieces.filter((piece) => !piece.skip).map((piece) => piece.pieceType)
-		) &&
-		durationMode === 'auto'
+		!part.skip && !part.float && partSupportsAutoNext(part.partType) && durationMode === 'auto'
 			? true
 			: undefined
 
