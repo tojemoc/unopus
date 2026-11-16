@@ -227,8 +227,9 @@ function resolveMediaSourcePartDuration(
 }
 
 /**
- * Longest blueprint-playable media duration (seconds): trimmed source capped by
- * explicit editorial On air, matching resolveClipPlayback.
+ * Longest blueprint-playable media duration (seconds): trimmed source, falling
+ * back to trimmed editorial On air when ffprobe data is missing — matching
+ * resolveClipPlayback.
  */
 function resolvePlayableMediaPartDuration(
 	pieces: Array<Pick<StoryDurationPiece, 'duration' | 'pieceType' | 'skip' | 'payload'>>
@@ -238,15 +239,9 @@ function resolvePlayableMediaPartDuration(
 		if (!isMediaVideoPieceType(piece.pieceType)) {
 			continue
 		}
-		const hasSource = hasSourceDurationMetadata(piece)
-		const trimmedSource = resolveTrimmedSourceDurationSeconds(piece)
-		const editorial = isPositiveDurationSeconds(piece.duration) ? piece.duration : undefined
-		const trimmedEditorial = resolveTrimmedEditorialDurationSeconds(piece)
-		const mediaDuration = hasSource
-			? editorial !== undefined
-				? Math.min(trimmedSource ?? 0, editorial)
-				: trimmedSource
-			: trimmedEditorial
+		const mediaDuration = hasSourceDurationMetadata(piece)
+			? resolveTrimmedSourceDurationSeconds(piece)
+			: resolveTrimmedEditorialDurationSeconds(piece)
 		if (mediaDuration) {
 			maxMedia = Math.max(maxMedia, mediaDuration)
 		}

@@ -325,17 +325,19 @@ describe('storyDuration', () => {
 		assert.deepEqual(plan.pieceUpdates, [])
 	})
 
-	it('VO/VT fallback keeps editorial duration as the playable cap', () => {
-		const plan = planStoryDurationSync({ duration: 0, partType: 'vt' }, [
-			{
-				id: 'vt',
-				pieceType: 'video',
-				duration: 18,
-				payload: { sourceDuration: 12000, trimIn: 2, trimOut: 1 }
-			}
-		])
-		assert.equal(plan.partDuration, 9)
-		assert.deepEqual(plan.pieceUpdates, [])
+	it('VO/VT fallback uses trimmed source, ignoring shorter editorial On air', () => {
+		for (const editorial of [5, 18]) {
+			const plan = planStoryDurationSync({ duration: 0, partType: 'vt' }, [
+				{
+					id: 'vt',
+					pieceType: 'video',
+					duration: editorial,
+					payload: { sourceDuration: 12000, trimIn: 2, trimOut: 1 }
+				}
+			])
+			assert.equal(plan.partDuration, 9)
+			assert.deepEqual(plan.pieceUpdates, [])
+		}
 	})
 
 	it('does not revive stale durations when source metadata is exhausted', () => {
