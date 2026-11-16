@@ -250,6 +250,34 @@ function resolvePlayableMediaPartDuration(
 }
 
 /**
+ * Pre-fix fill formula: trimmed source capped by raw editorial On air. Stored
+ * part durations equal to this value were system-derived, not manual overrides,
+ * so they may be recomputed to the uncapped playable duration.
+ */
+function resolveLegacyCappedMediaPartDuration(
+	pieces: Array<Pick<StoryDurationPiece, 'duration' | 'pieceType' | 'skip' | 'payload'>>
+): number | undefined {
+	let maxMedia = 0
+	for (const piece of activePieces(pieces)) {
+		if (!isMediaVideoPieceType(piece.pieceType)) {
+			continue
+		}
+		const hasSource = hasSourceDurationMetadata(piece)
+		const trimmedSource = resolveTrimmedSourceDurationSeconds(piece)
+		const editorial = isPositiveDurationSeconds(piece.duration) ? piece.duration : undefined
+		const mediaDuration = hasSource
+			? editorial !== undefined
+				? Math.min(trimmedSource ?? 0, editorial)
+				: trimmedSource
+			: resolveTrimmedEditorialDurationSeconds(piece)
+		if (mediaDuration) {
+			maxMedia = Math.max(maxMedia, mediaDuration)
+		}
+	}
+	return maxMedia > 0 ? maxMedia : undefined
+}
+
+/**
  * Effective story on-air duration (seconds).
  *
  * 1. Script reading time for ILU / DoubleBox / SJV / ŠPORT / marker-qualified SYN
@@ -286,6 +314,17 @@ export function resolvePartOnAirDuration(
 		}
 	}
 	if (isPositiveDurationSeconds(part.duration)) {
+		// Stored values matching the pre-fix capped formula were derived, not
+		// manually entered — resolve to the uncapped playable duration.
+		if (
+			mode !== 'manual' &&
+			usesMediaDuration &&
+			playableMediaDuration &&
+			part.duration !== playableMediaDuration &&
+			part.duration === resolveLegacyCappedMediaPartDuration(pieces)
+		) {
+			return playableMediaDuration
+		}
 		return part.duration
 	}
 	if (usesMediaDuration && playableMediaDuration) {
@@ -399,6 +438,22 @@ export function planStoryDurationSync(
 	}
 
 	if (isPositiveDurationSeconds(part.duration)) {
+		// A stored value matching the pre-fix capped formula was derived, not
+		// manually entered — rewrite it from the uncapped playable duration.
+		// Manual-mode parts and non-matching values stay user-owned.
+		if (
+			mode !== 'manual' &&
+			usesMediaDuration &&
+			playableMediaDuration &&
+			part.duration !== playableMediaDuration &&
+			part.duration === resolveLegacyCappedMediaPartDuration(pieces)
+		) {
+			return {
+				partDuration: playableMediaDuration,
+				forcePartDuration: true,
+				pieceUpdates
+			}
+		}
 		return { pieceUpdates }
 	}
 
