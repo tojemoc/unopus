@@ -325,17 +325,19 @@ describe('storyDuration', () => {
 		assert.deepEqual(plan.pieceUpdates, [])
 	})
 
-	it('VO/VT fallback keeps editorial duration as the playable cap', () => {
-		const plan = planStoryDurationSync({ duration: 0, partType: 'vt' }, [
-			{
-				id: 'vt',
-				pieceType: 'video',
-				duration: 18,
-				payload: { sourceDuration: 12000, trimIn: 2, trimOut: 1 }
-			}
-		])
-		assert.equal(plan.partDuration, 9)
-		assert.deepEqual(plan.pieceUpdates, [])
+	it('VO/VT fallback uses trimmed source, ignoring shorter editorial On air', () => {
+		for (const editorial of [5, 18]) {
+			const plan = planStoryDurationSync({ duration: 0, partType: 'vt' }, [
+				{
+					id: 'vt',
+					pieceType: 'video',
+					duration: editorial,
+					payload: { sourceDuration: 12000, trimIn: 2, trimOut: 1 }
+				}
+			])
+			assert.equal(plan.partDuration, 9)
+			assert.deepEqual(plan.pieceUpdates, [])
+		}
 	})
 
 	it('does not revive stale durations when source metadata is exhausted', () => {
@@ -365,6 +367,53 @@ describe('storyDuration', () => {
 		assert.equal(plan.partDuration, 0)
 		assert.equal(plan.forcePartDuration, true)
 		assert.deepEqual(plan.pieceUpdates, [])
+	})
+
+	it('recomputes a stored part duration that matches the pre-fix capped formula', () => {
+		const piece = {
+			id: 'vt',
+			pieceType: 'video',
+			duration: 8,
+			payload: { sourceDuration: 12000 }
+		}
+		// legacy fill stored min(12, 8) = 8 — system-derived, not user input
+		const plan = planStoryDurationSync({ duration: 8, partType: 'vt' }, [piece])
+		assert.equal(plan.partDuration, 12)
+		assert.equal(plan.forcePartDuration, true)
+	})
+
+	it('preserves stored part durations that do not match the legacy formula', () => {
+		const piece = {
+			id: 'vt',
+			pieceType: 'video',
+			duration: 8,
+			payload: { sourceDuration: 12000 }
+		}
+		const plan = planStoryDurationSync({ duration: 7.5, partType: 'vt' }, [piece])
+		assert.equal(plan.partDuration, undefined)
+	})
+
+	it('resolves a legacy-capped stored duration to the playable window on read', () => {
+		const pieces = [
+			{ pieceType: 'video', duration: 8, payload: { sourceDuration: 12000 } }
+		]
+		assert.equal(resolvePartOnAirDuration({ duration: 8, partType: 'vt' }, pieces), 12)
+		assert.equal(
+			resolvePartOnAirDuration({ duration: 8, partType: 'vt', durationMode: 'manual' }, pieces),
+			8
+		)
+		assert.equal(resolvePartOnAirDuration({ duration: 7.5, partType: 'vt' }, pieces), 7.5)
+	})
+
+	it('preserves a legacy-matching duration on manual-mode parts', () => {
+		const piece = {
+			id: 'vt',
+			pieceType: 'video',
+			duration: 8,
+			payload: { sourceDuration: 12000 }
+		}
+		const plan = planStoryDurationSync({ duration: 8, partType: 'vt', durationMode: 'manual' }, [piece])
+		assert.equal(plan.partDuration, undefined)
 	})
 
 	it('uses trimmed source for part duration when video On air is empty', () => {
