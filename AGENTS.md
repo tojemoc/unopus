@@ -100,7 +100,9 @@ ref alone. Megarepo contract:
 - Local accounts in SQLite (`authStore.ts`): scrypt-hashed passwords, `timingSafeEqual`,
   UUID session ids, `HttpOnly` + `SameSite=Strict` cookies (`Secure` behind
   `SESSION_COOKIE_SECURE`).
-- Roles: `admin` / `editor` / `viewer`. Socket mutations go through `forbidRundownMutation`
+- Roles: `admin` / `editor` / `tech_admin` / `viewer` (`auth/roles.ts`). `tech_admin` can
+  edit rundowns (`canEditRundown`) and view tech-only pieces (`canSeeTechPieces` — Cam,
+  WIPE, …). Socket mutations go through `forbidRundownMutation`
   (`backend/src/socketServer.ts`); REST routes mostly check only that a session exists —
   **known gap**: `settings` and `typeManifests` socket channels, and mutation REST routes
   (daily-generation, weather sync, media ensure-folder) lack role checks. Treat any new
@@ -112,16 +114,19 @@ ref alone. Megarepo contract:
 ### Core contract
 
 The backend is a Sofie **peripheral device** (`background/coreHandler.ts`): connects over DDP
-to `coreUrl:corePort` (default `127.0.0.1:3000`), device id + token from settings (defaults
-`SofieRundownEditor` / `unsecureToken` — always configure for real deployments; the retry loop
-re-registers connection listeners each second Core is down). Rundowns marked `sync=true` are
+to `coreUrl:corePort` from settings (default `127.0.0.1:3000`). Device id + token are
+**not** configurable — `coreHandler` passes empty values so `CoreConnection` uses its
+built-in `SofieRundownEditor` / `unsecureToken` defaults (`// todo - have settings for
+this`); the retry loop re-registers connection listeners each second Core is down.
+Rundowns marked `sync=true` **and not `isTemplate`** are
 pushed via `dataRundownCreate`/`dataRundownUpdate`/`dataRundownDelete` and part/piece
 mutations via `dataPart*`/`dataSegment*`/`dataPiece*` ingest methods using **externalIds**
 (RE ids == Sofie `externalId`). Part ids double as `Part.externalId` for the on-air lock.
 
 Consumes fork-added Core methods: `getContentStatusForRundown` (media readiness),
-`getRundownPlayoutState` + `getRundownPartAutoNext` (On-air System locks via
-`playoutLockService` — polled; **advisory only, the backend does not enforce locks on
+`getRundownPartSettings` (part autoNext/expectedDuration display), and
+`getRundownPlayoutState` — the single poll that drives On-air System locks via
+`playoutLockService` (**advisory only, the backend does not enforce locks on
 mutations**).
 
 ### Data flow
