@@ -58,6 +58,7 @@ export function formatPieceOnAirDuration(
 		pieceType: string
 		duration?: number | null
 		skip?: boolean
+		payload?: Record<string, unknown> | null
 	},
 	partDuration?: number | null
 ): string {

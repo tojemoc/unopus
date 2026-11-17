@@ -312,7 +312,16 @@ function PayloadField({
 									if (fieldInfo.id !== 'fileName' && fieldInfo.id !== 'iluFile') {
 										return
 									}
-									form.setFieldValue('duration', durationSeconds)
+									// Empty On air → fill with probed source length; a set
+									// On air is the operator's override and stays untouched.
+									const currentDuration = form.state.values.duration
+									if (
+										typeof currentDuration !== 'number' ||
+										!Number.isFinite(currentDuration) ||
+										currentDuration <= 0
+									) {
+										form.setFieldValue('duration', durationSeconds)
+									}
 									form.setFieldValue(
 										'payload.sourceDuration',
 										Math.round(durationSeconds * 1000)

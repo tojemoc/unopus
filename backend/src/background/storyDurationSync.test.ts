@@ -107,6 +107,33 @@ describe('syncStoryDurationsForPart', () => {
 		assert.equal(readPieceDuration(), 2)
 	})
 
+	it('fills an empty video On air from the probed source length', async () => {
+		const videoId = 'story-duration-sync-test-video'
+		db.prepare(
+			`INSERT OR REPLACE INTO pieces (id, playlistId, rundownId, segmentId, partId, document) VALUES (?, NULL, ?, ?, ?, ?)`
+		).run(
+			videoId,
+			rundownId,
+			segmentId,
+			partId,
+			JSON.stringify({
+				name: 'vt',
+				pieceType: 'video',
+				rank: 1,
+				payload: { sourceDuration: 58000 }
+			})
+		)
+		try {
+			await syncStoryDurationsForPart(partId)
+			const row = db.prepare(`SELECT document FROM pieces WHERE id = ?`).get(videoId) as {
+				document: string
+			}
+			assert.equal((JSON.parse(row.document) as { duration?: unknown }).duration, 58)
+		} finally {
+			db.prepare(`DELETE FROM pieces WHERE id = ?`).run(videoId)
+		}
+	})
+
 	it('leaves empty L3D On air alone (no part inherit fill)', async () => {
 		const l3dId = 'story-duration-sync-test-l3d'
 		db.prepare(
