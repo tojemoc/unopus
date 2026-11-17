@@ -337,6 +337,14 @@ export function resolvePartOnAirDuration(
 			return mediaDuration
 		}
 		if (hasMediaSourceMetadata) {
+			// Missing or exhausted media window: only a stored value recognized
+			// as system-derived may be dropped — nonmatching values stay.
+			if (
+				isPositiveDurationSeconds(part.duration) &&
+				!isDerivedStoredMediaPartDuration(part.duration, pieces)
+			) {
+				return part.duration
+			}
 			return undefined
 		}
 	}
@@ -467,6 +475,14 @@ export function planStoryDurationSync(
 			}
 		}
 		if (hasMediaSourceMetadata) {
+			// Missing or exhausted media window: clear the stored duration only
+			// when it is recognized as derived — nonmatching values stay.
+			if (
+				isPositiveDurationSeconds(part.duration) &&
+				!isDerivedStoredMediaPartDuration(part.duration, pieces)
+			) {
+				return { pieceUpdates }
+			}
 			return {
 				partDuration: 0,
 				forcePartDuration: part.duration !== 0,

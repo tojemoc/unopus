@@ -332,7 +332,7 @@ describe('storyDuration', () => {
 		] as const) {
 			const plan = planStoryDurationSync({ duration: 0, partType: 'vt' }, [
 				{
-					id: 'vt',
+					id: 'syn',
 					pieceType: 'video',
 					duration: editorial,
 					payload: { sourceDuration: 12000, trimIn: 2, trimOut: 1 }
@@ -355,6 +355,41 @@ describe('storyDuration', () => {
 				}
 			]),
 			undefined
+		)
+	})
+
+	it('exhausted editorial window clears only derived stored durations (AUTO syn)', () => {
+		const exhaustedPiece = {
+			id: 'syn',
+			pieceType: 'video',
+			duration: 2,
+			payload: { sourceDuration: 12000, trimIn: 2, trimOut: 1 }
+		}
+
+		// Stored 9 matches the trimmed-source formula — derived, clears to 0.
+		assert.equal(
+			resolvePartOnAirDuration({ partType: 'syn', duration: 9, durationMode: 'auto' }, [exhaustedPiece]),
+			undefined
+		)
+		assert.deepEqual(planStoryDurationSync({ partType: 'syn', duration: 9, durationMode: 'auto' }, [exhaustedPiece]), {
+			partDuration: 0,
+			forcePartDuration: true,
+			pieceUpdates: []
+		})
+
+		// Stored 7 matches no formula — user-owned, preserved on read and sync.
+		assert.equal(
+			resolvePartOnAirDuration({ partType: 'syn', duration: 7, durationMode: 'auto' }, [exhaustedPiece]),
+			7
+		)
+		assert.deepEqual(planStoryDurationSync({ partType: 'syn', duration: 7, durationMode: 'auto' }, [exhaustedPiece]), {
+			pieceUpdates: []
+		})
+
+		// Manual mode keeps even a formula-matching stored value.
+		assert.equal(
+			resolvePartOnAirDuration({ partType: 'syn', duration: 9, durationMode: 'manual' }, [exhaustedPiece]),
+			9
 		)
 	})
 
@@ -408,7 +443,7 @@ describe('storyDuration', () => {
 
 	it('recomputes a stored part duration written by a probe-era formula', () => {
 		const piece = {
-			id: 'vt',
+			id: 'syn',
 			pieceType: 'video',
 			duration: 8,
 			payload: { sourceDuration: 5000 }
@@ -421,7 +456,7 @@ describe('storyDuration', () => {
 
 	it('preserves stored part durations that do not match a probe-era formula', () => {
 		const piece = {
-			id: 'vt',
+			id: 'syn',
 			pieceType: 'video',
 			duration: 8,
 			payload: { sourceDuration: 12000 }
@@ -443,7 +478,7 @@ describe('storyDuration', () => {
 
 	it('preserves a legacy-matching duration on manual-mode parts', () => {
 		const piece = {
-			id: 'vt',
+			id: 'syn',
 			pieceType: 'video',
 			duration: 8,
 			payload: { sourceDuration: 12000 }
