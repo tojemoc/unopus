@@ -94,3 +94,51 @@ exporting `SOFIE_MEGAREPO_ASSETS`. Mismatch → exit 1 and delete partial downlo
 checksum in the same commit (`git show <sha>:assets/<file> \| sha256sum`). Do not bump the
 ref alone. Megarepo contract:
 [MEGAREPO-ASSETS-FETCH.md](https://github.com/tojemoc/sofie/blob/main/docs/integration/MEGAREPO-ASSETS-FETCH.md).
+
+### Auth & roles
+
+- Local accounts in SQLite (`authStore.ts`): scrypt-hashed passwords, `timingSafeEqual`,
+  UUID session ids, `HttpOnly` + `SameSite=Strict` cookies (`Secure` behind
+  `SESSION_COOKIE_SECURE`).
+- Roles: `admin` / `editor` / `tech_admin` / `viewer` (`auth/roles.ts`). `tech_admin` can
+  edit rundowns (`canEditRundown`) and view tech-only pieces (`canSeeTechPieces` — Cam,
+  WIPE, …). Socket mutations go through `forbidRundownMutation`
+  (`backend/src/background/auth/roles.ts`); REST routes mostly check only that a session exists —
+  **known gap**: `settings`, `typeManifests`, and `playlists` socket channels
+  (`registerPlaylistsHandlers` permits viewer update/delete without the guard), and
+  mutation REST routes (daily-generation, weather sync, media ensure-folder) lack role
+  checks. Treat any new mutation endpoint as needing an explicit role gate until those
+  are fixed.
+- Socket.IO authenticates via the session cookie in middleware; `socketServer.ts` logs every
+  event **with its full payload** — don't add secrets to event payloads until that log is
+  trimmed (settings updates carry `imeteoApiKey`).
+
+### Core contract
+
+The backend is a Sofie **peripheral device** (`background/coreHandler.ts`): connects over DDP
+to `coreUrl:corePort` from settings — when saved settings are absent, `CORE_HOST` /
+`CORE_PORT` env vars override the default `127.0.0.1:3000`. Device id + token are
+**not** configurable — `coreHandler` passes empty values so `CoreConnection` uses its
+built-in `SofieRundownEditor` / `unsecureToken` defaults (`// todo - have settings for
+this`); the retry loop re-registers connection listeners each second Core is down.
+Rundowns marked `sync=true` are
+pushed via `dataRundownCreate`/`dataRundownUpdate`/`dataRundownDelete` and part/piece
+mutations via `dataPart*`/`dataSegment*`/`dataPiece*` ingest methods using **externalIds**
+(RE ids == Sofie `externalId`). The `isTemplate` exclusion applies only to rundown
+create/update sync (`sendRundownDiffToCore`): deleting a synced template rundown still
+calls `dataRundownDelete`, and creating a part in one still calls `dataPartCreate`.
+Part ids double as `Part.externalId` for the on-air lock.
+
+Consumes fork-added Core methods: `getContentStatusForRundown` (media readiness),
+`getRundownPartSettings` (part autoNext/expectedDuration display), and
+`getRundownPlayoutState` — the single poll that drives On-air System locks via
+`playoutLockService` (**advisory only, the backend does not enforce locks on
+mutations**).
+
+### Data flow
+
+REST = session/admin APIs (`/api/...`); Socket.IO = live rundown CRUD + Core sync. Rundown
+docs are JSON rows in SQLite tables (`rundowns`, `segments`, `parts`, `pieces`) keyed by
+`(id, entityType)` for type manifests. Deletes wrap multi-table deletes in `BEGIN…COMMIT` —
+**the `catch` paths lack `ROLLBACK`** (unlike `reorder`); if you touch deletes, fix that first.
+Full end-to-end schema: megarepo `docs/integration/RUNDOWN-SCHEMA-AND-LAYOUT.md`.
