@@ -99,7 +99,8 @@ async function mutatePart(part: Part): Promise<MutatedPart> {
 					{
 						duration: piece.duration ?? undefined,
 						pieceType: piece.objectType,
-						skip: piece.skip
+						skip: piece.skip,
+						payload: piece.attributes
 					},
 					effectivePartDuration
 				) ?? (piece.duration ?? undefined)

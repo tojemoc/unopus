@@ -195,7 +195,7 @@ describe('storyDuration', () => {
 		)
 	})
 
-	it('plain SYN AUTO prefers trimmed sourceDuration over stale durations', () => {
+	it('plain SYN AUTO uses piece On air over the probed source length', () => {
 		const pieces = [
 			{
 				pieceType: 'video',
@@ -209,7 +209,7 @@ describe('storyDuration', () => {
 				pieces,
 				{ scriptCps: 15 }
 			),
-			17
+			37
 		)
 
 		const plan = planStoryDurationSync(
@@ -217,7 +217,7 @@ describe('storyDuration', () => {
 			[{ id: 'syn', ...pieces[0] }],
 			{ scriptCps: 15 }
 		)
-		assert.equal(plan.partDuration, 17)
+		assert.equal(plan.partDuration, 37)
 		assert.equal(plan.forcePartDuration, true)
 		assert.deepEqual(plan.pieceUpdates, [])
 	})
@@ -304,7 +304,7 @@ describe('storyDuration', () => {
 		assert.equal(total, 10)
 	})
 
-	it('AUTO SYN uses trimmed sourceDuration for part without changing piece On air', () => {
+	it('AUTO SYN treats trimmed piece On air as the clip length', () => {
 		assert.equal(
 			resolveTrimmedSourceDurationSeconds({
 				pieceType: 'video',
@@ -321,12 +321,15 @@ describe('storyDuration', () => {
 				payload: { sourceDuration: 12000, trimIn: 2, trimOut: 1 }
 			}
 		])
-		assert.equal(plan.partDuration, 9)
+		assert.equal(plan.partDuration, 15)
 		assert.deepEqual(plan.pieceUpdates, [])
 	})
 
-	it('VO/VT fallback uses trimmed source, ignoring shorter editorial On air', () => {
-		for (const editorial of [5, 18]) {
+	it('VO/VT uses the trimmed piece On air when set, ignoring the probe', () => {
+		for (const [editorial, expected] of [
+			[5, 2],
+			[18, 15]
+		] as const) {
 			const plan = planStoryDurationSync({ duration: 0, partType: 'vt' }, [
 				{
 					id: 'vt',
@@ -335,12 +338,12 @@ describe('storyDuration', () => {
 					payload: { sourceDuration: 12000, trimIn: 2, trimOut: 1 }
 				}
 			])
-			assert.equal(plan.partDuration, 9)
+			assert.equal(plan.partDuration, expected)
 			assert.deepEqual(plan.pieceUpdates, [])
 		}
 	})
 
-	it('does not revive stale durations when source metadata is exhausted', () => {
+	it('keeps the piece On air when its window survives an exhausted probe', () => {
 		const pieces = [
 			{
 				pieceType: 'video',
@@ -353,36 +356,55 @@ describe('storyDuration', () => {
 				{ partType: 'syn', duration: 99, durationMode: 'auto' },
 				pieces
 			),
-			undefined
+			14.5
 		)
 		assert.equal(
 			resolvePartOnAirDuration({ partType: 'vt', duration: undefined }, pieces),
-			undefined
+			14.5
 		)
 
 		const plan = planStoryDurationSync(
 			{ partType: 'syn', duration: 99, durationMode: 'auto' },
 			[{ id: 'syn', ...pieces[0] }]
 		)
-		assert.equal(plan.partDuration, 0)
+		assert.equal(plan.partDuration, 14.5)
 		assert.equal(plan.forcePartDuration, true)
 		assert.deepEqual(plan.pieceUpdates, [])
 	})
 
-	it('recomputes a stored part duration that matches the pre-fix capped formula', () => {
+	it('resolves an empty video On air from the probed source length', () => {
+		assert.equal(
+			resolvePieceOnAirDuration({
+				pieceType: 'video',
+				duration: undefined,
+				payload: { sourceDuration: 58000 }
+			}),
+			58
+		)
+		assert.equal(
+			resolvePieceOnAirDuration({
+				pieceType: 'video',
+				duration: 30,
+				payload: { sourceDuration: 58000 }
+			}),
+			30
+		)
+	})
+
+	it('recomputes a stored part duration written by a probe-era formula', () => {
 		const piece = {
 			id: 'vt',
 			pieceType: 'video',
 			duration: 8,
-			payload: { sourceDuration: 12000 }
+			payload: { sourceDuration: 5000 }
 		}
-		// legacy fill stored min(12, 8) = 8 — system-derived, not user input
-		const plan = planStoryDurationSync({ duration: 8, partType: 'vt' }, [piece])
-		assert.equal(plan.partDuration, 12)
+		// probe-era sync stored trimmedSource = 5 — system-derived, not user input
+		const plan = planStoryDurationSync({ duration: 5, partType: 'vt' }, [piece])
+		assert.equal(plan.partDuration, 8)
 		assert.equal(plan.forcePartDuration, true)
 	})
 
-	it('preserves stored part durations that do not match the legacy formula', () => {
+	it('preserves stored part durations that do not match a probe-era formula', () => {
 		const piece = {
 			id: 'vt',
 			pieceType: 'video',
@@ -393,14 +415,13 @@ describe('storyDuration', () => {
 		assert.equal(plan.partDuration, undefined)
 	})
 
-	it('resolves a legacy-capped stored duration to the playable window on read', () => {
-		const pieces = [
-			{ pieceType: 'video', duration: 8, payload: { sourceDuration: 12000 } }
-		]
-		assert.equal(resolvePartOnAirDuration({ duration: 8, partType: 'vt' }, pieces), 12)
+	it('resolves a probe-derived stored duration to the editorial window on read', () => {
+		const pieces = [{ pieceType: 'video', duration: 8, payload: { sourceDuration: 5000 } }]
+		// stored 5 matches the probe-era trimmed-source fill → derived → playable 8
+		assert.equal(resolvePartOnAirDuration({ duration: 5, partType: 'vt' }, pieces), 8)
 		assert.equal(
-			resolvePartOnAirDuration({ duration: 8, partType: 'vt', durationMode: 'manual' }, pieces),
-			8
+			resolvePartOnAirDuration({ duration: 5, partType: 'vt', durationMode: 'manual' }, pieces),
+			5
 		)
 		assert.equal(resolvePartOnAirDuration({ duration: 7.5, partType: 'vt' }, pieces), 7.5)
 	})
@@ -416,7 +437,7 @@ describe('storyDuration', () => {
 		assert.equal(plan.partDuration, undefined)
 	})
 
-	it('uses trimmed source for part duration when video On air is empty', () => {
+	it('uses trimmed source for part duration and fills an empty video On air', () => {
 		const plan = planStoryDurationSync({ duration: 0, partType: 'syn' }, [
 			{
 				id: 'syn',
@@ -425,7 +446,7 @@ describe('storyDuration', () => {
 			}
 		])
 		assert.equal(plan.partDuration, 9)
-		assert.deepEqual(plan.pieceUpdates, [])
+		assert.deepEqual(plan.pieceUpdates, [{ id: 'syn', duration: 12 }])
 	})
 
 	it('rejects trimmed durations that round to zero', () => {

@@ -6,10 +6,12 @@
  * Duration sources:
  * - ILU / DoubleBox / SJV / ŠPORT / marker-qualified SYN parts → part script reading
  *   time (CPS). ILU / DoubleBox are manual-only; SJV / ŠPORT may `autoNext`.
- * - Plain SYN in `auto` mode → linked media file length (minus trims); Sofie may `autoNext`.
+ * - Plain SYN in `auto` mode → clip On air (ffprobe source length fills an empty
+ *   On air); Sofie may `autoNext`.
  * - Same media parts in `manual` (until next take) → explicit On air sticks; no autoNext
- * - VO / VT: media picker seeds On air + sourceDuration from ffprobe; editorial On air
- *   is never force-overwritten by source length (operators may trim timing or clear it)
+ * - VO / VT: media picker seeds On air + sourceDuration from ffprobe. Editorial On air
+ *   is the clip length when set (operators override misdetected probes); an empty
+ *   On air falls back to the probed source length.
  * - L3D / inheriting graphics: empty On air is intentional → Sofie enable without duration
  *   (hold until Take). Do not auto-fill from part duration on save.
  * - Skipped parts/pieces are excluded from timing
@@ -187,12 +189,13 @@ export function resolveScriptDerivedPartDuration(
 /**
  * Effective on-air duration for one piece (seconds).
  *
- * Empty duration is intentional: L3Ds hold until Take; video pieces fall back to
- * `sourceDuration` (minus trims) at playout in blueprints. Part duration is not
- * substituted here — that used to make cleared L3Ds reappear with a short enable.
+ * Editorial On air is the clip length when set. An empty On air on a video
+ * piece resolves to the probed source length (untrimmed — trims apply at
+ * playout); L3Ds hold until Take. Part duration is not substituted here —
+ * that used to make cleared L3Ds reappear with a short enable.
  */
 export function resolvePieceOnAirDuration(
-	piece: Pick<StoryDurationPiece, 'duration' | 'pieceType' | 'skip'>,
+	piece: Pick<StoryDurationPiece, 'duration' | 'pieceType' | 'skip' | 'payload'>,
 	_partDuration?: number | null | undefined
 ): number | undefined {
 	if (piece.skip) {
@@ -201,14 +204,21 @@ export function resolvePieceOnAirDuration(
 	if (isPositiveDurationSeconds(piece.duration)) {
 		return piece.duration
 	}
+	if (isMediaVideoPieceType(piece.pieceType)) {
+		const sourceMs = positiveNumber(piece.payload?.sourceDuration)
+		if (sourceMs !== undefined) {
+			return sourceMs / 1000
+		}
+	}
 	return undefined
 }
 
 /**
- * Longest trimmed source duration (seconds) for SYN AUTO. Source metadata wins;
- * trimmed piece On air is the fallback when ffprobe data is missing.
+ * Probe-era formula (pre-fix): trimmed source won over editorial On air.
+ * Kept only to recognise stored part durations that era force-wrote so
+ * they can be recomputed under editorial-first semantics.
  */
-function resolveMediaSourcePartDuration(
+function resolveProbeEraMediaPartDuration(
 	pieces: Array<Pick<StoryDurationPiece, 'duration' | 'pieceType' | 'skip' | 'payload'>>
 ): number | undefined {
 	let maxMedia = 0
@@ -227,9 +237,9 @@ function resolveMediaSourcePartDuration(
 }
 
 /**
- * Longest blueprint-playable media duration (seconds): trimmed source, falling
- * back to trimmed editorial On air when ffprobe data is missing — matching
- * resolveClipPlayback.
+ * Longest blueprint-playable media duration (seconds). Editorial On air is the
+ * clip length when set; the trimmed ffprobe source window fills in only when
+ * On air is empty — matching resolveClipPlayback.
  */
 function resolvePlayableMediaPartDuration(
 	pieces: Array<Pick<StoryDurationPiece, 'duration' | 'pieceType' | 'skip' | 'payload'>>
@@ -239,9 +249,9 @@ function resolvePlayableMediaPartDuration(
 		if (!isMediaVideoPieceType(piece.pieceType)) {
 			continue
 		}
-		const mediaDuration = hasSourceDurationMetadata(piece)
-			? resolveTrimmedSourceDurationSeconds(piece)
-			: resolveTrimmedEditorialDurationSeconds(piece)
+		const mediaDuration =
+			resolveTrimmedEditorialDurationSeconds(piece) ??
+			resolveTrimmedSourceDurationSeconds(piece)
 		if (mediaDuration) {
 			maxMedia = Math.max(maxMedia, mediaDuration)
 		}
@@ -278,10 +288,25 @@ function resolveLegacyCappedMediaPartDuration(
 }
 
 /**
+ * True when a stored part duration equals a probe-era formula output — it was
+ * system-filled, not manually entered, so it may be recomputed to the
+ * editorial-first playable duration.
+ */
+function isDerivedStoredMediaPartDuration(
+	partDuration: number,
+	pieces: Array<Pick<StoryDurationPiece, 'duration' | 'pieceType' | 'skip' | 'payload'>>
+): boolean {
+	return (
+		partDuration === resolveLegacyCappedMediaPartDuration(pieces) ||
+		partDuration === resolveProbeEraMediaPartDuration(pieces)
+	)
+}
+
+/**
  * Effective story on-air duration (seconds).
  *
  * 1. Script reading time for ILU / DoubleBox / SJV / ŠPORT / marker-qualified SYN
- * 2. Linked media length for AUTO-capable plain SYN
+ * 2. Clip On air (source length when empty) for AUTO-capable plain SYN
  * 3. Explicit positive part.duration
  * 4. Longest non-skipped child piece duration
  */
@@ -298,37 +323,36 @@ export function resolvePartOnAirDuration(
 	const mode = resolveEffectiveIluDurationMode(part.durationMode, options?.defaultDurationMode)
 	const pieceTypes = activePieces(pieces).map((piece) => piece.pieceType)
 	const usesMediaDuration = partUsesMediaDuration(part.partType, pieceTypes)
-	const mediaSourceDuration = resolveMediaSourcePartDuration(pieces)
-	const playableMediaDuration = resolvePlayableMediaPartDuration(pieces)
+	const mediaDuration = resolvePlayableMediaPartDuration(pieces)
 	const hasMediaSourceMetadata = activePieces(pieces).some(hasSourceDurationMetadata)
 
 	if (isPositiveDurationSeconds(scriptDuration)) {
 		return scriptDuration
 	}
 	if (mode === 'auto' && partSupportsAutoNext(part.partType) && usesMediaDuration) {
-		if (mediaSourceDuration) {
-			return mediaSourceDuration
+		if (mediaDuration) {
+			return mediaDuration
 		}
 		if (hasMediaSourceMetadata) {
 			return undefined
 		}
 	}
 	if (isPositiveDurationSeconds(part.duration)) {
-		// Stored values matching the pre-fix capped formula were derived, not
-		// manually entered — resolve to the uncapped playable duration.
+		// Stored values matching a probe-era formula were derived, not manually
+		// entered — resolve to the editorial-first playable duration.
 		if (
 			mode !== 'manual' &&
 			usesMediaDuration &&
-			playableMediaDuration &&
-			part.duration !== playableMediaDuration &&
-			part.duration === resolveLegacyCappedMediaPartDuration(pieces)
+			mediaDuration &&
+			part.duration !== mediaDuration &&
+			isDerivedStoredMediaPartDuration(part.duration, pieces)
 		) {
-			return playableMediaDuration
+			return mediaDuration
 		}
 		return part.duration
 	}
-	if (usesMediaDuration && playableMediaDuration) {
-		return playableMediaDuration
+	if (usesMediaDuration && mediaDuration) {
+		return mediaDuration
 	}
 
 	let maxChild = 0
@@ -381,8 +405,8 @@ export type StoryDurationSyncPlan = {
  * Compute DB updates so stored part/piece durations match what we export to Sofie.
  *
  * 1. Script-driven parts + script → force part + script-receiving pieces to reading time
- * 2. AUTO-capable media parts → force part On air to linked media length
- * 3. Never overwrite editorial piece On air from ffprobe source length
+ * 2. AUTO-capable media parts → force part On air to clip On air / source length
+ * 3. Empty media piece On air → fill from ffprobe source length; a set On air is never touched
  * 4. Never auto-fill L3D / inheriting graphics from part (empty = hold until Take)
  * 5. When part duration is empty → set from playable media, else longest child On air
  * 6. Skipped pieces are never updated / never contribute
@@ -397,6 +421,18 @@ export function planStoryDurationSync(
 
 	if (part.skip) {
 		return { pieceUpdates }
+	}
+
+	// Empty media On air → fill with the probed source length. Never forced:
+	// a set On air wins over the probe.
+	for (const piece of livePieces) {
+		if (isMediaVideoPieceType(piece.pieceType) && !isPositiveDurationSeconds(piece.duration)) {
+			const sourceMs = positiveNumber(piece.payload?.sourceDuration)
+			const fill = sourceMs !== undefined ? roundedPositiveSeconds(sourceMs / 1000) : undefined
+			if (fill) {
+				pieceUpdates.push({ id: piece.id, duration: fill })
+			}
+		}
 	}
 
 	const scriptDuration = resolveScriptDerivedPartDuration(part, options, pieces)
@@ -417,14 +453,13 @@ export function planStoryDurationSync(
 	const mode = resolveEffectiveIluDurationMode(part.durationMode, options?.defaultDurationMode)
 	const pieceTypes = livePieces.map((piece) => piece.pieceType)
 	const usesMediaDuration = partUsesMediaDuration(part.partType, pieceTypes)
-	const mediaSourceDuration = resolveMediaSourcePartDuration(pieces)
-	const playableMediaDuration = resolvePlayableMediaPartDuration(pieces)
+	const mediaDuration = resolvePlayableMediaPartDuration(pieces)
 	const hasMediaSourceMetadata = livePieces.some(hasSourceDurationMetadata)
 	if (mode === 'auto' && partSupportsAutoNext(part.partType) && usesMediaDuration) {
-		if (mediaSourceDuration) {
+		if (mediaDuration) {
 			return {
-				partDuration: mediaSourceDuration,
-				forcePartDuration: part.duration !== mediaSourceDuration,
+				partDuration: mediaDuration,
+				forcePartDuration: part.duration !== mediaDuration,
 				pieceUpdates
 			}
 		}
@@ -438,18 +473,18 @@ export function planStoryDurationSync(
 	}
 
 	if (isPositiveDurationSeconds(part.duration)) {
-		// A stored value matching the pre-fix capped formula was derived, not
-		// manually entered — rewrite it from the uncapped playable duration.
+		// A stored value matching a probe-era formula was derived, not manually
+		// entered — rewrite it from the editorial-first playable duration.
 		// Manual-mode parts and non-matching values stay user-owned.
 		if (
 			mode !== 'manual' &&
 			usesMediaDuration &&
-			playableMediaDuration &&
-			part.duration !== playableMediaDuration &&
-			part.duration === resolveLegacyCappedMediaPartDuration(pieces)
+			mediaDuration &&
+			part.duration !== mediaDuration &&
+			isDerivedStoredMediaPartDuration(part.duration, pieces)
 		) {
 			return {
-				partDuration: playableMediaDuration,
+				partDuration: mediaDuration,
 				forcePartDuration: true,
 				pieceUpdates
 			}
@@ -457,9 +492,9 @@ export function planStoryDurationSync(
 		return { pieceUpdates }
 	}
 
-	if (usesMediaDuration && playableMediaDuration) {
+	if (usesMediaDuration && mediaDuration) {
 		return {
-			partDuration: playableMediaDuration,
+			partDuration: mediaDuration,
 			pieceUpdates
 		}
 	}
