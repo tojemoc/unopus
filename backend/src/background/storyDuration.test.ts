@@ -343,6 +343,21 @@ describe('storyDuration', () => {
 		}
 	})
 
+	it('an exhausted editorial window stays exhausted — no source fallback', () => {
+		// On air 2s fully consumed by trims (2-2-1 < 0): the editorial value is
+		// set, so it stays authoritative — the probe must not resurrect 9s.
+		assert.equal(
+			resolvePartOnAirDuration({ partType: 'syn', duration: 0, durationMode: 'auto' }, [
+				{
+					pieceType: 'video',
+					duration: 2,
+					payload: { sourceDuration: 12000, trimIn: 2, trimOut: 1 }
+				}
+			]),
+			undefined
+		)
+	})
+
 	it('keeps the piece On air when its window survives an exhausted probe', () => {
 		const pieces = [
 			{

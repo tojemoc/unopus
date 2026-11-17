@@ -249,9 +249,12 @@ function resolvePlayableMediaPartDuration(
 		if (!isMediaVideoPieceType(piece.pieceType)) {
 			continue
 		}
-		const mediaDuration =
-			resolveTrimmedEditorialDurationSeconds(piece) ??
-			resolveTrimmedSourceDurationSeconds(piece)
+		// Select on whether editorial is set — not on the trimmed result — so an
+		// exhausted editorial window stays exhausted instead of falling back to
+		// the source window (blueprint resolveClipPlayback also yields 0).
+		const mediaDuration = isPositiveDurationSeconds(piece.duration)
+			? resolveTrimmedEditorialDurationSeconds(piece)
+			: resolveTrimmedSourceDurationSeconds(piece)
 		if (mediaDuration) {
 			maxMedia = Math.max(maxMedia, mediaDuration)
 		}
