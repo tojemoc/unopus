@@ -67,11 +67,17 @@ export async function fetchPreviewBaseUrl(): Promise<string> {
 export async function fetchAppConfig(): Promise<{
 	previewBaseUrl: string
 	ingestMediaRoot: string
+	gfxEditorAvailable: boolean
 }> {
-	const data = await request<{ previewBaseUrl: string; ingestMediaRoot: string }>('/api/config')
+	const data = await request<{
+		previewBaseUrl: string
+		ingestMediaRoot: string
+		gfxEditorAvailable?: boolean
+	}>('/api/config')
 	return {
 		previewBaseUrl: data.previewBaseUrl.replace(/\/$/, ''),
-		ingestMediaRoot: data.ingestMediaRoot
+		ingestMediaRoot: data.ingestMediaRoot,
+		gfxEditorAvailable: Boolean(data.gfxEditorAvailable)
 	}
 }
 

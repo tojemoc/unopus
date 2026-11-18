@@ -54,6 +54,29 @@ export async function fetchGfxTemplateResolution(
 	}
 }
 
+/**
+ * Deep link into the demo-assets GFX editor (`/preview/`): resolves the real
+ * template id from the preview resolution (falling back to the manifest id)
+ * and carries the current piece payload in `?data=`.
+ */
+export function buildGfxEditorUrl(
+	template: string,
+	resolution: GfxTemplateResolution | null | undefined,
+	payload: Record<string, unknown>
+): string {
+	const leaf = resolution?.relativePath
+		.replace(/\.html$/, '')
+		.replace(/\/index$/, '')
+		.split('/')
+		.pop()
+	const params = new URLSearchParams({ template: leaf || template })
+	const data = JSON.stringify(payload)
+	if (data !== '{}') {
+		params.set('data', data)
+	}
+	return `/preview/?${params}`
+}
+
 export function buildCasparTemplateDataXml(payload: Record<string, unknown>): string {
 	const components: string[] = []
 

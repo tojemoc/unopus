@@ -1,6 +1,8 @@
-import express from 'express'
+import express, { type Response } from 'express'
+import fsSync from 'node:fs'
 import http from 'http'
 import path from 'path'
+import { pathToFileURL } from 'node:url'
 import { Server, Socket } from 'socket.io'
 import { registerSettingsHandlers } from './background/api/settings'
 import { registerTypeManifestsHandlers } from './background/api/typeManifests'
@@ -25,11 +27,40 @@ import { registerDailyGenerationRoutes } from './routes/dailyGeneration'
 import { registerWeatherRoutes } from './routes/weather'
 import { registerPresenceHandlers } from './background/api/presence'
 import { listCachedPlayoutUpdates } from './background/playoutLockService'
-import { getBundledGfxTemplatesRoot, resolveGfxTemplateRoots } from './background/media'
+import {
+	getBundledGfxTemplatesRoot,
+	getDemoAssetsRepoRoot,
+	resolveGfxTemplateRoots
+} from './background/media'
 
 const frontendPath = path.resolve(__dirname, '../../frontend/dist')
 
 const PUBLIC_API_PREFIXES = ['/api/auth/login']
+
+/** SSE clients of the GFX editor page (`/events`) — get a reload nudge on file changes. */
+const gfxEditorEventClients = new Set<Response>()
+
+/**
+ * Reload notifier for the GFX editor: template/gfx edits reload the preview
+ * iframe, preview-app edits reload the whole page. Non-recursive fs.watch —
+ * recursive watching is unsupported on Linux (the demo-assets server polls for
+ * the same reason) and both folders are flat.
+ */
+function registerTemplateFileWatch(repoRoot: string, notify: (reloadPage: boolean) => void): void {
+	let timer: NodeJS.Timeout | undefined
+	const arm = (dir: string, reloadPage: boolean) => {
+		try {
+			fsSync.watch(dir, () => {
+				clearTimeout(timer)
+				timer = setTimeout(() => notify(reloadPage), 150)
+			})
+		} catch (error) {
+			console.warn(`GFX editor: cannot watch ${dir}`, error)
+		}
+	}
+	arm(path.join(repoRoot, 'template', 'gfx'), false)
+	arm(path.join(repoRoot, 'preview'), true)
+}
 
 /**
  * Check if a URL path is a public API endpoint (no authentication required).
@@ -143,6 +174,57 @@ export async function initSocketServer(port: number = 3010) {
 		app.get('/demo-assets/_gfx-preview-bridge.html', (_req, res) => {
 			res.sendFile(path.join(getBundledGfxTemplatesRoot(), '_gfx-preview-bridge.html'))
 		})
+
+		// sofie-demo-assets checkout: serve the standalone GFX editor (`/preview/`),
+		// its templates and fonts same-origin, and proxy the template-settings API.
+		const demoAssetsRepoRoot = getDemoAssetsRepoRoot()
+		if (demoAssetsRepoRoot) {
+			console.log(`GFX editor (sofie-demo-assets): ${demoAssetsRepoRoot}`)
+			app.use('/preview', express.static(path.join(demoAssetsRepoRoot, 'preview')))
+			app.use('/template', express.static(path.join(demoAssetsRepoRoot, 'template')))
+			app.use('/fonts', express.static(path.join(demoAssetsRepoRoot, 'public', 'fonts')))
+			app.get('/events', (req, res) => {
+				res.writeHead(200, { 'Content-Type': 'text/event-stream', Connection: 'keep-alive' })
+				res.write(': connected\n\n')
+				gfxEditorEventClients.add(res)
+				req.on('close', () => gfxEditorEventClients.delete(res))
+			})
+			registerTemplateFileWatch(demoAssetsRepoRoot, (reloadPage) => {
+				for (const client of gfxEditorEventClients) {
+					client.write(`data: ${JSON.stringify({ reloadPage })}\n\n`)
+				}
+			})
+			// The save/restore implementation lives in the demo-assets repo (ESM).
+			// Backend compiles to CJS but Node 22 `import()` handles .mjs — same API
+			// contract as the standalone preview server.
+			const templateSettingsModule = pathToFileURL(
+				path.join(demoAssetsRepoRoot, 'scripts', 'template-settings.mjs')
+			).href
+			type TemplateSettingsModule = {
+				readSettings: (root: string, template: string) => Promise<unknown>
+				saveSettings: (root: string, request: unknown) => Promise<unknown>
+			}
+			const loadTemplateSettings = () => import(templateSettingsModule) as Promise<TemplateSettingsModule>
+			app.get('/api/template-settings', async (req, res) => {
+				try {
+					const { readSettings } = await loadTemplateSettings()
+					const template = typeof req.query.template === 'string' ? req.query.template : ''
+					res.json(await readSettings(demoAssetsRepoRoot, template))
+				} catch (error) {
+					const err = error as Error & { status?: number }
+					res.status(err.status || 500).json({ error: err.message })
+				}
+			})
+			app.post('/api/template-settings', async (req, res) => {
+				try {
+					const { saveSettings } = await loadTemplateSettings()
+					res.json(await saveSettings(demoAssetsRepoRoot, req.body))
+				} catch (error) {
+					const err = error as Error & { status?: number }
+					res.status(err.status || 500).json({ error: err.message })
+				}
+			})
+		}
 
 		const gfxTemplateRoots = resolveGfxTemplateRoots()
 		if (gfxTemplateRoots.length === 0) {

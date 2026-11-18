@@ -35,6 +35,23 @@ export default defineConfig({
 			'/demo-assets': {
 				target: 'http://127.0.0.1:3010',
 				changeOrigin: true
+			},
+			// sofie-demo-assets GFX editor + its template/font/event endpoints.
+			'/preview': {
+				target: 'http://127.0.0.1:3010',
+				changeOrigin: true
+			},
+			'/template': {
+				target: 'http://127.0.0.1:3010',
+				changeOrigin: true
+			},
+			'/fonts': {
+				target: 'http://127.0.0.1:3010',
+				changeOrigin: true
+			},
+			'/events': {
+				target: 'http://127.0.0.1:3010',
+				changeOrigin: true
 			}
 		}
 	}

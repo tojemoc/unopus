@@ -31,6 +31,17 @@ export function sanitizeGfxTemplateId(template: string): string {
 }
 
 /**
+ * Manifest `previewTemplate` ids that map to a differently-named real template.
+ * The aliases are tried with each candidate path before falling back to
+ * `{template}/index.html` stubs (e.g. weather → gfx/pocasie.html beats the
+ * bundled weather stub).
+ */
+const TEMPLATE_ID_ALIASES: Record<string, string> = {
+	weather: 'pocasie',
+	headline: 'l3d-headline'
+}
+
+/**
  * Resolve the first matching GFX template file across configured roots.
  *
  * Lookup order (first match wins):
@@ -43,13 +54,18 @@ export function resolveGfxTemplate(template: string): GfxTemplateResolution | nu
 	if (!safeTemplate) {
 		return null
 	}
+	const ids = [safeTemplate, TEMPLATE_ID_ALIASES[safeTemplate]].filter(
+		(id): id is string => typeof id === 'string' && id.length > 0
+	)
 
 	for (const candidate of TEMPLATE_CANDIDATES) {
-		for (const root of resolveGfxTemplateRoots()) {
-			const relativePath = candidate.buildPath(safeTemplate)
-			const absolutePath = path.join(root, relativePath)
-			if (fsSync.existsSync(absolutePath)) {
-				return { relativePath, mode: candidate.mode }
+		for (const id of ids) {
+			for (const root of resolveGfxTemplateRoots()) {
+				const relativePath = candidate.buildPath(id)
+				const absolutePath = path.join(root, relativePath)
+				if (fsSync.existsSync(absolutePath)) {
+					return { relativePath, mode: candidate.mode }
+				}
 			}
 		}
 	}

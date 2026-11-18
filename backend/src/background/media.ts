@@ -60,13 +60,40 @@ export function getBundledGfxTemplatesRoot(): string {
 }
 
 /**
+ * The sofie-demo-assets checkout — source of the real Caspar `template/gfx/*.html`
+ * and the standalone `/preview/` GFX editor. `DEMO_ASSETS_ROOT` env wins;
+ * otherwise the megarepo sibling (`sofie/rundown-editor` nested as `sofie/demo-assets`).
+ * Returns undefined when no checkout with a `template/` dir is present.
+ */
+export function getDemoAssetsRepoRoot(): string | undefined {
+	const env = process.env.DEMO_ASSETS_ROOT?.trim()
+	const candidates = env
+		? [env]
+		: [
+				// backend/dist/background/media.js → sofie/… when nested in the megarepo.
+				path.resolve(__dirname, '../../../../demo-assets')
+			]
+	for (const candidate of candidates) {
+		if (!candidate) {
+			continue
+		}
+		const resolved = path.resolve(candidate)
+		if (fsSync.existsSync(path.join(resolved, 'template', 'gfx'))) {
+			return resolved
+		}
+	}
+	return undefined
+}
+
+/**
  * Ordered GFX template roots — first match wins when serving `/demo-assets/…`.
  *
  * Flat Caspar templates: `gfx/{name}.html`, `{name}.html`, or `{name}/index.html` stubs.
  *
  * 1. `GFX_TEMPLATES_ROOT` env (Docker bind mount to sofie-demo-assets, etc.)
  * 2. `{INGEST_MEDIA_ROOT}/gfx-templates/` (copy HTML templates onto the NAS ingest share)
- * 3. Bundled demo-assets stubs in the app image
+ * 3. sofie-demo-assets `template/` in the megarepo (real Caspar templates)
+ * 4. Bundled demo-assets stubs in the app image
  */
 export function resolveGfxTemplateRoots(): string[] {
 	const roots: string[] = []
@@ -86,6 +113,10 @@ export function resolveGfxTemplateRoots(): string[] {
 
 	addRoot(process.env.GFX_TEMPLATES_ROOT?.trim())
 	addRoot(path.join(getIngestMediaRoot(), GFX_TEMPLATES_INGEST_SUBDIR))
+	const repoRoot = getDemoAssetsRepoRoot()
+	if (repoRoot) {
+		addRoot(path.join(repoRoot, 'template'))
+	}
 	addRoot(getBundledGfxTemplatesRoot())
 
 	return roots
