@@ -1,6 +1,6 @@
 import fsSync from 'node:fs'
 import path from 'path'
-import { resolveGfxTemplateRoots } from './media.js'
+import { getBundledGfxTemplatesRoot, resolveGfxTemplateRoots } from './media.js'
 
 export type GfxTemplateMode = 'caspar' | 'query'
 
@@ -45,9 +45,12 @@ const TEMPLATE_ID_ALIASES: Record<string, string> = {
  * Resolve the first matching GFX template file across configured roots.
  *
  * Lookup order (first match wins):
- * 1. `gfx/{template}.html` — Caspar flat deploy (sofie-demo-template/gfx/)
- * 2. `{template}.html` — flat file at template root
- * 3. `{template}/index.html` — bundled query-param stubs
+ * 1. Explicitly configured roots (`GFX_TEMPLATES_ROOT`, ingest, demo-assets
+ *    checkout) — the requested id first, then its alias, each across all
+ *    candidate paths so `gfx/{id}.html` beats `{id}/index.html` anywhere.
+ *    A checkout therefore can never shadow a file an operator placed in an
+ *    explicit root for the requested id.
+ * 2. Bundled stubs — last resort only.
  */
 export function resolveGfxTemplate(template: string): GfxTemplateResolution | null {
 	const safeTemplate = sanitizeGfxTemplateId(template)
@@ -58,13 +61,17 @@ export function resolveGfxTemplate(template: string): GfxTemplateResolution | nu
 		(id): id is string => typeof id === 'string' && id.length > 0
 	)
 
-	for (const candidate of TEMPLATE_CANDIDATES) {
+	const bundledRoot = getBundledGfxTemplatesRoot()
+	const explicitRoots = resolveGfxTemplateRoots().filter((root) => root !== bundledRoot)
+	for (const roots of [explicitRoots, [bundledRoot]]) {
 		for (const id of ids) {
-			for (const root of resolveGfxTemplateRoots()) {
-				const relativePath = candidate.buildPath(id)
-				const absolutePath = path.join(root, relativePath)
-				if (fsSync.existsSync(absolutePath)) {
-					return { relativePath, mode: candidate.mode }
+			for (const candidate of TEMPLATE_CANDIDATES) {
+				for (const root of roots) {
+					const relativePath = candidate.buildPath(id)
+					const absolutePath = path.join(root, relativePath)
+					if (fsSync.existsSync(absolutePath)) {
+						return { relativePath, mode: candidate.mode }
+					}
 				}
 			}
 		}

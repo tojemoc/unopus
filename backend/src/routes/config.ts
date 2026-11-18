@@ -1,6 +1,6 @@
 import type { Application, Request, Response } from 'express'
 import { getUserFromSession, parseSessionCookie } from '../background/auth/authStore'
-import { getDemoAssetsRepoRoot, getIngestMediaRoot, getPreviewBaseUrl } from '../background/media'
+import { getGfxEditorCheckout, getIngestMediaRoot, getPreviewBaseUrl } from '../background/media'
 
 /**
  * Retrieves the session user from the request's cookie.
@@ -27,7 +27,7 @@ export function registerConfigRoutes(app: Application): void {
 		res.json({
 			previewBaseUrl: getPreviewBaseUrl(),
 			ingestMediaRoot: getIngestMediaRoot(),
-			gfxEditorAvailable: Boolean(getDemoAssetsRepoRoot())
+			gfxEditorAvailable: Boolean(getGfxEditorCheckout())
 		})
 	})
 }

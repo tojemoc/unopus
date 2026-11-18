@@ -101,23 +101,36 @@ describe('resolveGfxTemplate', () => {
 		assert.deepEqual(resolved, { relativePath: 'l3d-tema/index.html', mode: 'query' })
 	})
 
-	it('resolves manifest aliases to real caspar templates before stubs', () => {
+	it('resolves manifest aliases to real caspar templates before bundled stubs', () => {
 		tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'gfx-preview-alias-'))
-		tempIngestRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'gfx-preview-alias-ingest-'))
-
-		fs.mkdirSync(path.join(tempRoot, 'weather'), { recursive: true })
-		fs.writeFileSync(path.join(tempRoot, 'weather', 'index.html'), '<html>stub</html>')
-
-		const gfxTemplatesDir = path.join(tempIngestRoot, 'gfx-templates', 'gfx')
+		// Bundled demo-assets ships a `weather/index.html` stub — the checkout's
+		// real `gfx/pocasie.html` must still win for the `weather` manifest id.
+		const gfxTemplatesDir = path.join(tempRoot, 'template', 'gfx')
 		fs.mkdirSync(gfxTemplatesDir, { recursive: true })
 		fs.writeFileSync(path.join(gfxTemplatesDir, 'pocasie.html'), '<html>caspar</html>')
 
-		process.env.GFX_TEMPLATES_ROOT = tempRoot
-		process.env.INGEST_MEDIA_ROOT = tempIngestRoot
 		process.env.DEMO_ASSETS_ROOT = tempRoot
 
 		const resolved = resolveGfxTemplate('weather')
 		assert.deepEqual(resolved, { relativePath: 'gfx/pocasie.html', mode: 'caspar' })
+	})
+
+	it('lets an explicit root override a checkout alias for the requested id', () => {
+		tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'gfx-preview-alias-explicit-'))
+		tempIngestRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'gfx-preview-alias-checkout-'))
+
+		fs.mkdirSync(path.join(tempRoot, 'weather'), { recursive: true })
+		fs.writeFileSync(path.join(tempRoot, 'weather', 'index.html'), '<html>stub</html>')
+
+		const gfxTemplatesDir = path.join(tempIngestRoot, 'template', 'gfx')
+		fs.mkdirSync(gfxTemplatesDir, { recursive: true })
+		fs.writeFileSync(path.join(gfxTemplatesDir, 'pocasie.html'), '<html>caspar</html>')
+
+		process.env.GFX_TEMPLATES_ROOT = tempRoot
+		process.env.DEMO_ASSETS_ROOT = tempIngestRoot
+
+		const resolved = resolveGfxTemplate('weather')
+		assert.deepEqual(resolved, { relativePath: 'weather/index.html', mode: 'query' })
 	})
 
 	it('prefers caspar candidate across roots over index.html in a higher-priority root', () => {
@@ -137,5 +150,17 @@ describe('resolveGfxTemplate', () => {
 
 		const resolved = resolveGfxTemplate('l3d-syn')
 		assert.deepEqual(resolved, { relativePath: 'gfx/l3d-syn.html', mode: 'caspar' })
+	})
+
+	it('discovers caspar templates inside the demo-assets checkout', () => {
+		tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'gfx-preview-checkout-'))
+		const gfxTemplatesDir = path.join(tempRoot, 'template', 'gfx')
+		fs.mkdirSync(gfxTemplatesDir, { recursive: true })
+		fs.writeFileSync(path.join(gfxTemplatesDir, 'l3d-odporucanie.html'), '<html>caspar</html>')
+
+		process.env.DEMO_ASSETS_ROOT = tempRoot
+
+		const resolved = resolveGfxTemplate('l3d-odporucanie')
+		assert.deepEqual(resolved, { relativePath: 'gfx/l3d-odporucanie.html', mode: 'caspar' })
 	})
 })

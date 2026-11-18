@@ -204,19 +204,19 @@ export function GfxPreview({
 	return (
 		<div className="gfx-preview mb-3">
 			<h3 className="mb-2">GFX Preview</h3>
-			{(usesCasparBridge || gfxEditorAvailable) && (
+			{(usesCasparBridge || (gfxEditorAvailable && resolution !== undefined)) && (
 				<div className="gfx-preview-controls mb-2">
 					{usesCasparBridge && (
 						<>
-							<button type="button" onClick={() => postPreviewData('play')}>
+							<button type="button" disabled={!bridgeReady} onClick={() => postPreviewData('play')}>
 								Play
 							</button>
-							<button type="button" onClick={() => postPreviewData('stop')}>
+							<button type="button" disabled={!bridgeReady} onClick={() => postPreviewData('stop')}>
 								Stop
 							</button>
 						</>
 					)}
-					{gfxEditorAvailable && (
+					{gfxEditorAvailable && resolution !== undefined && (
 						<a href={buildGfxEditorUrl(template, resolution, previewPayload)} target="_blank" rel="noreferrer">
 							Open in GFX editor
 						</a>

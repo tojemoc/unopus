@@ -59,6 +59,11 @@ export function getBundledGfxTemplatesRoot(): string {
 	return path.resolve(process.cwd(), 'demo-assets')
 }
 
+// Probed once and cached: the checkout mounted at startup must not appear or
+// disappear for templates/config while the server runs (a checkout that shows
+// up later only takes effect after restart).
+let repoRootCache: { env: string | undefined; root: string | undefined } | undefined
+
 /**
  * The sofie-demo-assets checkout — source of the real Caspar `template/gfx/*.html`
  * and the standalone `/preview/` GFX editor. `DEMO_ASSETS_ROOT` env wins;
@@ -67,22 +72,38 @@ export function getBundledGfxTemplatesRoot(): string {
  */
 export function getDemoAssetsRepoRoot(): string | undefined {
 	const env = process.env.DEMO_ASSETS_ROOT?.trim()
+	if (repoRootCache && repoRootCache.env === env) {
+		return repoRootCache.root
+	}
 	const candidates = env
 		? [env]
 		: [
 				// backend/dist/background/media.js → sofie/… when nested in the megarepo.
 				path.resolve(__dirname, '../../../../demo-assets')
 			]
+	let root: string | undefined
 	for (const candidate of candidates) {
 		if (!candidate) {
 			continue
 		}
 		const resolved = path.resolve(candidate)
 		if (fsSync.existsSync(path.join(resolved, 'template', 'gfx'))) {
-			return resolved
+			root = resolved
+			break
 		}
 	}
-	return undefined
+	repoRootCache = { env, root }
+	return root
+}
+
+/**
+ * The GFX editor is only available when the checkout also ships its
+ * `preview/` app — `template/gfx` alone means templates can resolve but
+ * there is no editor to mount or deep-link.
+ */
+export function getGfxEditorCheckout(): string | undefined {
+	const root = getDemoAssetsRepoRoot()
+	return root && fsSync.existsSync(path.join(root, 'preview', 'index.html')) ? root : undefined
 }
 
 /**

@@ -29,7 +29,7 @@ import { registerPresenceHandlers } from './background/api/presence'
 import { listCachedPlayoutUpdates } from './background/playoutLockService'
 import {
 	getBundledGfxTemplatesRoot,
-	getDemoAssetsRepoRoot,
+	getGfxEditorCheckout,
 	resolveGfxTemplateRoots
 } from './background/media'
 
@@ -48,12 +48,22 @@ const gfxEditorEventClients = new Set<Response>()
  */
 function registerTemplateFileWatch(repoRoot: string, notify: (reloadPage: boolean) => void): void {
 	let timer: NodeJS.Timeout | undefined
+	let reloadNeeded = false
 	const arm = (dir: string, reloadPage: boolean) => {
 		try {
-			fsSync.watch(dir, () => {
-				clearTimeout(timer)
-				timer = setTimeout(() => notify(reloadPage), 150)
-			})
+			fsSync
+				.watch(dir, () => {
+					// Accumulate: a template edit must not cancel a pending page reload.
+					reloadNeeded = reloadNeeded || reloadPage
+					clearTimeout(timer)
+					timer = setTimeout(() => {
+						notify(reloadNeeded)
+						reloadNeeded = false
+					}, 150)
+				})
+				.on('error', (error) => {
+					console.warn(`GFX editor: watch failed for ${dir}`, error)
+				})
 		} catch (error) {
 			console.warn(`GFX editor: cannot watch ${dir}`, error)
 		}
@@ -108,7 +118,9 @@ export async function initSocketServer(port: number = 3010) {
 			next()
 			return
 		}
-		if (req.path.startsWith('/api/')) {
+		// Express routes match case-insensitively — the guard must too, or
+		// /API/template-settings would skip the session check.
+		if (req.path.toLowerCase().startsWith('/api/')) {
 			const user = getUserFromSession(parseSessionCookie(req.headers.cookie))
 			if (!user) {
 				res.status(401).json({ error: 'Not authenticated' })
@@ -177,7 +189,8 @@ export async function initSocketServer(port: number = 3010) {
 
 		// sofie-demo-assets checkout: serve the standalone GFX editor (`/preview/`),
 		// its templates and fonts same-origin, and proxy the template-settings API.
-		const demoAssetsRepoRoot = getDemoAssetsRepoRoot()
+		// Probed once here — the mounted checkout is the one /api/config advertises.
+		const demoAssetsRepoRoot = getGfxEditorCheckout()
 		if (demoAssetsRepoRoot) {
 			console.log(`GFX editor (sofie-demo-assets): ${demoAssetsRepoRoot}`)
 			app.use('/preview', express.static(path.join(demoAssetsRepoRoot, 'preview')))
@@ -194,9 +207,10 @@ export async function initSocketServer(port: number = 3010) {
 					client.write(`data: ${JSON.stringify({ reloadPage })}\n\n`)
 				}
 			})
-			// The save/restore implementation lives in the demo-assets repo (ESM).
-			// Backend compiles to CJS but Node 22 `import()` handles .mjs — same API
-			// contract as the standalone preview server.
+			// The save/restore implementation lives in the demo-assets repo (ESM) —
+			// same API contract as the standalone preview server. `new Function` keeps
+			// a native dynamic import: TS downlevels import() to require() under
+			// CommonJS, which fails if the .mjs ever uses top-level await.
 			const templateSettingsModule = pathToFileURL(
 				path.join(demoAssetsRepoRoot, 'scripts', 'template-settings.mjs')
 			).href
@@ -204,7 +218,10 @@ export async function initSocketServer(port: number = 3010) {
 				readSettings: (root: string, template: string) => Promise<unknown>
 				saveSettings: (root: string, request: unknown) => Promise<unknown>
 			}
-			const loadTemplateSettings = () => import(templateSettingsModule) as Promise<TemplateSettingsModule>
+			const loadTemplateSettings = () =>
+				new Function('specifier', 'return import(specifier)')(
+					templateSettingsModule
+				) as Promise<TemplateSettingsModule>
 			app.get('/api/template-settings', async (req, res) => {
 				try {
 					const { readSettings } = await loadTemplateSettings()
