@@ -107,6 +107,17 @@ export function getGfxEditorCheckout(): string | undefined {
 }
 
 /**
+ * The editor's settings API needs the checkout's `scripts/template-settings.mjs`
+ * — a checkout can have the preview app but no settings persistence. Reported
+ * separately so such a checkout still serves `/preview` and template previews.
+ */
+export function hasGfxEditorSettings(checkout: string | undefined): boolean {
+	return Boolean(
+		checkout && fsSync.existsSync(path.join(checkout, 'scripts', 'template-settings.mjs'))
+	)
+}
+
+/**
  * Ordered GFX template roots — first match wins when serving `/demo-assets/…`.
  *
  * Flat Caspar templates: `gfx/{name}.html`, `{name}.html`, or `{name}/index.html` stubs.

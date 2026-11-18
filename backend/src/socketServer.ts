@@ -50,9 +50,18 @@ function registerTemplateFileWatch(repoRoot: string, notify: (reloadPage: boolea
 	let timer: NodeJS.Timeout | undefined
 	let reloadNeeded = false
 	const arm = (dir: string, reloadPage: boolean) => {
-		try {
-			fsSync
-				.watch(dir, () => {
+		let watcher: fsSync.FSWatcher | undefined
+		const attach = () => {
+			try {
+				watcher = fsSync.watch(dir, (eventType) => {
+					if (eventType === 'rename' && !fsSync.existsSync(dir)) {
+						// The watched dir was replaced/removed — the watcher's fd sits on
+						// the dead inode, so re-arm once the path exists again.
+						watcher?.close()
+						watcher = undefined
+						rearm()
+						return
+					}
 					// Accumulate: a template edit must not cancel a pending page reload.
 					reloadNeeded = reloadNeeded || reloadPage
 					clearTimeout(timer)
@@ -61,12 +70,24 @@ function registerTemplateFileWatch(repoRoot: string, notify: (reloadPage: boolea
 						reloadNeeded = false
 					}, 150)
 				})
-				.on('error', (error) => {
+				watcher.on('error', (error) => {
 					console.warn(`GFX editor: watch failed for ${dir}`, error)
 				})
-		} catch (error) {
-			console.warn(`GFX editor: cannot watch ${dir}`, error)
+			} catch (error) {
+				console.warn(`GFX editor: cannot watch ${dir}`, error)
+			}
 		}
+		const rearm = () => {
+			if (watcher) {
+				return
+			}
+			if (fsSync.existsSync(dir)) {
+				attach()
+			} else {
+				setTimeout(rearm, 500)
+			}
+		}
+		attach()
 	}
 	arm(path.join(repoRoot, 'template', 'gfx'), false)
 	arm(path.join(repoRoot, 'preview'), true)
@@ -79,7 +100,12 @@ function isPublicApiPath(url: string | undefined): boolean {
 	if (!url) {
 		return false
 	}
-	return PUBLIC_API_PREFIXES.some((prefix) => url === prefix || url.startsWith(`${prefix}?`))
+	// Match Express's case-insensitive, trailing-slash-tolerant routing, or
+	// /API/auth/login would 401 while the login handler would have matched.
+	const lower = url.toLowerCase()
+	return PUBLIC_API_PREFIXES.some(
+		(prefix) => lower === prefix || lower === `${prefix}/` || lower.startsWith(`${prefix}?`)
+	)
 }
 
 /**

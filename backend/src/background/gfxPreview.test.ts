@@ -50,6 +50,15 @@ describe('resolveGfxTemplate', () => {
 	const previousDemoAssets = process.env.DEMO_ASSETS_ROOT
 	let tempRoot = ''
 	let tempIngestRoot = ''
+	const tempDirs: string[] = []
+
+	// Point a root env var at a fresh empty dir so results can't come from the
+	// caller's ambient env — every candidate must originate in the test fixture.
+	const emptyDir = (): string => {
+		const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gfx-preview-empty-'))
+		tempDirs.push(dir)
+		return dir
+	}
 
 	afterEach(() => {
 		if (previousRoot === undefined) {
@@ -75,6 +84,9 @@ describe('resolveGfxTemplate', () => {
 			fs.rmSync(tempIngestRoot, { recursive: true, force: true })
 			tempIngestRoot = ''
 		}
+		for (const dir of tempDirs.splice(0)) {
+			fs.rmSync(dir, { recursive: true, force: true })
+		}
 	})
 
 	it('prefers gfx/{template}.html over folder stubs', () => {
@@ -85,6 +97,7 @@ describe('resolveGfxTemplate', () => {
 		fs.writeFileSync(path.join(tempRoot, 'l3d-syn', 'index.html'), '<html></html>')
 
 		process.env.GFX_TEMPLATES_ROOT = tempRoot
+		process.env.INGEST_MEDIA_ROOT = emptyDir()
 		process.env.DEMO_ASSETS_ROOT = tempRoot
 		const resolved = resolveGfxTemplate('l3d-syn')
 		assert.deepEqual(resolved, { relativePath: 'gfx/l3d-syn.html', mode: 'caspar' })
@@ -96,6 +109,7 @@ describe('resolveGfxTemplate', () => {
 		fs.writeFileSync(path.join(tempRoot, 'l3d-tema', 'index.html'), '<html></html>')
 
 		process.env.GFX_TEMPLATES_ROOT = tempRoot
+		process.env.INGEST_MEDIA_ROOT = emptyDir()
 		process.env.DEMO_ASSETS_ROOT = tempRoot
 		const resolved = resolveGfxTemplate('l3d-tema')
 		assert.deepEqual(resolved, { relativePath: 'l3d-tema/index.html', mode: 'query' })
@@ -109,6 +123,8 @@ describe('resolveGfxTemplate', () => {
 		fs.mkdirSync(gfxTemplatesDir, { recursive: true })
 		fs.writeFileSync(path.join(gfxTemplatesDir, 'pocasie.html'), '<html>caspar</html>')
 
+		process.env.GFX_TEMPLATES_ROOT = emptyDir()
+		process.env.INGEST_MEDIA_ROOT = emptyDir()
 		process.env.DEMO_ASSETS_ROOT = tempRoot
 
 		const resolved = resolveGfxTemplate('weather')
@@ -127,6 +143,7 @@ describe('resolveGfxTemplate', () => {
 		fs.writeFileSync(path.join(gfxTemplatesDir, 'pocasie.html'), '<html>caspar</html>')
 
 		process.env.GFX_TEMPLATES_ROOT = tempRoot
+		process.env.INGEST_MEDIA_ROOT = emptyDir()
 		process.env.DEMO_ASSETS_ROOT = tempIngestRoot
 
 		const resolved = resolveGfxTemplate('weather')
@@ -158,6 +175,8 @@ describe('resolveGfxTemplate', () => {
 		fs.mkdirSync(gfxTemplatesDir, { recursive: true })
 		fs.writeFileSync(path.join(gfxTemplatesDir, 'l3d-odporucanie.html'), '<html>caspar</html>')
 
+		process.env.GFX_TEMPLATES_ROOT = emptyDir()
+		process.env.INGEST_MEDIA_ROOT = emptyDir()
 		process.env.DEMO_ASSETS_ROOT = tempRoot
 
 		const resolved = resolveGfxTemplate('l3d-odporucanie')
