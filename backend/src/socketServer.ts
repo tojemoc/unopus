@@ -29,6 +29,7 @@ import { registerPresenceHandlers } from './background/api/presence'
 import { listCachedPlayoutUpdates } from './background/playoutLockService'
 import {
 	getBundledGfxTemplatesRoot,
+	getDemoAssetsRepoRoot,
 	getGfxEditorCheckout,
 	resolveGfxTemplateRoots
 } from './background/media'
@@ -226,12 +227,18 @@ export async function initSocketServer(port: number = 3010) {
 		// sofie-demo-assets checkout: serve the standalone GFX editor (`/preview/`),
 		// its templates and fonts same-origin, and proxy the template-settings API.
 		// Probed once here — the mounted checkout is the one /api/config advertises.
+		// `/fonts` mounts off the repo root (not the editor gate) — a checkout that
+		// ships templates without the preview app still serves its templates via
+		// /demo-assets, and those templates reference checkout fonts.
+		const demoAssetsCheckout = getDemoAssetsRepoRoot()
+		if (demoAssetsCheckout) {
+			app.use('/fonts', express.static(path.join(demoAssetsCheckout, 'public', 'fonts')))
+		}
 		const demoAssetsRepoRoot = getGfxEditorCheckout()
 		if (demoAssetsRepoRoot) {
 			console.log(`GFX editor (sofie-demo-assets): ${demoAssetsRepoRoot}`)
 			app.use('/preview', express.static(path.join(demoAssetsRepoRoot, 'preview')))
 			app.use('/template', express.static(path.join(demoAssetsRepoRoot, 'template')))
-			app.use('/fonts', express.static(path.join(demoAssetsRepoRoot, 'public', 'fonts')))
 			app.get('/events', (req, res) => {
 				res.writeHead(200, { 'Content-Type': 'text/event-stream', Connection: 'keep-alive' })
 				res.write(': connected\n\n')
