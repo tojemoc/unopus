@@ -51,6 +51,14 @@ function registerTemplateFileWatch(repoRoot: string, notify: (reloadPage: boolea
 	let reloadNeeded = false
 	const arm = (dir: string, reloadPage: boolean) => {
 		let watcher: fsSync.FSWatcher | undefined
+		// Accumulate: a template edit must not cancel a pending page reload.
+		const scheduleNotify = () => {
+			clearTimeout(timer)
+			timer = setTimeout(() => {
+				notify(reloadNeeded)
+				reloadNeeded = false
+			}, 150)
+		}
 		const attach = () => {
 			try {
 				watcher = fsSync.watch(dir, (eventType) => {
@@ -62,13 +70,8 @@ function registerTemplateFileWatch(repoRoot: string, notify: (reloadPage: boolea
 						rearm()
 						return
 					}
-					// Accumulate: a template edit must not cancel a pending page reload.
 					reloadNeeded = reloadNeeded || reloadPage
-					clearTimeout(timer)
-					timer = setTimeout(() => {
-						notify(reloadNeeded)
-						reloadNeeded = false
-					}, 150)
+					scheduleNotify()
 				})
 				watcher.on('error', (error) => {
 					console.warn(`GFX editor: watch failed for ${dir}`, error)
@@ -81,11 +84,18 @@ function registerTemplateFileWatch(repoRoot: string, notify: (reloadPage: boolea
 			if (watcher) {
 				return
 			}
-			if (fsSync.existsSync(dir)) {
-				attach()
-			} else {
+			if (!fsSync.existsSync(dir)) {
 				setTimeout(rearm, 500)
+				return
 			}
+			attach()
+			if (!watcher) {
+				setTimeout(rearm, 500)
+				return
+			}
+			// Files changed while the dir was missing — reload after reattaching.
+			reloadNeeded = reloadNeeded || reloadPage
+			scheduleNotify()
 		}
 		attach()
 	}
