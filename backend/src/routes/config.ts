@@ -1,6 +1,11 @@
 import type { Application, Request, Response } from 'express'
 import { getUserFromSession, parseSessionCookie } from '../background/auth/authStore'
-import { getIngestMediaRoot, getPreviewBaseUrl } from '../background/media'
+import {
+	getGfxEditorCheckout,
+	getIngestMediaRoot,
+	getPreviewBaseUrl,
+	hasGfxEditorSettings
+} from '../background/media'
 
 /**
  * Retrieves the session user from the request's cookie.
@@ -26,7 +31,10 @@ export function registerConfigRoutes(app: Application): void {
 
 		res.json({
 			previewBaseUrl: getPreviewBaseUrl(),
-			ingestMediaRoot: getIngestMediaRoot()
+			ingestMediaRoot: getIngestMediaRoot(),
+			// Advertise the editor only when its settings persistence is also
+			// available — the /preview mount itself stays up either way.
+			gfxEditorAvailable: hasGfxEditorSettings(getGfxEditorCheckout())
 		})
 	})
 }

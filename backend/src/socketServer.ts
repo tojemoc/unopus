@@ -1,6 +1,8 @@
-import express from 'express'
+import express, { type Response } from 'express'
+import fsSync from 'node:fs'
 import http from 'http'
 import path from 'path'
+import { pathToFileURL } from 'node:url'
 import { Server, Socket } from 'socket.io'
 import { registerSettingsHandlers } from './background/api/settings'
 import { registerTypeManifestsHandlers } from './background/api/typeManifests'
@@ -25,11 +27,93 @@ import { registerDailyGenerationRoutes } from './routes/dailyGeneration'
 import { registerWeatherRoutes } from './routes/weather'
 import { registerPresenceHandlers } from './background/api/presence'
 import { listCachedPlayoutUpdates } from './background/playoutLockService'
-import { getBundledGfxTemplatesRoot, resolveGfxTemplateRoots } from './background/media'
+import {
+	getBundledGfxTemplatesRoot,
+	getDemoAssetsRepoRoot,
+	getGfxEditorCheckout,
+	resolveGfxTemplateRoots
+} from './background/media'
 
 const frontendPath = path.resolve(__dirname, '../../frontend/dist')
 
 const PUBLIC_API_PREFIXES = ['/api/auth/login']
+
+/** SSE clients of the GFX editor page (`/events`) — get a reload nudge on file changes. */
+const gfxEditorEventClients = new Set<Response>()
+
+/**
+ * Reload notifier for the GFX editor: template/gfx edits reload the preview
+ * iframe, preview-app edits reload the whole page. fs.watch is recursive where
+ * the runtime supports it so nested template/preview dirs also trigger reloads;
+ * on runtimes without recursive watch it falls back to direct children only.
+ */
+function registerTemplateFileWatch(repoRoot: string, notify: (reloadPage: boolean) => void): void {
+	let timer: NodeJS.Timeout | undefined
+	let reloadNeeded = false
+	// Recursive watch where supported (macOS/Windows, and Linux on Node ≥ 19.1)
+	// so edits under nested template/preview dirs also reach /events; flat
+	// fallback on runtimes without it — both folders are flat today anyway.
+	let recursiveWatch = false
+	try {
+		const probe = fsSync.watch(repoRoot, { recursive: true }, () => {})
+		probe.close()
+		recursiveWatch = true
+	} catch {
+		// Unsupported runtime — non-recursive watching only.
+	}
+	const arm = (dir: string, reloadPage: boolean) => {
+		let watcher: fsSync.FSWatcher | undefined
+		// Accumulate: a template edit must not cancel a pending page reload.
+		const scheduleNotify = () => {
+			clearTimeout(timer)
+			timer = setTimeout(() => {
+				notify(reloadNeeded)
+				reloadNeeded = false
+			}, 150)
+		}
+		const attach = () => {
+			try {
+				watcher = fsSync.watch(dir, { recursive: recursiveWatch }, (eventType) => {
+					if (eventType === 'rename' && !fsSync.existsSync(dir)) {
+						// The watched dir was replaced/removed — the watcher's fd sits on
+						// the dead inode, so re-arm once the path exists again.
+						watcher?.close()
+						watcher = undefined
+						rearm()
+						return
+					}
+					reloadNeeded = reloadNeeded || reloadPage
+					scheduleNotify()
+				})
+				watcher.on('error', (error) => {
+					console.warn(`GFX editor: watch failed for ${dir}`, error)
+				})
+			} catch (error) {
+				console.warn(`GFX editor: cannot watch ${dir}`, error)
+			}
+		}
+		const rearm = () => {
+			if (watcher) {
+				return
+			}
+			if (!fsSync.existsSync(dir)) {
+				setTimeout(rearm, 500)
+				return
+			}
+			attach()
+			if (!watcher) {
+				setTimeout(rearm, 500)
+				return
+			}
+			// Files changed while the dir was missing — reload after reattaching.
+			reloadNeeded = reloadNeeded || reloadPage
+			scheduleNotify()
+		}
+		attach()
+	}
+	arm(path.join(repoRoot, 'template', 'gfx'), false)
+	arm(path.join(repoRoot, 'preview'), true)
+}
 
 /**
  * Check if a URL path is a public API endpoint (no authentication required).
@@ -38,7 +122,12 @@ function isPublicApiPath(url: string | undefined): boolean {
 	if (!url) {
 		return false
 	}
-	return PUBLIC_API_PREFIXES.some((prefix) => url === prefix || url.startsWith(`${prefix}?`))
+	// Match Express's case-insensitive, trailing-slash-tolerant routing, or
+	// /API/auth/login would 401 while the login handler would have matched.
+	const lower = url.toLowerCase()
+	return PUBLIC_API_PREFIXES.some(
+		(prefix) => lower === prefix || lower === `${prefix}/` || lower.startsWith(`${prefix}?`)
+	)
 }
 
 /**
@@ -77,7 +166,9 @@ export async function initSocketServer(port: number = 3010) {
 			next()
 			return
 		}
-		if (req.path.startsWith('/api/')) {
+		// Express routes match case-insensitively — the guard must too, or
+		// /API/template-settings would skip the session check.
+		if (req.path.toLowerCase().startsWith('/api/')) {
 			const user = getUserFromSession(parseSessionCookie(req.headers.cookie))
 			if (!user) {
 				res.status(401).json({ error: 'Not authenticated' })
@@ -143,6 +234,68 @@ export async function initSocketServer(port: number = 3010) {
 		app.get('/demo-assets/_gfx-preview-bridge.html', (_req, res) => {
 			res.sendFile(path.join(getBundledGfxTemplatesRoot(), '_gfx-preview-bridge.html'))
 		})
+
+		// sofie-demo-assets checkout: serve the standalone GFX editor (`/preview/`),
+		// its templates and fonts same-origin, and proxy the template-settings API.
+		// Probed once here — the mounted checkout is the one /api/config advertises.
+		// `/fonts` mounts off the repo root (not the editor gate) — a checkout that
+		// ships templates without the preview app still serves its templates via
+		// /demo-assets, and those templates reference checkout fonts.
+		const demoAssetsCheckout = getDemoAssetsRepoRoot()
+		if (demoAssetsCheckout) {
+			app.use('/fonts', express.static(path.join(demoAssetsCheckout, 'public', 'fonts')))
+		}
+		const demoAssetsRepoRoot = getGfxEditorCheckout()
+		if (demoAssetsRepoRoot) {
+			console.log(`GFX editor (sofie-demo-assets): ${demoAssetsRepoRoot}`)
+			app.use('/preview', express.static(path.join(demoAssetsRepoRoot, 'preview')))
+			app.use('/template', express.static(path.join(demoAssetsRepoRoot, 'template')))
+			app.get('/events', (req, res) => {
+				res.writeHead(200, { 'Content-Type': 'text/event-stream', Connection: 'keep-alive' })
+				res.write(': connected\n\n')
+				gfxEditorEventClients.add(res)
+				req.on('close', () => gfxEditorEventClients.delete(res))
+			})
+			registerTemplateFileWatch(demoAssetsRepoRoot, (reloadPage) => {
+				for (const client of gfxEditorEventClients) {
+					client.write(`data: ${JSON.stringify({ reloadPage })}\n\n`)
+				}
+			})
+			// The save/restore implementation lives in the demo-assets repo (ESM) —
+			// same API contract as the standalone preview server. `new Function` keeps
+			// a native dynamic import: TS downlevels import() to require() under
+			// CommonJS, which fails if the .mjs ever uses top-level await.
+			const templateSettingsModule = pathToFileURL(
+				path.join(demoAssetsRepoRoot, 'scripts', 'template-settings.mjs')
+			).href
+			type TemplateSettingsModule = {
+				readSettings: (root: string, template: string) => Promise<unknown>
+				saveSettings: (root: string, request: unknown) => Promise<unknown>
+			}
+			const loadTemplateSettings = () =>
+				new Function('specifier', 'return import(specifier)')(
+					templateSettingsModule
+				) as Promise<TemplateSettingsModule>
+			app.get('/api/template-settings', async (req, res) => {
+				try {
+					const { readSettings } = await loadTemplateSettings()
+					const template = typeof req.query.template === 'string' ? req.query.template : ''
+					res.json(await readSettings(demoAssetsRepoRoot, template))
+				} catch (error) {
+					const err = error as Error & { status?: number }
+					res.status(err.status || 500).json({ error: err.message })
+				}
+			})
+			app.post('/api/template-settings', async (req, res) => {
+				try {
+					const { saveSettings } = await loadTemplateSettings()
+					res.json(await saveSettings(demoAssetsRepoRoot, req.body))
+				} catch (error) {
+					const err = error as Error & { status?: number }
+					res.status(err.status || 500).json({ error: err.message })
+				}
+			})
+		}
 
 		const gfxTemplateRoots = resolveGfxTemplateRoots()
 		if (gfxTemplateRoots.length === 0) {

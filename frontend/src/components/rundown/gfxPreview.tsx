@@ -2,13 +2,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
 	buildCasparBridgePreviewUrl,
 	buildCasparTemplateDataXml,
+	buildGfxEditorUrl,
 	buildQueryPreviewUrl,
 	fetchGfxTemplateResolution,
 	isSameOriginPreviewBase,
 	joinPreviewPath,
 	type GfxTemplateResolution
 } from '~/lib/gfxPreview'
-import { fetchPreviewBaseUrl } from '~/lib/mediaApi'
+import { fetchAppConfig } from '~/lib/mediaApi'
 import type { Piece, TypeManifest } from '~backend/background/interfaces'
 import { resolveSourceEnabled, trimSourceText } from '~/util/sourcePayload'
 
@@ -76,11 +77,15 @@ export function GfxPreview({
 	payload: Record<string, unknown>
 }) {
 	const [previewBaseUrl, setPreviewBaseUrl] = useState<string | null>(null)
-	const [resolution, setResolution] = useState<GfxTemplateResolution | null | undefined>(undefined)
+	const [gfxEditorAvailable, setGfxEditorAvailable] = useState(false)
+	const [resolutionState, setResolutionState] = useState<
+		{ template: string; value: GfxTemplateResolution | null } | undefined
+	>(undefined)
 	const [error, setError] = useState<string | null>(null)
 	const [frameFailed, setFrameFailed] = useState(false)
 	const [bridgeReady, setBridgeReady] = useState(false)
 	const iframeRef = useRef<HTMLIFrameElement>(null)
+	const autoPlayedRef = useRef(false)
 
 	const template = manifest?.previewTemplate
 	const previewPayload = useMemo(() => buildPreviewPayload(payload), [payload])
@@ -90,10 +95,11 @@ export function GfxPreview({
 			return
 		}
 		let cancelled = false
-		fetchPreviewBaseUrl()
-			.then((url) => {
+		fetchAppConfig()
+			.then((config) => {
 				if (!cancelled) {
-					setPreviewBaseUrl(url)
+					setPreviewBaseUrl(config.previewBaseUrl)
+					setGfxEditorAvailable(config.gfxEditorAvailable)
 				}
 			})
 			.catch((e) => {
@@ -111,22 +117,28 @@ export function GfxPreview({
 			return
 		}
 		let cancelled = false
-		setResolution(undefined)
+		setResolutionState(undefined)
 		fetchGfxTemplateResolution(template)
 			.then((resolved) => {
 				if (!cancelled) {
-					setResolution(resolved)
+					setResolutionState({ template, value: resolved })
 				}
 			})
 			.catch(() => {
 				if (!cancelled) {
-					setResolution(null)
+					setResolutionState({ template, value: null })
 				}
 			})
 		return () => {
 			cancelled = true
 		}
 	}, [template])
+
+	// A resolution only applies to the template it was fetched for — while the
+	// fetch for a new manifest template is in flight, the previous result must
+	// not pair with it (editor link + preview URL would use a stale file).
+	const resolution =
+		resolutionState !== undefined && resolutionState.template === template ? resolutionState.value : undefined
 
 	const previewUrl = useMemo(() => {
 		if (!previewBaseUrl || !template) {
@@ -145,19 +157,24 @@ export function GfxPreview({
 		resolution?.mode === 'caspar' && previewBaseUrl && isSameOriginPreviewBase(previewBaseUrl)
 	)
 
-	const postPreviewData = useCallback(() => {
-		if (!usesCasparBridge || !bridgeReady) {
-			return
-		}
-		const xml = buildCasparTemplateDataXml(previewPayload)
-		iframeRef.current?.contentWindow?.postMessage(
-			{
-				type: GFX_PREVIEW_MESSAGE,
-				xml
-			},
-			'*'
-		)
-	}, [usesCasparBridge, bridgeReady, previewPayload])
+	const postPreviewData = useCallback(
+		(action?: 'play' | 'stop' | 'update'): boolean => {
+			const target = iframeRef.current?.contentWindow
+			if (!usesCasparBridge || !bridgeReady || !target) {
+				return false
+			}
+			target.postMessage(
+				{
+					type: GFX_PREVIEW_MESSAGE,
+					xml: buildCasparTemplateDataXml(previewPayload),
+					action
+				},
+				'*'
+			)
+			return true
+		},
+		[usesCasparBridge, bridgeReady, previewPayload]
+	)
 
 	useEffect(() => {
 		const onMessage = (event: MessageEvent) => {
@@ -176,11 +193,20 @@ export function GfxPreview({
 	useEffect(() => {
 		setBridgeReady(false)
 		setFrameFailed(false)
+		autoPlayedRef.current = false
 	}, [previewUrl])
 
+	// First payload once the template is loaded plays it in; later edits only
+	// update() so typing in the form doesn't restart the animation. Autoplay is
+	// done only once the play message was actually sent.
 	useEffect(() => {
-		postPreviewData()
-	}, [postPreviewData])
+		if (!bridgeReady) {
+			return
+		}
+		if (postPreviewData(autoPlayedRef.current ? 'update' : 'play')) {
+			autoPlayedRef.current = true
+		}
+	}, [postPreviewData, bridgeReady])
 
 	if (!template) {
 		return null
@@ -189,6 +215,25 @@ export function GfxPreview({
 	return (
 		<div className="gfx-preview mb-3">
 			<h3 className="mb-2">GFX Preview</h3>
+			{(usesCasparBridge || (gfxEditorAvailable && resolution !== undefined)) && (
+				<div className="gfx-preview-controls mb-2">
+					{usesCasparBridge && (
+						<>
+							<button type="button" disabled={!bridgeReady} onClick={() => postPreviewData('play')}>
+								Play
+							</button>
+							<button type="button" disabled={!bridgeReady} onClick={() => postPreviewData('stop')}>
+								Stop
+							</button>
+						</>
+					)}
+					{gfxEditorAvailable && resolution !== undefined && (
+						<a href={buildGfxEditorUrl(template, resolution, previewPayload)} target="_blank" rel="noreferrer">
+							Open in GFX editor
+						</a>
+					)}
+				</div>
+			)}
 			{error && <div className="text-warning small mb-2">Preview unavailable: {error}</div>}
 			{frameFailed && previewUrl ? (
 				<div className="text-warning small mb-2">

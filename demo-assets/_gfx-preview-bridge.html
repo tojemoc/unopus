@@ -28,6 +28,7 @@
 			const templateFrame = document.getElementById('template')
 			let templateReady = false
 			let pendingData
+			let pendingAction
 
 			const templateSrc = resolveBridgeTemplateSrc(
 				templatePath,
@@ -41,13 +42,31 @@
 
 			templateFrame.src = templateSrc
 
-			function applyPreviewData(data) {
+			// Templates resolve fonts via local() — inject the same @font-face set
+			// the demo-assets preview tool injects so preview matches on-air type.
+			const fonts = `
+@font-face {font-family:Bauplan;font-weight:900;src:url('/fonts/Bauplan/WOFF2/Bauplan-Heavy.woff2') format('woff2')}
+@font-face {font-family:Bauplan;font-weight:400;src:url('/fonts/Bauplan/WOFF2/Bauplan-Regular.woff2') format('woff2')}
+@font-face {font-family:Diform;font-weight:700;src:url('/fonts/Diform/WOFF2/Diform-Bold.woff2') format('woff2')}
+@font-face {font-family:Diform;font-weight:400;src:url('/fonts/Diform/WOFF2/Diform-Regular.woff2') format('woff2')}
+`
+
+			function applyPreviewData(data, action) {
 				const win = templateFrame.contentWindow
 				if (!win || data === undefined) {
 					return
 				}
+				if (action === 'stop') {
+					if (typeof win.stop === 'function') {
+						win.stop()
+					}
+					return
+				}
 				if (typeof win.update === 'function') {
 					win.update(data)
+				}
+				if (action === 'update') {
+					return
 				}
 				if (typeof win.play === 'function') {
 					win.play(data)
@@ -58,8 +77,9 @@
 				if (!templateReady || pendingData === undefined) {
 					return
 				}
-				applyPreviewData(pendingData)
+				applyPreviewData(pendingData, pendingAction)
 				pendingData = undefined
+				pendingAction = undefined
 			}
 
 			function notifyReady() {
@@ -74,16 +94,20 @@
 					return
 				}
 				pendingData = event.data.xml ?? event.data.json ?? event.data.payload
+				pendingAction = event.data.action
 				flushPendingData()
 			})
 
 			templateFrame.addEventListener('load', () => {
+				try {
+					const style = templateFrame.contentDocument.createElement('style')
+					style.textContent = fonts
+					templateFrame.contentDocument.head.append(style)
+				} catch { /* Fonts are best-effort. */ }
 				templateReady = true
 				flushPendingData()
 				notifyReady()
 			})
-
-			notifyReady()
 		</script>
 	</body>
 </html>
