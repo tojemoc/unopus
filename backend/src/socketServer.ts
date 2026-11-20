@@ -43,13 +43,24 @@ const gfxEditorEventClients = new Set<Response>()
 
 /**
  * Reload notifier for the GFX editor: template/gfx edits reload the preview
- * iframe, preview-app edits reload the whole page. Non-recursive fs.watch —
- * recursive watching is unsupported on Linux (the demo-assets server polls for
- * the same reason) and both folders are flat.
+ * iframe, preview-app edits reload the whole page. fs.watch is recursive where
+ * the runtime supports it so nested template/preview dirs also trigger reloads;
+ * on runtimes without recursive watch it falls back to direct children only.
  */
 function registerTemplateFileWatch(repoRoot: string, notify: (reloadPage: boolean) => void): void {
 	let timer: NodeJS.Timeout | undefined
 	let reloadNeeded = false
+	// Recursive watch where supported (macOS/Windows, and Linux on Node ≥ 19.1)
+	// so edits under nested template/preview dirs also reach /events; flat
+	// fallback on runtimes without it — both folders are flat today anyway.
+	let recursiveWatch = false
+	try {
+		const probe = fsSync.watch(repoRoot, { recursive: true }, () => {})
+		probe.close()
+		recursiveWatch = true
+	} catch {
+		// Unsupported runtime — non-recursive watching only.
+	}
 	const arm = (dir: string, reloadPage: boolean) => {
 		let watcher: fsSync.FSWatcher | undefined
 		// Accumulate: a template edit must not cancel a pending page reload.
@@ -62,7 +73,7 @@ function registerTemplateFileWatch(repoRoot: string, notify: (reloadPage: boolea
 		}
 		const attach = () => {
 			try {
-				watcher = fsSync.watch(dir, (eventType) => {
+				watcher = fsSync.watch(dir, { recursive: recursiveWatch }, (eventType) => {
 					if (eventType === 'rename' && !fsSync.existsSync(dir)) {
 						// The watched dir was replaced/removed — the watcher's fd sits on
 						// the dead inode, so re-arm once the path exists again.
