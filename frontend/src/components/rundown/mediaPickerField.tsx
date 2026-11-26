@@ -34,7 +34,8 @@ export function MediaPickerField({
 	onBlur,
 	name,
 	onDurationSeconds,
-	onDurationClear
+	onDurationClear,
+	onDurationProbe
 }: {
 	rundownId: string
 	subdir?: string
@@ -46,6 +47,8 @@ export function MediaPickerField({
 	onDurationSeconds?: (durationSeconds: number | undefined) => void
 	/** Fired when the media path is cleared or replaced before a new probe completes. */
 	onDurationClear?: () => void
+	/** Fired once on mount with a fresh probe of an already-set path. */
+	onDurationProbe?: (durationSeconds: number) => void
 }) {
 	const [files, setFiles] = useState<MediaFileEntry[]>([])
 	const [folderPath, setFolderPath] = useState<string | null>(null)
@@ -133,6 +136,33 @@ export function MediaPickerField({
 			window.clearInterval(interval)
 		}
 	}, [loadMedia])
+
+	// Saved pieces open with a path already set — probe once on mount so a
+	// missing or stale source length gets a fresh fact. Never writes on-air
+	// duration (that stays with `onDurationSeconds` from explicit picks/blurs).
+	const didMountProbeRef = useRef(false)
+	useEffect(() => {
+		if (didMountProbeRef.current || !onDurationProbe) return
+		didMountProbeRef.current = true
+		const mediaPath = value?.trim()
+		if (!mediaPath) return
+		const requestId = ++durationRequestIdRef.current
+		void (async () => {
+			setProbing(true)
+			try {
+				const seconds = await fetchMediaDurationSeconds(mediaPath)
+				if (requestId !== durationRequestIdRef.current) return
+				if (typeof seconds === 'number' && Number.isFinite(seconds) && seconds > 0) {
+					setLastProbeSeconds(seconds)
+					onDurationProbe(seconds)
+				}
+			} catch {
+				/* keep the stored source length */
+			} finally {
+				if (requestId === durationRequestIdRef.current) setProbing(false)
+			}
+		})()
+	}, [value, onDurationProbe])
 
 	const emitDurationForPath = useCallback(
 		async (mediaPath: string, _knownSeconds?: number, forceProbe = false) => {

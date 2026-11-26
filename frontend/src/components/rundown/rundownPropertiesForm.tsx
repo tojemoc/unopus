@@ -8,6 +8,7 @@ import { ipcAPI } from '~/lib/IPC'
 import { saveTextToFile } from '~/lib/files'
 import { sanitizeRundownFilename, serializedRundownToCsv } from '~/util/rundownToCsv'
 import { DeleteRundownButton } from './deleteRundownButton'
+import { ReprobeClipLengthsButton } from './reprobeClipLengthsButton'
 import { useToasts } from '../toasts/useToasts'
 
 export function RundownPropertiesForm({ rundown }: { rundown: Rundown }) {
@@ -271,9 +272,10 @@ export function RundownPropertiesForm({ rundown }: { rundown: Rundown }) {
 								<Button onClick={exportRundown} variant="secondary" className="me-2">
 									Export JSON
 								</Button>
-								<Button onClick={exportRundownCsv} variant="secondary" className="me-4">
+								<Button onClick={exportRundownCsv} variant="secondary" className="me-2">
 									Export CSV
 								</Button>
+								<ReprobeClipLengthsButton rundownId={liveRundown.id} />
 
 								<ButtonGroup>
 									<Button
