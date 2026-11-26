@@ -301,6 +301,20 @@ function PayloadField({
 									form.setFieldValue('payload.sourceDuration', null)
 									durationFromMediaRef.current = 'clear'
 								}}
+								onDurationProbe={(durationSeconds) => {
+									if (
+										typeof durationSeconds !== 'number' ||
+										!Number.isFinite(durationSeconds) ||
+										durationSeconds <= 0
+									) {
+										return
+									}
+									if (fieldInfo.id !== 'fileName' && fieldInfo.id !== 'iluFile') {
+										return
+									}
+									// Mount-probe refreshes only the probe fact — never editorial On air.
+									form.setFieldValue('payload.sourceDuration', Math.round(durationSeconds * 1000))
+								}}
 								onDurationSeconds={(durationSeconds) => {
 									if (
 										typeof durationSeconds !== 'number' ||
