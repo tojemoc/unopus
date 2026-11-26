@@ -275,7 +275,7 @@ export function RundownPropertiesForm({ rundown }: { rundown: Rundown }) {
 								<Button onClick={exportRundownCsv} variant="secondary" className="me-2">
 									Export CSV
 								</Button>
-								<ReprobeClipLengthsButton />
+								<ReprobeClipLengthsButton rundownId={liveRundown.id} />
 
 								<ButtonGroup>
 									<Button

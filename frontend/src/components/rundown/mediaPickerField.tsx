@@ -146,10 +146,12 @@ export function MediaPickerField({
 		didMountProbeRef.current = true
 		const mediaPath = value?.trim()
 		if (!mediaPath) return
+		const requestId = ++durationRequestIdRef.current
 		void (async () => {
 			setProbing(true)
 			try {
 				const seconds = await fetchMediaDurationSeconds(mediaPath)
+				if (requestId !== durationRequestIdRef.current) return
 				if (typeof seconds === 'number' && Number.isFinite(seconds) && seconds > 0) {
 					setLastProbeSeconds(seconds)
 					onDurationProbe(seconds)
@@ -157,7 +159,7 @@ export function MediaPickerField({
 			} catch {
 				/* keep the stored source length */
 			} finally {
-				setProbing(false)
+				if (requestId === durationRequestIdRef.current) setProbing(false)
 			}
 		})()
 	}, [value, onDurationProbe])
